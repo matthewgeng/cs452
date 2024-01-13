@@ -1,6 +1,6 @@
 #include "rpi.h"
 #include "util.h"
-
+#include "cb.h"
 
 
 
@@ -79,6 +79,8 @@ void displaySensors(){
     outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "%d  ", sensorNum);
     nextSensorIndex = decrementBufEnd(nextSensorIndex, SENSOR_BUFFER_SIZE);
   }
+  //move cursor back to input
+  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;%uH", INPUT_ROW, inputCol);
 }
 
 void timeUpdate() {
@@ -127,9 +129,15 @@ void printToConsole(){
     if ((int)trainBuf[trainBufUartNext]==255){
       nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 20000;
       trainBufUartNext += 1;
+      if(trainBufUartNext == TRAIN_BUFFER_SIZE){
+        trainBufUartNext = 0;
+      }
     }else if((int)trainBuf[trainBufUartNext]==254){
       nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 2500000;
       trainBufUartNext += 1;
+      if(trainBufUartNext == TRAIN_BUFFER_SIZE){
+        trainBufUartNext = 0;
+      }
     }
     else if(readRegisterAsUInt32(TIMER_BASE, TIMER_CLO)>=nextMarklinCmdTime){
       if(polling_uart_putc(MARKLIN, trainBuf[trainBufUartNext])){

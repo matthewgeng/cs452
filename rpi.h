@@ -11,7 +11,7 @@
 #define COUNTER_PER_TENTH_SECOND 100000
 #define OUTPUT_BUFFER_SIZE 5000
 #define INPUT_BUFFER_SIZE 20
-#define TRAIN_BUFFER_SIZE 5000
+#define TRAIN_BUFFER_SIZE 50
 #define SENSOR_BUFFER_SIZE 12
 
 #define SWITCHES_ROW 3
@@ -28,12 +28,7 @@ void uart_putl(size_t line, const char *buf, size_t blen);
 void uart_puts(size_t line, const char *buf);
 void uart_printf(size_t line, char *fmt, ...);
 
-uint32_t incrementBufEnd(uint32_t bufEnd, uint32_t bufSize);
-uint32_t decrementBufEnd(uint32_t bufEnd, uint32_t bufSize);
 uint32_t charToRegBuffer(char *buf, uint32_t bufEnd, char c);
-uint32_t charToBuffer(size_t line, char *buf, uint32_t bufEnd, char c);
-uint32_t strToBuffer(size_t line, char *buf, uint32_t bufEnd, char *str);
-uint32_t printfToBuffer(size_t line, char *buf, uint32_t bufEnd, char *fmt, ... );
 
 unsigned int polling_uart_putc(size_t line, unsigned char c);
 unsigned char polling_uart_getc(size_t line);
