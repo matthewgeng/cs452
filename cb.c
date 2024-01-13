@@ -18,26 +18,14 @@ uint32_t decrementBufEnd(uint32_t bufEnd, uint32_t bufSize){
 }
 
 
-uint32_t charToBuffer(size_t line, char *buf, uint32_t bufEnd, char c){
-  uint32_t bufferSize;
-  switch(line){
-    case CONSOLE: bufferSize = OUTPUT_BUFFER_SIZE; break;
-    case MARKLIN: bufferSize = TRAIN_BUFFER_SIZE; break;
-    default: return 0;
-  }
+uint32_t charToBuffer(char *buf, uint32_t bufEnd, uint32_t bufferSize, char c){
   buf[bufEnd] = c;
   bufEnd = incrementBufEnd(bufEnd, bufferSize);
   buf[bufEnd] = '\0';
   return bufEnd;
 }
 
-uint32_t strToBuffer(size_t line, char *buf, uint32_t bufEnd, char *str){
-  uint32_t bufferSize;
-  switch(line){
-    case CONSOLE: bufferSize = OUTPUT_BUFFER_SIZE; break;
-    case MARKLIN: bufferSize = TRAIN_BUFFER_SIZE; break;
-    default: return 0;
-  }
+uint32_t strToBuffer(char *buf, uint32_t bufEnd, uint32_t bufferSize, char *str){
   for (int i = 0; str[i] != '\0'; ++i) {
 		buf[bufEnd] = str[i];
     bufEnd = incrementBufEnd(bufEnd, bufferSize);
@@ -46,17 +34,11 @@ uint32_t strToBuffer(size_t line, char *buf, uint32_t bufEnd, char *str){
   return bufEnd;
 }
 
-static uint32_t printfToBufferHelper (size_t line, char *buf, uint32_t bufEnd, char *fmt, va_list va ) {
+static uint32_t printfToBufferHelper (char *buf, uint32_t bufEnd, uint32_t bufferSize, char *fmt, va_list va ) {
 
-  uint32_t bufferSize;
-  switch(line){
-    case CONSOLE: bufferSize = OUTPUT_BUFFER_SIZE; break;
-    case MARKLIN: bufferSize = TRAIN_BUFFER_SIZE; break;
-    default: return 0;
-  }
 
-	char bf[12];
-	char ch;
+char bf[12];
+char ch;
 
   while ( ( ch = *(fmt++) ) ) {
 		if ( ch != '%' ){
@@ -68,14 +50,14 @@ static uint32_t printfToBufferHelper (size_t line, char *buf, uint32_t bufEnd, c
 			switch( ch ) {
 			case 'u':
 				ui2a( va_arg( va, unsigned int ), 10, bf );
-				bufEnd = strToBuffer(line, buf, bufEnd, bf);
+				bufEnd = strToBuffer(buf, bufEnd, bufferSize, bf);
 				break;
 			case 'd':
 				i2a( va_arg( va, int ), bf );
-				bufEnd = strToBuffer(line, buf, bufEnd, bf);
+				bufEnd = strToBuffer(buf, bufEnd, bufferSize, bf);
 				break;
 			case 's':
-			  bufEnd = strToBuffer(line, buf, bufEnd, va_arg( va, char* ));
+			  bufEnd = strToBuffer(buf, bufEnd, bufferSize, va_arg( va, char* ));
 				break;
 			case '%':
 			  buf[bufEnd] = ch;
@@ -91,11 +73,11 @@ static uint32_t printfToBufferHelper (size_t line, char *buf, uint32_t bufEnd, c
   return bufEnd;
 }
 
-uint32_t printfToBuffer(size_t line, char *buf, uint32_t bufEnd, char *fmt, ... ){
+uint32_t printfToBuffer(char *buf, uint32_t bufEnd, uint32_t bufferSize, char *fmt, ... ){
 
 	va_list va;
 	va_start(va,fmt);
-	bufEnd = printfToBufferHelper( line, buf, bufEnd, fmt, va );
+	bufEnd = printfToBufferHelper( buf, bufEnd, bufferSize, fmt, va );
 	va_end(va);
   return bufEnd;
 }

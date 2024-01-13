@@ -8,8 +8,8 @@
 
 uint32_t incrementBufEnd(uint32_t bufEnd, uint32_t bufSize);
 uint32_t decrementBufEnd(uint32_t bufEnd, uint32_t bufSize);
-uint32_t charToBuffer(size_t line, char *buf, uint32_t bufEnd, char c);
-uint32_t strToBuffer(size_t line, char *buf, uint32_t bufEnd, char *str);
-uint32_t printfToBuffer(size_t line, char *buf, uint32_t bufEnd, char *fmt, ... );
+uint32_t charToBuffer(char *buf, uint32_t bufEnd, uint32_t bufferSize, char c);
+uint32_t strToBuffer(char *buf, uint32_t bufEnd, uint32_t bufferSize, char *str);
+uint32_t printfToBuffer(char *buf, uint32_t bufEnd, uint32_t bufferSize, char *fmt, ... );
 
 #endif /* cb.h */

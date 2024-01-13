@@ -36,6 +36,7 @@ static uint32_t matchValue;
 
 static uint32_t lastSpeed;
 static uint32_t nextMarklinCmdTime;
+static uint16_t isWaiting;
 
 static int sensorBuf[SENSOR_BUFFER_SIZE];
 static uint32_t sensorBufEnd;
@@ -52,12 +53,6 @@ void clearInputBuffer(){
 }
 
 
-void debug(uint32_t line, char *msg){
-  uart_printf(CONSOLE, "\033[%u;1H\033[KInput: ", line);
-  uart_puts(CONSOLE, msg);
-  // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, "\033[%u;1H\033[KInput: ", line);
-  // outputBufEnd = strToBuffer(outputBuf, outputBufEnd, msg);
-}
 void addSensor(int sensor){
   sensorBuf[sensorBufEnd] = sensor;
   sensorBufEnd = incrementBufEnd(sensorBufEnd, SENSOR_BUFFER_SIZE);
@@ -71,16 +66,16 @@ void displaySensors(){
     startSensorIndex = sensorBufEnd;
   }
   uint32_t nextSensorIndex = decrementBufEnd(sensorBufEnd, SENSOR_BUFFER_SIZE);
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;22H\033[K", SENSORS_ROW);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;22H\033[K", SENSORS_ROW);
   while(nextSensorIndex!=startSensorIndex){
     char sensorBand = sensorBuf[nextSensorIndex]/16 + 'A';
     int sensorNum = sensorBuf[nextSensorIndex]%16 + 1;
-    outputBufEnd = charToBuffer(CONSOLE, outputBuf, outputBufEnd, sensorBand);
-    outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "%d  ", sensorNum);
+    outputBufEnd = charToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, sensorBand);
+    outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "%d  ", sensorNum);
     nextSensorIndex = decrementBufEnd(nextSensorIndex, SENSOR_BUFFER_SIZE);
   }
   //move cursor back to input
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;%uH", INPUT_ROW, inputCol);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", INPUT_ROW, inputCol);
 }
 
 void timeUpdate() {
@@ -89,25 +84,24 @@ void timeUpdate() {
     if (currentCounterValue>=matchValue){
       // clearOutputBuffer();
 
-      if(time>2000000 && time%500000==0){
+      if(time>2000000 && time%500000==0 && !isWaiting){
         sensorByteBufEnd = 0;
-        trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 0x85);
-        trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
-        sensorPollingStarted = 1;
+        trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0x85);
+        trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
+        sensorPollingStarted = 1; 
       }
 
       lastTime = time;
       time += COUNTER_PER_TENTH_SECOND;
-      // uart_printf(CONSOLE, "Time: %u\r\n", time);
       unsigned int minutes = time/COUNTER_PER_TENTH_SECOND/600;
       unsigned int seconds = (time/COUNTER_PER_TENTH_SECOND/10)%60;
       unsigned int tenthOfSecond = (time/COUNTER_PER_TENTH_SECOND)%10;
 
       //put time on screen
-      outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[1;1H\033[K%u:%u.%u\r\n", minutes, seconds, tenthOfSecond);
+      outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[1;1H\033[K%u:%u.%u\r\n", minutes, seconds, tenthOfSecond);
       
       //move cursor back to input
-      outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;%uH", INPUT_ROW, inputCol);
+      outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", INPUT_ROW, inputCol);
 
       uint32_t nextMatchValue = currentCounterValue + COUNTER_PER_TENTH_SECOND;
       matchValue = nextMatchValue;
@@ -119,32 +113,22 @@ void timeUpdate() {
 void printToConsole(){
   if(outputBufUartNext!=outputBufEnd){
     if(polling_uart_putc(CONSOLE, outputBuf[outputBufUartNext])){
-      outputBufUartNext+=1;
-      if(outputBufUartNext == OUTPUT_BUFFER_SIZE){
-        outputBufUartNext = 0;
-      }
+      outputBufUartNext = incrementBufEnd(outputBufUartNext, OUTPUT_BUFFER_SIZE);
     }
   }
   if(trainBufUartNext!=trainBufEnd){
     if ((int)trainBuf[trainBufUartNext]==255){
-      nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 20000;
-      trainBufUartNext += 1;
-      if(trainBufUartNext == TRAIN_BUFFER_SIZE){
-        trainBufUartNext = 0;
-      }
+      nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 50000;
+      trainBufUartNext = incrementBufEnd(trainBufUartNext, TRAIN_BUFFER_SIZE);
     }else if((int)trainBuf[trainBufUartNext]==254){
+      isWaiting = 1;
       nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 2500000;
-      trainBufUartNext += 1;
-      if(trainBufUartNext == TRAIN_BUFFER_SIZE){
-        trainBufUartNext = 0;
-      }
+      trainBufUartNext = incrementBufEnd(trainBufUartNext, TRAIN_BUFFER_SIZE);
     }
     else if(readRegisterAsUInt32(TIMER_BASE, TIMER_CLO)>=nextMarklinCmdTime){
+      isWaiting = 0;
       if(polling_uart_putc(MARKLIN, trainBuf[trainBufUartNext])){
-        trainBufUartNext+=1;
-        if(trainBufUartNext == TRAIN_BUFFER_SIZE){
-          trainBufUartNext = 0;
-        }
+        trainBufUartNext = incrementBufEnd(trainBufUartNext, TRAIN_BUFFER_SIZE);
       }
     }
   }
@@ -179,44 +163,44 @@ unsigned int getArgumentThreeDigitNumber(char *src){
 }
 
 void displayFuncMessage(char *err){
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;1H\033[K", FUNCTION_RESULT_ROW);
-  outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, err);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[K", FUNCTION_RESULT_ROW);
+  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, err);
 }
 
 
 void tr(unsigned int trainNumber, unsigned int  trainSpeed){
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, trainSpeed);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, trainNumber);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainSpeed);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
   lastSpeed = trainSpeed;
 }
 void rv(unsigned int trainNumber){
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 0);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, trainNumber);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 254);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 254);
   
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 15);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, trainNumber);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 15);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
   
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, lastSpeed);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, trainNumber);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, lastSpeed);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
 
 }
 void sw(unsigned int switchNumber, char switchDirection){
   if(switchDirection=='S'){
-    trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 33);
+    trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 33);
   }else if(switchDirection=='C'){
-    trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 34);
+    trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 34);
   }else{
     return;
   }
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, switchNumber);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, switchNumber);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
 
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 32);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 32);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
 
   uint32_t r,c;
   
@@ -227,13 +211,13 @@ void sw(unsigned int switchNumber, char switchDirection){
     r = SWITCHES_ROW + 1 + (switchNumber-134)/8;
     c = ((switchNumber-134)%8-1)*9+6;
   }
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;%uH", r, c);
-  outputBufEnd = charToBuffer(CONSOLE, outputBuf, outputBufEnd, switchDirection);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", r, c);
+  outputBufEnd = charToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, switchDirection);
 }
 
 void executeFunction(char *str){
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd,"\033[%u;1H\033[K", LAST_FUNCTON_ROW);
-  outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, str);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,"\033[%u;1H\033[K", LAST_FUNCTON_ROW);
+  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, str);
   if(str[0]=='t' && str[1]=='r' && str[2]==' '){
     unsigned int trainNumber, trainSpeed;
     uint16_t trainSpeedStartIndex;
@@ -326,13 +310,11 @@ void addSensors() {
 void onReceiveSensorByte(char sensorByte){
   sensorByteBuf[sensorByteBufEnd] = sensorByte;
   if(sensorByteBufEnd==9){
-    // uart_printf(CONSOLE, "\033[%d;1H\033[KAll sensor bytes received.", 40);
     addSensors();
     displaySensors();
     sensorByteBufEnd=0;
   }else{
     sensorByteBufEnd+=1;
-    // uart_printf(CONSOLE, "\033[%d;1H\033[KSensor byte received. %u", 41, sensorByteBufEnd);
   }
 }
 
@@ -364,16 +346,16 @@ static void mainloop() {
         executeFunction(inputBuf);
         clearInputBuffer();
         // clear input line and add >
-        outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;1H\033[K", INPUT_ROW);
-        outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, "> ");
+        outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[K", INPUT_ROW);
+        outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "> ");
         inputCol = 3;
       }else{
         //add char to input buffer
         inputBufEnd = charToRegBuffer(inputBuf, inputBufEnd, c);
 
         //put char on screen
-        outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;%uH", INPUT_ROW, inputCol);
-        outputBufEnd = charToBuffer(CONSOLE, outputBuf, outputBufEnd, c);
+        outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", INPUT_ROW, inputCol);
+        outputBufEnd = charToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, c);
         inputCol += 1;
       } 
     }
@@ -413,7 +395,6 @@ int kmain() {
   // but we'll configure the line anyway, so we know what state it is in
   uart_config_and_enable(CONSOLE);
   uart_config_and_enable(MARKLIN);
-  uart_printf(CONSOLE, "Start of code\r\n");
 
 
   outputBufUartNext = 0;
@@ -424,49 +405,42 @@ int kmain() {
 
 
 
-  outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[2J");
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;1H> ", INPUT_ROW);
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;3H", INPUT_ROW);
+  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[2J");
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H> ", INPUT_ROW);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;3H", INPUT_ROW);
   inputCol = 3;
   nextMarklinCmdTime = 0;
+  isWaiting = 0;
 
   //marklin go
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 96);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 96);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
   //marklin sensor reset mode on
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 0xC0);
-  trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0xC0);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
 
   switchesSetup();
   char *s1 = "Switches\r\n";
   char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
   char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
   char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;1H", SWITCHES_ROW);
-  outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, s1);
-  outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, s2);
-  outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, s3);
-  outputBufEnd = strToBuffer(CONSOLE, outputBuf, outputBufEnd, s4);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H", SWITCHES_ROW);
+  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s1);
+  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s2);
+  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s3);
+  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s4);
 
   for(int i = 0; i<SENSOR_BUFFER_SIZE; i++){
     sensorBuf[i]=-1;
   }
   sensorBufEnd = 0;
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "\033[%u;1H\033[K", SENSORS_ROW);
-  outputBufEnd = printfToBuffer(CONSOLE, outputBuf, outputBufEnd, "Most recent sensors: ", SENSORS_ROW);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[K", SENSORS_ROW);
+  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "Most recent sensors: ", SENSORS_ROW);
   sensorByteBufEnd = 0;
 
   lastSensorTriggered = 1000;
   sensorPollingStarted = 0;
 
-
-  // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, 0x85);
-  // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, 255);
-
-  // for(int i = 0; i<10; i++){
-  //   char sensorByte = uart_getc(MARKLIN);
-  //   onReceiveSensorByte(sensorByte);
-  // }
 
   matchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_TENTH_SECOND;
   time = 0;
