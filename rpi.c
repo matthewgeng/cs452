@@ -90,14 +90,7 @@ static const uint32_t UART_LCRH_WLEN_HIGH = 0x40;
 
 // timer
 static char* const  TIMER_BASE = (char*)0xFe003000;
-
-static const uint32_t TIMER_CS  = 0x00;
 static const uint32_t TIMER_CLO  = 0x04;
-static const uint32_t TIMER_CHI  = 0x08;
-static const uint32_t TIMER_C0  = 0x0c;
-static const uint32_t TIMER_C1  = 0x10;
-static const uint32_t TIMER_C2  = 0x14;
-static const uint32_t TIMER_C3  = 0x18;
 
 
 static char* const CONSOLE_UART_BASE = (char*) 0xFe201000;
@@ -227,36 +220,6 @@ void uart_printf( size_t line, char *fmt, ... ) {
 
 
 
-int isBitSet(uint16_t num, int bitPosition) {
-    // Create a bitmask with only the desired bit set
-    uint16_t bitmask = (uint16_t)(1 << bitPosition);
-
-    // Check if the bit is set by performing a bitwise AND
-    return (num & bitmask) != 0;
-}
-
-// unsigned char console_getc(e) {
-//   unsigned char ch;
-//   /* wait for data if necessary */
-//   while (UART_REG(line, UART_FR) & UART_FR_RXFE);
-//   ch = UART_REG(line, UART_DR);
-//   return(ch);
-// }
-
-
-void waitUntilTransBufEmpty(){
-  uint16_t fr = readRegisterAsUInt16(CONSOLE_UART_BASE, CONSOLE_UART_FR);
-  // TODO: still busy waiting?
-  while(!isBitSet(fr,7)){
-    fr = readRegisterAsUInt16(CONSOLE_UART_BASE, CONSOLE_UART_FR);
-  };
-}
-
-void clearConsole() {
-    uart_printf(CONSOLE, "\033[2J");
-    uart_printf(CONSOLE, "\033[H");
-}
-
 
 uint16_t readRegisterAsUInt16(char *base, uint32_t offset) {
     // Replace with the actual code to read from the system timer register
@@ -293,11 +256,4 @@ unsigned char polling_uart_getc(size_t line) {
     return(ch);
   }
   return 255;
-}
-
-
-void timerSetup(){
-  uart_printf(CONSOLE, "Setup!\r\n");
-  uint32_t initialMatchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_TENTH_SECOND;
-  *(volatile uint32_t *)(TIMER_BASE + TIMER_C0) = initialMatchValue;
 }

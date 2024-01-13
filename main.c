@@ -4,22 +4,12 @@
 
 
 
-static unsigned int lastTime;
+// static unsigned int lastTime;
 static unsigned int time;
 
 
 static char* const TIMER_BASE = (char*) 0xFe003000;
-static const uint32_t TIMER_CS  = 0x00;
 static const uint32_t TIMER_CLO  = 0x04;
-static const uint32_t TIMER_CHI  = 0x08;
-static const uint32_t TIMER_C0  = 0x0c;
-static const uint32_t TIMER_C1  = 0x10;
-static const uint32_t TIMER_C2  = 0x14;
-static const uint32_t TIMER_C3  = 0x18;
-
-static char* const CONSOLE_UART_BASE = (char*) 0xFe201000;
-static const uint32_t CONSOLE_UART_DR  = 0x00;
-static const uint32_t CONSOLE_UART_FR  = 0x18;
 
 static char outputBuf[OUTPUT_BUFFER_SIZE] = "";
 static uint32_t outputBufUartNext;
@@ -91,7 +81,7 @@ void timeUpdate() {
         sensorPollingStarted = 1; 
       }
 
-      lastTime = time;
+      // lastTime = time;
       time += COUNTER_PER_TENTH_SECOND;
       unsigned int minutes = time/COUNTER_PER_TENTH_SECOND/600;
       unsigned int seconds = (time/COUNTER_PER_TENTH_SECOND/10)%60;
@@ -444,8 +434,7 @@ int kmain() {
 
   matchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_TENTH_SECOND;
   time = 0;
-  lastTime = 0;
-  timerSetup();
+  // lastTime = 0;
   mainloop();
 
   // exit to boot loader

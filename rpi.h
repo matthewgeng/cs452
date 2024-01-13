@@ -33,7 +33,6 @@ uint32_t charToRegBuffer(char *buf, uint32_t bufEnd, char c);
 unsigned int polling_uart_putc(size_t line, unsigned char c);
 unsigned char polling_uart_getc(size_t line);
 
-void clearConsole();
 uint16_t readRegisterAsUInt16(char *base, uint32_t offset);
 uint32_t readRegisterAsUInt32(char *base, uint32_t offset);
 void timerSetup();
