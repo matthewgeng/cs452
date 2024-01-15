@@ -24,7 +24,7 @@ static uint32_t trainBufEnd;
 
 static uint32_t matchValue;
 
-static uint32_t lastSpeed;
+static uint32_t lastSpeed[100];
 static uint32_t nextMarklinCmdTime;
 static uint16_t isWaiting;
 
@@ -108,7 +108,7 @@ void printToConsole(){
   }
   if(trainBufUartNext!=trainBufEnd){
     if ((int)trainBuf[trainBufUartNext]==255){
-      nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 50000;
+      nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 150000;
       trainBufUartNext = incrementBufEnd(trainBufUartNext, TRAIN_BUFFER_SIZE);
     }else if((int)trainBuf[trainBufUartNext]==254){
       isWaiting = 1;
@@ -162,7 +162,7 @@ void tr(unsigned int trainNumber, unsigned int  trainSpeed){
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainSpeed);
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
-  lastSpeed = trainSpeed;
+  lastSpeed[trainNumber] = trainSpeed;
 }
 void rv(unsigned int trainNumber){
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0);
@@ -173,7 +173,7 @@ void rv(unsigned int trainNumber){
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
   
-  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, lastSpeed);
+  trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, lastSpeed[trainNumber]);
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
 
@@ -430,6 +430,10 @@ int kmain() {
 
   lastSensorTriggered = 1000;
   sensorPollingStarted = 0;
+
+  for(int i = 0; i<100; i++){
+    lastSpeed[i] = 0;
+  }
 
 
   matchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_TENTH_SECOND;
