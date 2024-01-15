@@ -18,6 +18,9 @@ make
 
 Upload image to raspberry pi and restart pi.
 
+## Write up file path
+
+./writeup.pdf
 
 ## Sensor polling time
 
