@@ -37,6 +37,13 @@ static uint16_t sensorPollingStarted;
 static uint32_t lastSensorTriggered;
 
 
+static uint32_t sensorTimeStart;
+static uint32_t sensorTimeSum;
+static uint32_t sensorTimeCount;
+static uint32_t sensorTimeMax;
+static uint32_t sensorTimeMin;
+
+
 void clearInputBuffer(){
   inputBufEnd = 0;
   inputBuf[0] = '\0';
@@ -79,6 +86,7 @@ void timeUpdate() {
         trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0x85);
         trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
         sensorPollingStarted = 1; 
+        sensorTimeStart = currentCounterValue;
       }
 
       // lastTime = time;
@@ -269,12 +277,10 @@ void executeFunction(char *str){
     displayFuncMessage("Switch direction changed");
 
   }
-  // else if(str[0]=='t'){
-  //   //TODO: remove
-  //   sensorByteBufEnd = 0;
-  //   trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 0x85);
-  //   trainBufEnd = charToBuffer(MARKLIN, trainBuf, trainBufEnd, 255);
-  // }
+  else if(str[0]=='t'){
+    uint32_t result = sensorTimeSum/sensorTimeCount;
+    outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[50;1H\033[KSensor time: ave: %u; count: %u; max: %u; min: %u", result, sensorTimeCount, sensorTimeMax, sensorTimeMin);
+  }
   else{
     displayFuncMessage("Unknown function");
     return;
@@ -300,6 +306,15 @@ void addSensors() {
 void onReceiveSensorByte(char sensorByte){
   sensorByteBuf[sensorByteBufEnd] = sensorByte;
   if(sensorByteBufEnd==9){
+    sensorTimeCount += 1;
+    uint32_t result = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO)-sensorTimeStart;
+    sensorTimeSum += result;
+    if(result>sensorTimeMax){
+      sensorTimeMax = result;
+    }else if(result < sensorTimeMin){
+      sensorTimeMin = result;
+    }
+
     addSensors();
     displaySensors();
     sensorByteBufEnd=0;
@@ -434,6 +449,12 @@ int kmain() {
   for(int i = 0; i<100; i++){
     lastSpeed[i] = 0;
   }
+
+  sensorTimeStart = 0;
+  sensorTimeSum = 0;
+  sensorTimeCount = 0;
+  sensorTimeMax = 0;
+  sensorTimeMin = 1000000;
 
 
   matchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_TENTH_SECOND;
