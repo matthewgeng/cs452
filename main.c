@@ -20,12 +20,20 @@ priority stack
 task: 
 - tid
 - parent tid
+- x0-x31
+- program counter
 - stack base pointer
 - maybe stack size?
+- fr (frame register)?
+- lr (link register)?
 
 
 all these functions should call SVC in order to context switch 
 */
+
+void SystemCall(int operand){
+  
+}
 
 int Create(int priority, void (*function)()){
   // allocate memory
