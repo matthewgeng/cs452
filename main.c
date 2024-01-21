@@ -20,11 +20,6 @@ uint32_t curTid;
 uint32_t curPriority;
 uint32_t curParentTid;
 
-
-// void SystemCall(int operand){
-  
-// }
-
 struct TaskFrame *kernelTaskFrame;
 struct TaskFrame *currentTask;
 
@@ -331,11 +326,6 @@ int kmain() {
     uart_printf(CONSOLE, "Exception level: %u \r\n", el);
     uart_printf(CONSOLE, "\r\n");
 
-    uart_printf(CONSOLE, "Restarting \r\n");
-    // exit to boot loader
-    // 590000
-    uart_puts(CONSOLE, "Started\r\n");
-
     struct TaskFrame tfs[NUM_FREE_TASK_FRAMES+1];
 
     kernelTaskFrame = tfs;
@@ -346,9 +336,8 @@ int kmain() {
     for(;;){
         struct TaskFrame *curtask = schedule();
         if(curtask != NULL) {
-
-        activate(curtask);
-        uart_puts(CONSOLE, "after activate\r\n");
+            activate(curtask);
+            uart_puts(CONSOLE, "after activate\r\n");
         }
     }
     return 0;

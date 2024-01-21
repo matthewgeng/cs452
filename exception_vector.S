@@ -82,25 +82,54 @@ exception_vector:
 
 
 curr_el_sp0_sync:
+    mov x0, #0
+    b invalid_exception
 curr_el_sp0_irq:
+    mov x0, #1
+    b invalid_exception
 curr_el_sp0_fiq:
+    mov x0, #2
+    b invalid_exception
 curr_el_sp0_serror:
+    mov x0, #3
+    b invalid_exception
 
 curr_el_spx_sync:
-    // store throwing registers
-    mov x0, #4
-    bl invalid_exception
-    // store kernel registers
+    // load kernel registers
+    // jump to the last kernel pc, should be in the activate function
+
 curr_el_spx_irq:
+    mov x0, #5
+    b invalid_exception
 curr_el_spx_fiq:
+    mov x0, #6
+    b invalid_exception
 curr_el_spx_serror:
+    mov x0, #7
+    b invalid_exception
 
 lower_el_aarch64_sync:
+    mov x0, #8
+    b invalid_exception
 lower_el_aarch64_irq:
+    mov x0, #9
+    b invalid_exception
 lower_el_aarch64_fiq:
+    mov x0, #10
+    b invalid_exception
 lower_el_aarch64_serror:
+    mov x0, #11
+    b invalid_exception
 
 lower_el_aarch32_sync:
+    mov x0, #12
+    b invalid_exception
 lower_el_aarch32_irq:
+    mov x0, #13
+    b invalid_exception
 lower_el_aarch32_fiq:
+    mov x0, #14
+    b invalid_exception
 lower_el_aarch32_serror:
+    mov x0, #15
+    b invalid_exception
