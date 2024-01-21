@@ -26,7 +26,10 @@ struct TaskFrame {
   int tid;
   int parentTid;
   uint64_t sp;
+  uint64_t lr;
+  uint64_t pc;
   uint32_t priority;
+  uint64_t x[31];
   void (*function)();
   struct TaskFrame *next;
 };
