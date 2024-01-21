@@ -1,4 +1,3 @@
-
 /*
 What does the boot.S do?
 
@@ -71,9 +70,9 @@ https://s-matyukevich.github.io/raspberry-pi-os/docs/lesson01/rpi-os.html
 #define SPSR_VALUE (SPSR_MASK_ALL | SPSR_EL1)
 
 // ensure the linker puts this at the start of the kernel image
-.section ".text.boot"
-.global _start
-_start:
+.section .text.boot
+.global start
+start:
     // check processor ID is zero (executing on main core), else loop
 //    mrs  x0, mpidr_el1
 //    and  x0, x0, #3
@@ -134,7 +133,7 @@ exit:
     wfi
     b  exit
 
-.section ".bss"
+.section .bss
 .balign 16
 stack:
     .rept 0x10000

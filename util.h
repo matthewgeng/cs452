@@ -1,5 +1,5 @@
 #ifndef _util_h_
-#define _util_h_ 1
+#define _util_h_
 
 #include <stddef.h>
 
@@ -14,6 +14,6 @@ void *memset(void *s, int c, size_t n);
 void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 
 // defined in boot_util.S
-extern int get_el ( void );
+extern int get_el(void);
 
 #endif /* util.h */
