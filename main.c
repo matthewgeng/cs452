@@ -13,31 +13,6 @@ things to store in register for running task
 
 */
 
-/*
-obj types:
-
-priority stack
-- list of tasks
-
-task: 
-- tid
-- parent tid
-- x0-x31
-- program counter
-- stack base pointer
-- maybe stack size?
-- fr (frame register)?
-- lr (link register)?
-- function
-
-
-all these functions should call SVC in order to context switch 
-
-sp of a task starts as NULL and when it runs, if NULL, run function; if not null, pop those registers 
-*/
-
-
-
 // TODO: prob change all these once we start syscall
 
 uint32_t curTid;
@@ -48,6 +23,8 @@ uint32_t curParentTid;
 // void SystemCall(int operand){
   
 // }
+
+struct TaskFrame *currentTask;
 
 int Create(int priority, void (*function)()){
   // allocate memory
@@ -65,7 +42,7 @@ int Create(int priority, void (*function)()){
   tf->parentTid = curTid;
   tf->function = function;
   tf->priority = priority;
-  // TODO: sp?
+  tf->sp = getNextUserStackPointer();
 
   insertTaskFrame(tf);
 
@@ -98,6 +75,7 @@ void Exit(){
   // reclaim stack memory
   // maybe reclaim task frame?
   // call svc
+  reclaimTaskFrame(currentTask);
 }
 
 void otherTask(){
@@ -109,24 +87,45 @@ void otherTask(){
 
 void rootTask(){
   uart_puts(CONSOLE, "Root Task\r\n");
-  Create(1, otherTask);
-  Create(1, otherTask);
-  Create(2, otherTask);
-  Create(2, otherTask);
+  Create(1, &otherTask);
+  Create(1, &otherTask);
+  Create(2, &otherTask);
+  Create(2, &otherTask);
   Exit();
 }
 
 struct TaskFrame *schedule(){
+  uart_puts(CONSOLE, "Schedule\r\n");
   return popNextTaskFrame();
 }
 
 void activate(struct TaskFrame *tf){
   // TODO: change this to assembly
-  void (*function)() = tf->function;
+  void (*functionPtr)() = tf->function;
   curTid = tf->tid;
   curParentTid = tf->parentTid;
-  reclaimTaskFrame(tf);
-  function();
+  // reclaimTaskFrame(tf);
+  currentTask = tf;
+
+  uart_puts(CONSOLE, "activate start\r\n");
+  
+  // functionPtr();
+
+  // void (*tmp)() = &otherTask;
+
+   asm volatile (
+      "LDR x1, %0"
+      : 
+      : "m" (functionPtr)
+      : "x1"
+  );
+
+  asm volatile("mov sp, %0" : : "r"(tf->sp));
+  asm volatile (
+      "BLR x1"
+  );
+
+  uart_puts(CONSOLE, "activate end\r\n");
 }
 
 
@@ -137,61 +136,15 @@ int kmain() {
   struct TaskFrame tfs[NUM_FREE_TASK_FRAMES];
 
   initializeTasks(tfs);
-  if(Create(1,rootTask)<0){
+  if(Create(1,&rootTask)<0){
     return 0;
   }
   for(;;){
     struct TaskFrame *curtask = schedule();
     if(curtask != NULL) {
       activate(curtask);
+      uart_puts(CONSOLE, "after activate\r\n");
     }
   }
   return 0;
 }
-
-
-
-
-/*
-#include "memory.h"
-
-static uint32_t stackSize = 1000;
-static uint32_t heapSize = 1000;
-static uint32_t kernelHeapSize = 5000;
-
-static uint32_t nextUserStackBaseAddr = 580000;
-static uint32_t nextUserHeapBaseAddr = 565000;
-static uint32_t kernelHeapBaseAddr = 570000;
-
-uint32_t getKernelHeapPointer(){
-    return kernelHeapBaseAddr;
-}
-
-uint32_t getNextUserStackPointer(){
-    nextUserStackBaseAddr-=stackSize;
-    return nextUserHeapBaseAddr + stackSize;
-}
-
-uint32_t getNextUserHeapPointer(){
-    nextUserHeapBaseAddr-=heapSize;
-    return nextUserHeapBaseAddr + heapSize;
-}
-
-
-struct list {
-  struct list *next;
-}
-
-struct item {
-  list items;
-  int val;
-}
-
-item i1;
-item i2;
-i1->items = i2->items;
-
-
-i2->val = i1->items->items+sizeof(list)
-
-*/

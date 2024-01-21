@@ -8,7 +8,11 @@ uint32_t nextTid;
 struct TaskFrame *taskFrameHeap[NUM_FREE_TASK_FRAMES];
 uint32_t tfHeapLength;
 
+static uint32_t nextUserStackBaseAddr;
+
 void initializeTasks(struct TaskFrame *tfs){
+
+  nextUserStackBaseAddr = USER_STACK_START;
 
   nextTid = 1;
   tfHeapLength = 0;
@@ -99,4 +103,9 @@ struct TaskFrame *popNextTaskFrame(){
     }
   }
   return ret;
+}
+
+uint32_t getNextUserStackPointer(){
+    nextUserStackBaseAddr-=USER_STACK_SIZE;
+    return nextUserStackBaseAddr + USER_STACK_SIZE;
 }
