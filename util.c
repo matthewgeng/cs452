@@ -1,5 +1,4 @@
 #include "util.h"
-#include <stdarg.h>
 
 // ascii digit to integer
 int a2d( char ch ) {
