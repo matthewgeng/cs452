@@ -151,8 +151,13 @@ void Exit(){
     : "m" (kernelTaskFrame->pc)
     : "x1"
   );
+  asm volatile("mov fp, %0" : : "r"(kernelTaskFrame->fp));
   asm volatile("mov sp, %0" : : "r"(kernelTaskFrame->sp));
   asm volatile("mov lr, %0" : : "r"(kernelTaskFrame->lr));
+
+  uint64_t current_sp;
+  asm volatile("MOV %0, sp" : "=r" (current_sp));
+  uart_printf(CONSOLE, "exit sp: %x %x\r\n", (uint32_t)(current_sp>>32), (uint32_t)(current_sp));
 
   asm volatile (
       "BLR x1"
@@ -172,6 +177,10 @@ void otherTask(){
 void rootTask(){
   uart_puts(CONSOLE, "Root Task\r\n");
 
+  uint64_t current_sp;
+  asm volatile("MOV %0, sp" : "=r" (current_sp));
+  uart_printf(CONSOLE, "roottask sp: %x %x\r\n", (uint32_t)(current_sp>>32), (uint32_t)(current_sp));
+
   Create(1, &otherTask);
   Create(1, &otherTask);
   Create(2, &otherTask);
@@ -181,11 +190,6 @@ void rootTask(){
 
 struct TaskFrame *schedule(){
   return popNextTaskFrame();
-}
-
-void load_sp_and_lr(uint64_t sp, uint64_t lr){
-  asm volatile("mov sp, %0" : : "r"(sp));
-  asm volatile("mov lr, %0" : : "r"(lr));
 }
 
 void activate(struct TaskFrame *tf){
@@ -199,8 +203,6 @@ void activate(struct TaskFrame *tf){
   uart_puts(CONSOLE, "activate start\r\n");
 
   // save kernel task frame
-  asm volatile("mov %0, sp" : "=r"(kernelTaskFrame->sp));
-  asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->lr));
   asm volatile("mov %0, x0" : "=r"(kernelTaskFrame->x[0]));
   asm volatile("mov %0, x1" : "=r"(kernelTaskFrame->x[1]));
   asm volatile("mov %0, x2" : "=r"(kernelTaskFrame->x[2]));
@@ -232,15 +234,33 @@ void activate(struct TaskFrame *tf){
   asm volatile("mov %0, x28" : "=r"(kernelTaskFrame->x[28]));
   asm volatile("mov %0, x29" : "=r"(kernelTaskFrame->x[29]));
   asm volatile("mov %0, x30" : "=r"(kernelTaskFrame->x[30]));
-  asm volatile(
-    "BL 1f \n\t"
-    "1: \n\t"
-    "MOV %0, LR"
-    : "=r" (kernelTaskFrame->pc)
-  );
   uart_puts(CONSOLE, "after kernel tf saved\r\n");
 
 
+        // void* current_sp;
+        // uint32_t upper_sp, lower_sp;
+        // asm volatile(
+        //   "BL 1f \n\t"
+        //   "1: \n\t"
+        //   "MOV %0, LR"
+        //   : "=r" (current_sp)
+        // );
+        // upper_sp = (uint32_t)((uint64_t)current_sp >> 32);
+        // lower_sp = (uint32_t)((uint64_t)current_sp);
+        // uart_printf(CONSOLE, "pc: %x %x\r\n", upper_sp, lower_sp);
+
+  asm volatile("mov %0, fp" : "=r"(kernelTaskFrame->fp));
+  asm volatile("mov %0, sp" : "=r"(kernelTaskFrame->sp));
+  uart_printf(CONSOLE, "activate sp: %x %x\r\n", (uint32_t)(kernelTaskFrame->sp>>32), (uint32_t)(kernelTaskFrame->sp));
+  asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->lr));
+  uart_printf(CONSOLE, "LR: %x %x\r\n", (uint32_t)(kernelTaskFrame->lr >> 32), (uint32_t)(kernelTaskFrame->lr));
+  asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->pc));
+
+  uart_puts(CONSOLE, "before manual switch to user task\r\n");
+  
+  uint64_t current_sp;
+  asm volatile("MOV %0, sp" : "=r" (current_sp));
+  uart_printf(CONSOLE, "activate sp: %x %x\r\n", (uint32_t)(current_sp>>32), (uint32_t)(current_sp));
   // switch pc to user task function
   asm volatile (
     "LDR x1, %0"
@@ -253,44 +273,9 @@ void activate(struct TaskFrame *tf){
   asm volatile (
       "BLR x1"
   );
+
+  // shouldn't happen
   uart_puts(CONSOLE, "back to activate\r\n");
-
-  // load kernel task frame
-  asm volatile("mov sp, %0" : : "r"(kernelTaskFrame->sp));
-  asm volatile("mov lr, %0" : : "r"(kernelTaskFrame->lr));
-  asm volatile("mov x0, %0" : : "r"(kernelTaskFrame->x[0]));
-  asm volatile("mov x1, %0" : : "r"(kernelTaskFrame->x[1]));
-  asm volatile("mov x2, %0" : : "r"(kernelTaskFrame->x[2]));
-  asm volatile("mov x3, %0" : : "r"(kernelTaskFrame->x[3]));
-  asm volatile("mov x4, %0" : : "r"(kernelTaskFrame->x[4]));
-  asm volatile("mov x5, %0" : : "r"(kernelTaskFrame->x[5]));
-  asm volatile("mov x6, %0" : : "r"(kernelTaskFrame->x[6]));
-  asm volatile("mov x7, %0" : : "r"(kernelTaskFrame->x[7]));
-  asm volatile("mov x8, %0" : : "r"(kernelTaskFrame->x[8]));
-  asm volatile("mov x9, %0" : : "r"(kernelTaskFrame->x[9]));
-  asm volatile("mov x10, %0" : : "r"(kernelTaskFrame->x[10]));
-  asm volatile("mov x11, %0" : : "r"(kernelTaskFrame->x[11]));
-  asm volatile("mov x12, %0" : : "r"(kernelTaskFrame->x[12]));
-  asm volatile("mov x13, %0" : : "r"(kernelTaskFrame->x[13]));
-  asm volatile("mov x14, %0" : : "r"(kernelTaskFrame->x[14]));
-  asm volatile("mov x15, %0" : : "r"(kernelTaskFrame->x[15]));
-  asm volatile("mov x16, %0" : : "r"(kernelTaskFrame->x[16]));
-  asm volatile("mov x17, %0" : : "r"(kernelTaskFrame->x[17]));
-  asm volatile("mov x18, %0" : : "r"(kernelTaskFrame->x[18]));
-  asm volatile("mov x19, %0" : : "r"(kernelTaskFrame->x[19]));
-  asm volatile("mov x20, %0" : : "r"(kernelTaskFrame->x[20]));
-  asm volatile("mov x21, %0" : : "r"(kernelTaskFrame->x[21]));
-  asm volatile("mov x22, %0" : : "r"(kernelTaskFrame->x[22]));
-  asm volatile("mov x23, %0" : : "r"(kernelTaskFrame->x[23]));
-  asm volatile("mov x24, %0" : : "r"(kernelTaskFrame->x[24]));
-  asm volatile("mov x25, %0" : : "r"(kernelTaskFrame->x[25]));
-  asm volatile("mov x26, %0" : : "r"(kernelTaskFrame->x[26]));
-  asm volatile("mov x27, %0" : : "r"(kernelTaskFrame->x[27]));
-  asm volatile("mov x28, %0" : : "r"(kernelTaskFrame->x[28]));
-  asm volatile("mov x29, %0" : : "r"(kernelTaskFrame->x[29]));
-  asm volatile("mov x30, %0" : : "r"(kernelTaskFrame->x[30]));
-
-  uart_puts(CONSOLE, "activate end\r\n");
 }
 
 
@@ -308,7 +293,6 @@ int kmain() {
   for(;;){
     struct TaskFrame *curtask = schedule();
     if(curtask != NULL) {
-
       activate(curtask);
       uart_puts(CONSOLE, "after activate\r\n");
     }
