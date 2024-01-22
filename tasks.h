@@ -28,6 +28,7 @@ struct TaskFrame {
   uint64_t sp;
   uint64_t lr;
   uint64_t pc;
+  uint64_t fp;
   uint32_t priority;
   uint64_t x[31];
   void (*function)();
