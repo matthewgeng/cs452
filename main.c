@@ -190,9 +190,11 @@ void Exit(){
 
 void rootTask(){
     uart_puts(CONSOLE, "Root Task\r\n");
-    int el = get_el();
-    uart_printf(CONSOLE, "Exception level: %u \r\n", el);
-    uart_printf(CONSOLE, "\r\n");
+    // int el = get_el();
+    // uart_printf(CONSOLE, "Exception level: %u \r\n", el);
+    // uart_printf(CONSOLE, "\r\n");
+    
+    uart_printf(CONSOLE, "HERE\r\n");
 
 //   Create(1, &otherTask);
 //   Create(1, &otherTask);
@@ -251,11 +253,6 @@ void context_switch_to_task(struct TaskFrame *tf) {
     uart_printf(CONSOLE, "TASK CONTEXT\r\n");
     // TODO: save ESR_EL1, ELR_EL1, SPSR_EL1 for kernel task
 
-    // set SPSR?
-    // bits 3-0 must be 0 for ELOt stack pointer
-    asm volatile("mov x0, %0" : : "i"(0));
-    asm volatile("msr spsr_el1, x0");
-
     // restore task context
     // asm volatile("mov x0, %0" : : "r"(tf->x[0]));
     // asm volatile("mov x1, %0" : : "r"(tf->x[1]));
@@ -291,40 +288,51 @@ void context_switch_to_task(struct TaskFrame *tf) {
     // asm volatile("mov lr, %0" : : "r"(tf->lr));
     // asm volatile("mov fp, %0" : : "r"(tf->fp));
     // asm volatile("mov sp, %0" : : "r"(tf->sp));
-    uint64_t current_sp;
+
+    uint32_t test;
+
     // spsr might not affect us at this moment, maybe we can manually set sp_el0 to our task sp
-    asm volatile("mov %0, sp" : "=r" (current_sp));
-    uart_printf(CONSOLE, "current sp: %x %x\r\n", (uint32_t)(current_sp>>32), (uint32_t)(current_sp));
+    asm volatile("mov %0, sp" : "=r" (test));
+    uart_printf(CONSOLE, "current sp: %x %x\r\n", test);
     uart_printf(CONSOLE, "task sp: %x \r\n", (uint32_t)(tf->sp));
     uart_printf(CONSOLE, "task lr: %x \r\n", (uint32_t)(tf->lr));
 
+    // set SPSR?
+    // bits 3-0 must be 0 for ELOt stack pointer
+    // uint64_t spsr = 0x600002C5;
+    uint64_t spsr = 0x600002C0;
+    asm volatile("mov x0, %0" : : "r"(spsr));
+    asm volatile("msr spsr_el1, x0");
     
+    uart_printf(CONSOLE, "AFTER SPSR\r\n");
+
     // switch pc to user task function
     asm volatile (
         "LDR x1, %0"
         : 
         : "m" (functionPtr)
     );
-
-    uint32_t test;
-    // asm volatile("mov %0, x1" : "=r" (test));
-    // uart_printf(CONSOLE, "x1 value: %x \r\n", (uint32_t)(test));
-
-    // asm volatile("mrs %0, elr_el1" : "=r" (test));
-    // uart_printf(CONSOLE, "elr_el1 value before: %x \r\n", (uint32_t)(test));
-
-    // asm volatile("msr elr_el1, x1");
     asm volatile("msr elr_el1, x1");
-    // asm volatile("msr elr_el1, %0" : : "r"(528640));
-    // switch pc to user task function
 
     asm volatile("mrs %0, elr_el1" : "=r" (test));
-    uart_printf(CONSOLE, "elr_el1 value after: %x \r\n", (uint32_t)(test));
-    // asm volatile("msr spsel, x0");
-    // asm volatile("mov sp, %0" : : "r"(tf->sp));
+    uart_printf(CONSOLE, "elr_el1 value: %x \r\n", (uint32_t)(test));
 
-    asm volatile("mov %0, sp" : "=r" (current_sp));
-    uart_printf(CONSOLE, "run task sp: %x \r\n", (uint32_t)(current_sp));
+    asm volatile("mrs %0, spsr_el1" : "=r" (test));
+    uart_printf(CONSOLE, "spsr_el1 value: %x \r\n", (uint32_t)(test));
+
+    asm volatile("mov %0, sp" : "=r" (test));
+    uart_printf(CONSOLE, "run task sp: %x \r\n", (uint32_t)(test));
+
+    asm volatile("mrs %0, sp_el0" : "=r" (test));
+    uart_printf(CONSOLE, "sp_el0: %x \r\n", (uint32_t)(test));
+
+    // setting sp_el0
+    uart_printf(CONSOLE, "SETTING SL_EL0\r\n");
+
+    asm volatile("msr sp_el0, %0" : : "r"(tf->sp));
+
+    asm volatile("mrs %0, sp_el0" : "=r" (test));
+    uart_printf(CONSOLE, "sp_el0: %x \r\n", (uint32_t)(test));
 
     asm volatile("mov lr, %0" : : "r"(tf->lr));
     asm volatile("mov fp, %0" : : "r"(tf->fp));
