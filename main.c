@@ -292,6 +292,7 @@ void context_switch_to_task(struct TaskFrame *tf) {
     // asm volatile("mov fp, %0" : : "r"(tf->fp));
     // asm volatile("mov sp, %0" : : "r"(tf->sp));
     uint64_t current_sp;
+    // spsr might not affect us at this moment, maybe we can manually set sp_el0 to our task sp
     asm volatile("mov %0, sp" : "=r" (current_sp));
     uart_printf(CONSOLE, "current sp: %x %x\r\n", (uint32_t)(current_sp>>32), (uint32_t)(current_sp));
     uart_printf(CONSOLE, "task sp: %x \r\n", (uint32_t)(tf->sp));
@@ -327,7 +328,7 @@ void context_switch_to_task(struct TaskFrame *tf) {
 
     asm volatile("mov lr, %0" : : "r"(tf->lr));
     asm volatile("mov fp, %0" : : "r"(tf->fp));
-    asm volatile("mov sp, %0" : : "r"(tf->sp));
+    asm volatile("mov sp, %0" : : "r"(tf->sp)); // sp here might not be sp_el0
     asm volatile("eret");
 }
 
