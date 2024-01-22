@@ -1,4 +1,6 @@
-// not stored in memory (macro which is preprocessed during compile time)
+// macros not stored in memory (macro which is preprocessed during compile time)
+
+// exception vector table entries 
 .macro evec label
     .balign 0x80 // byte align 128
     b \label
@@ -98,6 +100,8 @@ curr_el_spx_sync:
     // load kernel registers
     // jump to the last kernel pc, should be in the activate function
 
+    mov x0, #4
+    b invalid_exception
 curr_el_spx_irq:
     mov x0, #5
     b invalid_exception

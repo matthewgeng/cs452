@@ -23,14 +23,14 @@ task:
 */
 
 struct TaskFrame {
+  uint64_t x[31];
+  uint64_t fp;
+  uint64_t lr;
+  uint64_t sp;
+  uint64_t pc;
   int tid;
   int parentTid;
-  uint64_t sp;
-  uint64_t lr;
-  uint64_t pc;
-  uint64_t fp;
   uint32_t priority;
-  uint64_t x[31];
   void (*function)();
   struct TaskFrame *next;
 };
