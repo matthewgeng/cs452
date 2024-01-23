@@ -26,7 +26,6 @@ void initializeTasks(struct TaskFrame *tfs){
     tfs[i].parentTid = 0;
     tfs[i].sp = 0;
     tfs[i].priority = 0;
-    tfs[i].function = NULL;
   }
   nextFreeTaskFrame = tfs;
 

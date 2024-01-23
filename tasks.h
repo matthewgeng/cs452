@@ -8,6 +8,8 @@
 #define USER_STACK_START 580000
 #define USER_STACK_SIZE 1000
 
+#define HIGHEST_PRIORITY 1000
+
 
 /*
 task: 
@@ -32,7 +34,6 @@ struct TaskFrame {
   int tid;
   int parentTid;
   uint32_t priority;
-  void (*function)();
   struct TaskFrame *next;
 };
 
