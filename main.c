@@ -12,7 +12,6 @@ struct TaskFrame *kernelTaskFrame;
 struct TaskFrame *currentTaskFrame;
 int message;
 
-
 void invalid_exception(uint32_t exception) {
     uart_printf(CONSOLE, "Invalid exception %u", exception);
     for (;;) {}
@@ -61,9 +60,10 @@ void exception_handler(uint32_t exception){
 
     asm volatile("mov %0, fp" : "=r"(currentTaskFrame->fp));
     asm volatile("mrs %0, sp_el0" : "=r"(currentTaskFrame->sp));
-    asm volatile("mov %0, lr" : "=r"(currentTaskFrame->lr));
+    asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->lr));
     asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->pc));
     asm volatile("mrs %0, spsr_el1" : "=r"(currentTaskFrame->spsr));
+
 
 
     uart_printf(CONSOLE, "Exception handler %u\r\n", exception);
@@ -112,6 +112,10 @@ void exception_handler(uint32_t exception){
     asm volatile("mov sp, %0" : : "r"(kernelTaskFrame->sp));
     asm volatile("mov lr, %0" : : "r"(kernelTaskFrame->lr));
     asm volatile("mov fp, %0" : : "r"(kernelTaskFrame->fp));
+
+    uart_printf(CONSOLE, "kernel frame lr: %x\r\n", kernelTaskFrame->lr);
+    uart_printf(CONSOLE, "kernel frame pc: %x\r\n", kernelTaskFrame->pc);
+    uart_printf(CONSOLE, "kernel frame sp: %x\r\n", kernelTaskFrame->sp);
 }
 
 int Create(int priority, void (*function)()){
@@ -211,21 +215,24 @@ void Yield(){
     // TODO: make sys codes global
     uart_printf(CONSOLE, "task yielding \r\n");
 
-    uint32_t lr;
-    asm volatile("ldr %0, [sp]" : "=r"(lr));
-    uart_printf(CONSOLE, "local stored lr : %x\r\n", lr);
-
+    uint32_t test;
+    asm volatile("mov %0, x30" : "=r"(test));
+    uart_printf(CONSOLE, "x30: %x\r\n", test);
+    asm volatile("mov %0, lr" : "=r"(test));
+    uart_printf(CONSOLE, "lr: %x\r\n", test);
+    asm volatile("mov %0, sp" : "=r"(test));
+    uart_printf(CONSOLE, "sp: %x\r\n", test);
     // asm volatile (
     //     // "ldp lr, x29, [sp], #16  \n"  // Load lr and x29 from the stack and increment sp
     //     "b x30                    \n"  // Branch to x30 (lr)
     // );
 
     // // volatile removes potentially bad compiler optimizations
-    // asm volatile(
-    //     "svc %[SYS_CODE]\n"
-    //     :
-    //     : [SYS_CODE] "i"(YIELD) 
-    // );
+    asm volatile(
+        "svc %[SYS_CODE]\n"
+        :
+        : [SYS_CODE] "i"(YIELD) 
+    );
 
     // asm volatile("sub lr, lr, #28");
     // asm volatile("mov %0, lr" : "=r"(lr));
@@ -244,8 +251,8 @@ void Exit(){
         :
         : [SYS_CODE] "i"(EXIT) 
     );
-  // load kernel task frame
-  // switch program counter to main loop
+    // load kernel task frame
+    // switch program counter to main loop
 }
 
 
@@ -258,20 +265,25 @@ void Exit(){
 // }
 
 void rootTask(){
-    uart_puts(CONSOLE, "Root Task\r\n");
+    uart_printf(CONSOLE, "Root Task\r\n");
 
-    uint32_t fp, lr;
+    // uint32_t fp, lr;
+    uint32_t test;
+    asm volatile("mov %0, x30" : "=r"(test));
+    uart_printf(CONSOLE, "x30: %x\r\n", test);
+    asm volatile("mov %0, lr" : "=r"(test));
+    uart_printf(CONSOLE, "lr: %x\r\n", test);
+    asm volatile("mov %0, sp" : "=r"(test));
+    uart_printf(CONSOLE, "sp: %x\r\n", test);
 
-    asm volatile("mov %0, lr" : "=r"(lr));
-    uart_printf(CONSOLE, "lr stored lr : %x\r\n", lr);
+    // asm volatile("ldp	%0, %1, [sp], #32" : "=r"(fp),"=r"(lr));
+    // uart_printf(CONSOLE, "sp stored fp, lr : %x %x\r\n", fp, lr);
 
-    asm volatile("ldp	%0, %1, [sp], #32" : "=r"(fp),"=r"(lr));
-    uart_printf(CONSOLE, "sp stored fp, lr : %x %x\r\n", fp, lr);
+    Yield();
 
-    // Yield();
-
-    // asm volatile("mov %0, lr" : "=r"(lr));
-    // uart_printf(CONSOLE, "local stored lr after: %x\r\n", lr);
+    // uint32_t test;
+    // asm volatile("mov %0, lr" : "=r"(test));
+    // uart_printf(CONSOLE, "local stored lr after: %x\r\n", test);
     // uart_puts(CONSOLE, "Root Task after yield\r\n");
 
     // uint32_t tid = MyTid();
@@ -326,6 +338,9 @@ void context_switch_to_task(struct TaskFrame *tf) {
     asm volatile("mov %0, sp" : "=r"(kernelTaskFrame->sp));
     asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->lr));
     asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->pc)); // allows kernel resumption to resume at the end of the function
+    // uart_printf(CONSOLE, "kernel frame lr: %x\r\n", kernelTaskFrame->lr);
+    // uart_printf(CONSOLE, "kernel frame pc: %x\r\n", kernelTaskFrame->pc);
+    // uart_printf(CONSOLE, "kernel frame sp: %x\r\n", kernelTaskFrame->sp);
 
     // TODO: save ESR_EL1, ELR_EL1, SPSR_EL1 for kernel task
 
@@ -366,10 +381,14 @@ void context_switch_to_task(struct TaskFrame *tf) {
     asm volatile("mov x28, %0" : : "r"(tf->x[28]));
     asm volatile("mov x29, %0" : : "r"(tf->x[29]));
     asm volatile("mov x30, %0" : : "r"(tf->x[30]));
+    // asm volatile("mov %0, fp" : "=r"(tf->fp));
+    // asm volatile("mrs %0, sp_el0" : "=r"(tf->sp));
+    // asm volatile("mov %0, lr" : "=r"(tf->lr));
+    // asm volatile("mrs %0, elr_el1" : "=r"(tf->pc));
+    // asm volatile("mrs %0, spsr_el1" : "=r"(tf->spsr));
 
 
     // switch pc to user task function
-    uart_printf(CONSOLE, "user task pc: %x\r\n", tf->pc);
     void (*pc)() = tf->pc;
     asm volatile (
         "LDR x1, %0"
@@ -385,10 +404,16 @@ void context_switch_to_task(struct TaskFrame *tf) {
     asm volatile("mov x0, %0" : : "r"(tf->spsr));
     asm volatile("msr spsr_el1, x0");
 
+    uint32_t test;
+    asm volatile("mov %0, lr" : "=r"(test));
+    uart_printf(CONSOLE, "WTF lr %x\r\n", test);
+
     asm volatile("mov lr, %0" : : "r"(tf->lr));
-    uart_printf(CONSOLE, "context switch lr loaded: %x\r\n",tf->lr);
+    asm volatile("mov %0, lr" : "=r"(test));
+    uart_printf(CONSOLE, "WTF lr %x\r\n", test);
+
+    asm volatile("mov lr, %0" : : "r"(tf->lr));
     asm volatile("mov fp, %0" : : "r"(tf->fp));
-    asm volatile("mov sp, %0" : : "r"(tf->sp)); // sp here might not be sp_el0
     asm volatile("eret");
 }
 
@@ -411,20 +436,20 @@ void run_task(struct TaskFrame *tf){
         currentTaskFrame->tid = tf->tid;
         currentTaskFrame->parentTid = tf->parentTid;
         message = tf->tid;
-        setNextTaskToBeScheduled(currentTaskFrame);
+        // setNextTaskToBeScheduled(currentTaskFrame);
     }else if(exception_code==YIELD){
         uart_printf(CONSOLE, "run_task yield exception, currentTask->pc: %x\r\n", currentTaskFrame->pc);
         currentTaskFrame->priority = tf->priority;
-        currentTaskFrame->tid = tf->tid;
+        // currentTaskFrame->tid = tf->tid;
+        currentTaskFrame->tid = 10;
         currentTaskFrame->parentTid = tf->parentTid;
         insertTaskFrame(currentTaskFrame);
     }else{
         uart_printf(CONSOLE, "\x1b[31mUnrecognized exception code %u\x1b[0m\r\n", exception_code);
         for(;;){}
     }
-    currentTaskFrame = getNextFreeTaskFrame();
-    reclaimTaskFrame(tf);
-
+    // currentTaskFrame = getNextFreeTaskFrame();
+    // reclaimTaskFrame(tf);
 }
 
 
@@ -447,7 +472,7 @@ int create_first_task(uint32_t priority, void (*function)()) {
 
     insertTaskFrame(currentTaskFrame);
 
-    currentTaskFrame = getNextFreeTaskFrame();
+    // currentTaskFrame = getNextFreeTaskFrame();
 }
 
 int kmain() {

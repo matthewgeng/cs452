@@ -28,14 +28,14 @@ SECTIONS {
     }
 
     /* define data section, initialized global and static data*/
-    /* TODO: note sure if we need to align here or if 8 bytes is correct */
-    . = ALIGN(8);
+    /* TODO: note sure if we need to align here or if 16 bytes is correct */
+    . = ALIGN(16);
 	.data : { *(.data) }
 
     /* define BSS (block starting symbol) section, uninitialized global and static data*/
-    /* TODO: note sure if we need to align here or if 8 bytes is correct */
+    /* TODO: note sure if we need to align here or if 16 bytes is correct */
     /* TODO: memset all this data to 0*/
-    . = ALIGN(8);
+    . = ALIGN(16);
     bss_begin = .;
     .bss : { *(.bss) }
     bss_end = .;
