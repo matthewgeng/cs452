@@ -56,11 +56,12 @@ void exception_handler(uint32_t exception){
     asm volatile("mov %0, x27" : "=r"(currentTaskFrame->x[27]));
     asm volatile("mov %0, x28" : "=r"(currentTaskFrame->x[28]));
     asm volatile("mov %0, x29" : "=r"(currentTaskFrame->x[29]));
-    asm volatile("mov %0, x30" : "=r"(currentTaskFrame->x[30]));
+    // asm volatile("mov %0, x30" : "=r"(currentTaskFrame->x[30]));
+    asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->x[30]));
 
-    asm volatile("mov %0, fp" : "=r"(currentTaskFrame->fp));
+    // asm volatile("mov %0, fp" : "=r"(currentTaskFrame->fp));
     asm volatile("mrs %0, sp_el0" : "=r"(currentTaskFrame->sp));
-    asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->lr));
+    // asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->lr));
     asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->pc));
     asm volatile("mrs %0, spsr_el1" : "=r"(currentTaskFrame->spsr));
 
@@ -110,11 +111,11 @@ void exception_handler(uint32_t exception){
     asm volatile("mov x29, %0" : : "r"(kernelTaskFrame->x[29]));
     asm volatile("mov x30, %0" : : "r"(kernelTaskFrame->x[30]));
     asm volatile("mov sp, %0" : : "r"(kernelTaskFrame->sp));
-    asm volatile("mov lr, %0" : : "r"(kernelTaskFrame->lr));
-    asm volatile("mov fp, %0" : : "r"(kernelTaskFrame->fp));
+    // asm volatile("mov lr, %0" : : "r"(kernelTaskFrame->lr));
+    // asm volatile("mov fp, %0" : : "r"(kernelTaskFrame->fp));
 
-    uart_printf(CONSOLE, "kernel frame lr: %x\r\n", kernelTaskFrame->lr);
-    uart_printf(CONSOLE, "kernel frame pc: %x\r\n", kernelTaskFrame->pc);
+    // uart_printf(CONSOLE, "kernel frame lr: %x\r\n", kernelTaskFrame->lr);
+    // uart_printf(CONSOLE, "kernel frame pc: %x\r\n", kernelTaskFrame->pc);
     uart_printf(CONSOLE, "kernel frame sp: %x\r\n", kernelTaskFrame->sp);
 }
 
@@ -302,6 +303,11 @@ void rootTask(){
 
 void context_switch_to_task(struct TaskFrame *tf) {
     // save kernel task frame
+    // asm volatile("stp x0, x1, [%0, #16 * 0]" : : "r"(&kernelTaskFrame));
+    // asm volatile("stp x2, x3, [%0, #16 * 1]" : : "r"(&kernelTaskFrame));
+    // asm volatile("stp x3, x4, [%0, #16 * 2]" : : "r"(&kernelTaskFrame));
+    // asm volatile("stp x4, x5, [%0, #16 * 3]" : : "r"(&kernelTaskFrame));
+
     asm volatile("mov %0, x0" : "=r"(kernelTaskFrame->x[0]));
     asm volatile("mov %0, x1" : "=r"(kernelTaskFrame->x[1]));
     asm volatile("mov %0, x2" : "=r"(kernelTaskFrame->x[2]));
@@ -334,10 +340,10 @@ void context_switch_to_task(struct TaskFrame *tf) {
     asm volatile("mov %0, x29" : "=r"(kernelTaskFrame->x[29]));
     asm volatile("mov %0, x30" : "=r"(kernelTaskFrame->x[30]));
 
-    asm volatile("mov %0, fp" : "=r"(kernelTaskFrame->fp));
+    // asm volatile("mov %0, fp" : "=r"(kernelTaskFrame->fp));
     asm volatile("mov %0, sp" : "=r"(kernelTaskFrame->sp));
-    asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->lr));
-    asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->pc)); // allows kernel resumption to resume at the end of the function
+    // asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->lr));
+    // asm volatile("mov %0, lr" : "=r"(kernelTaskFrame->pc)); // allows kernel resumption to resume at the end of the function
     // uart_printf(CONSOLE, "kernel frame lr: %x\r\n", kernelTaskFrame->lr);
     // uart_printf(CONSOLE, "kernel frame pc: %x\r\n", kernelTaskFrame->pc);
     // uart_printf(CONSOLE, "kernel frame sp: %x\r\n", kernelTaskFrame->sp);
@@ -408,12 +414,12 @@ void context_switch_to_task(struct TaskFrame *tf) {
     asm volatile("mov %0, lr" : "=r"(test));
     uart_printf(CONSOLE, "WTF lr %x\r\n", test);
 
-    asm volatile("mov lr, %0" : : "r"(tf->lr));
-    asm volatile("mov %0, lr" : "=r"(test));
-    uart_printf(CONSOLE, "WTF lr %x\r\n", test);
+    // // asm volatile("mov lr, %0" : : "r"(tf->lr));
+    // asm volatile("mov %0, lr" : "=r"(test));
+    // uart_printf(CONSOLE, "WTF lr %x\r\n", test);
 
-    asm volatile("mov lr, %0" : : "r"(tf->lr));
-    asm volatile("mov fp, %0" : : "r"(tf->fp));
+    asm volatile("mov lr, %0" : : "r"(tf->x[30]));
+    // asm volatile("mov fp, %0" : : "r"(tf->fp));
     asm volatile("eret");
 }
 
@@ -464,11 +470,8 @@ int create_first_task(uint32_t priority, void (*function)()) {
     currentTaskFrame->parentTid = 0;
     currentTaskFrame->pc = function;
     currentTaskFrame->priority = priority;
-    currentTaskFrame->lr = &Exit;
-    currentTaskFrame->x[30] = currentTaskFrame->lr;
+    currentTaskFrame->x[30] = &Exit;
     currentTaskFrame->sp = getNextUserStackPointer();
-    currentTaskFrame->fp = currentTaskFrame->sp;
-    currentTaskFrame->x[29] = currentTaskFrame->fp;
 
     insertTaskFrame(currentTaskFrame);
 
