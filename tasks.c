@@ -76,6 +76,7 @@ void insertTaskFrame(struct TaskFrame *tf){
 
 struct TaskFrame *popNextTaskFrame(){
   // TODO: assert tfHeapLength>0
+  
   if(tfHeapLength==0){
     return NULL;
   }
