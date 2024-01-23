@@ -8,8 +8,6 @@
 #define USER_STACK_START 580000
 #define USER_STACK_SIZE 1000
 
-#define HIGHEST_PRIORITY 1000
-
 
 /*
 task: 
@@ -38,12 +36,13 @@ struct TaskFrame {
 };
 
 void initializeTasks(struct TaskFrame *tfs);
+void setNextTaskToBeScheduled(struct TaskFrame *tf);
 struct TaskFrame *getNextFreeTaskFrame();
 void reclaimTaskFrame(struct TaskFrame *tf);
 uint32_t getNextTid();
 
 void insertTaskFrame(struct TaskFrame *tf);
-struct TaskFrame *popNextTaskFrame();
+struct TaskFrame *getNextTask();
 
 uint32_t getNextUserStackPointer();
 

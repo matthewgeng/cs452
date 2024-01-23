@@ -8,6 +8,8 @@ uint32_t nextTid;
 struct TaskFrame *taskFrameHeap[NUM_FREE_TASK_FRAMES];
 uint32_t tfHeapLength;
 
+struct TaskFrame *nextTaskToSchedule;
+
 static uint32_t nextUserStackBaseAddr;
 
 void initializeTasks(struct TaskFrame *tfs){
@@ -29,6 +31,12 @@ void initializeTasks(struct TaskFrame *tfs){
   }
   nextFreeTaskFrame = tfs;
 
+  nextTaskToSchedule = NULL;
+
+}
+
+void setNextTaskToBeScheduled(struct TaskFrame *tf){
+  nextTaskToSchedule = tf;
 }
 
 
@@ -104,6 +112,18 @@ struct TaskFrame *popNextTaskFrame(){
   }
   return ret;
 }
+
+
+struct TaskFrame *getNextTask(){
+    // uart_printf(CONSOLE, "scheduling \r\n");
+  if(nextTaskToSchedule!=NULL){
+    struct TaskFrame *tmp = nextTaskToSchedule;
+    nextTaskToSchedule = NULL;
+    return tmp;
+  }
+  return popNextTaskFrame();
+}
+
 
 uint32_t getNextUserStackPointer(){
     nextUserStackBaseAddr-=USER_STACK_SIZE;
