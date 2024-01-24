@@ -22,7 +22,7 @@ task:
 - function
 */
 
-struct TaskFrame {
+typedef struct TaskFrame {
   uint64_t x[31];
   uint64_t sp;
   uint64_t pc;
@@ -31,17 +31,11 @@ struct TaskFrame {
   int parentTid;
   uint32_t priority;
   struct TaskFrame *next;
-};
+} TaskFrame;
 
-void initializeTasks(struct TaskFrame *tfs);
-void setNextTaskToBeScheduled(struct TaskFrame *tf);
-struct TaskFrame *getNextFreeTaskFrame();
-void reclaimTaskFrame(struct TaskFrame *tf);
-uint32_t getNextTid();
-
-void insertTaskFrame(struct TaskFrame *tf);
-struct TaskFrame *getNextTask();
-
-uint32_t getNextUserStackPointer();
+void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t start_tid, size_t num_task_frames);
+int task_cmp(const TaskFrame *tf1, const TaskFrame* tf2);
+TaskFrame *getNextFreeTaskFrame();
+void reclaimTaskFrame(TaskFrame *tf);
 
 #endif /* tasks.h */
