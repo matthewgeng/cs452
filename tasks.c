@@ -3,7 +3,7 @@
 
 TaskFrame *nextFreeTaskFrame;
 
-void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t start_tid, size_t num_task_frames) {
+void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t num_task_frames) {
     nextFreeTaskFrame = task_frames;
 
     for(size_t i = 0; i<num_task_frames; i++){
@@ -15,9 +15,6 @@ void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, si
         }
         // stack initialization
         task_frames[i].sp = stack_base + i*stack_size;
-
-        // tid
-        task_frames[i].tid = start_tid + i;
     }
 }
 
@@ -26,6 +23,12 @@ int task_cmp(const TaskFrame* tf1, const TaskFrame* tf2) {
         return -1;
     } else if (tf1->priority > tf2->priority) {
         return 1;
+    } else {
+        if (tf1->added_time < tf2->added_time) {
+            return 1;
+        } else if (tf1->added_time > tf2->added_time) {
+            return -1;
+        }
     }
     return 0;
 }

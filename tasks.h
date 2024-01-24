@@ -29,11 +29,12 @@ typedef struct TaskFrame {
   uint64_t spsr;
   int tid;
   int parentTid;
+  uint32_t added_time;
   uint32_t priority;
   struct TaskFrame *next;
 } TaskFrame;
 
-void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t start_tid, size_t num_task_frames);
+void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t num_task_frames);
 int task_cmp(const TaskFrame *tf1, const TaskFrame* tf2);
 TaskFrame *getNextFreeTaskFrame();
 void reclaimTaskFrame(TaskFrame *tf);
