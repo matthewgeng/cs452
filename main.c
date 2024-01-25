@@ -20,12 +20,6 @@ void invalid_exception(uint32_t exception) {
 
 void exception_handler(uint32_t exception){
 
-    // uint32_t test;
-    // asm volatile("mov %0, x12" : "=r"(test));
-    // uart_printf(CONSOLE, "\r\nhandler x12: %u\r\n", test);
-    // asm volatile("mov %0, x11" : "=r"(test));
-    // uart_printf(CONSOLE, "handler x11: %u\r\n", test);
-
     // store user task registers
     asm volatile("mov %0, x0" : "=r"(currentTaskFrame->x[0]));
     asm volatile("mov %0, x1" : "=r"(currentTaskFrame->x[1]));
@@ -60,16 +54,9 @@ void exception_handler(uint32_t exception){
     // asm volatile("mov %0, x30" : "=r"(currentTaskFrame->x[30]));
     asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->x[30]));
 
-    // asm volatile("mov %0, fp" : "=r"(currentTaskFrame->fp));
     asm volatile("mrs %0, sp_el0" : "=r"(currentTaskFrame->sp));
-    // asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->lr));
     asm volatile("mrs %0, elr_el1" : "=r"(currentTaskFrame->pc));
     asm volatile("mrs %0, spsr_el1" : "=r"(currentTaskFrame->spsr));
-
-
-
-    // uart_printf(CONSOLE, "Exception handler %u\r\n", exception);
-
 
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
@@ -114,15 +101,14 @@ void exception_handler(uint32_t exception){
     asm volatile("mov sp, %0" : : "r"(kf->sp));
     // asm volatile("mov lr, %0" : : "r"(kf->lr));
     // asm volatile("mov fp, %0" : : "r"(kf->fp));
-
-    // uart_printf(CONSOLE, "kernel frame lr: %x\r\n", kf->lr);
-    // uart_printf(CONSOLE, "kernel frame pc: %x\r\n", kf->pc);
-    // uart_printf(CONSOLE, "kernel frame sp: %x\r\n", kf->sp);
 }
 
-void Create(int priority, void (*function)()){
-    uart_printf(CONSOLE, "creating task: %d %x \r\n", priority, function);
+int Create(int priority, void (*function)()){
+    uart_dprintf(CONSOLE, "creating task: %d %x \r\n", priority, function);
     
+    int tid;
+
+    // x9-x15 are scratch registers
     asm volatile(
         "mov x9, %[priority]\n"
         "mov x10, %[function]\n"
@@ -132,11 +118,13 @@ void Create(int priority, void (*function)()){
         [function] "r" (function),
         [SYS_CODE] "i"(CREATE) 
     );
-//   uart_printf(CONSOLE, "Created: %u\r\n", tf->tid);
+
+    asm volatile("mov %0, x9" : "=r"(tid));
+    return tid;
 }
 
 int MyTid(){
-    uart_printf(CONSOLE, "fetching tid \r\n");
+    uart_dprintf(CONSOLE, "fetching tid \r\n");
     int tid;
 
     asm volatile(
@@ -146,13 +134,11 @@ int MyTid(){
     );
     asm volatile("mov %0, x9" : "=r"(tid));
 
-    // uart_puts(CONSOLE, "Back to MyTid\r\n");
-
     return tid;
 }
 
 int MyParentTid(){
-    uart_printf(CONSOLE, "fetching parent tid \r\n");
+    uart_dprintf(CONSOLE, "fetching parent tid \r\n");
     int parent_tid;
 
     asm volatile(
@@ -162,14 +148,12 @@ int MyParentTid(){
     );
     asm volatile("mov %0, x9" : "=r"(parent_tid));
 
-    // uart_puts(CONSOLE, "Back to MyTid\r\n");
-
     return parent_tid;
 }
 
 void Yield(){
     // TODO: make sys codes global
-    uart_printf(CONSOLE, "task yielding \r\n");
+    uart_dprintf(CONSOLE, "task yielding \r\n");
 
     // uint32_t test;
     // asm volatile("mov %0, x30" : "=r"(test));
@@ -190,12 +174,12 @@ void Yield(){
     // asm volatile("mov %0, lr" : "=r"(lr));
     // uart_printf(CONSOLE, "local stored lr after: %u\r\n", lr);
 
-    uart_printf(CONSOLE, "back to yield \r\n");
+    // uart_printf(CONSOLE, "back to yield \r\n");
 }
 
 void Exit(){
     // TODO: make sys codes global
-    uart_printf(CONSOLE, "task exiting \r\n");
+    uart_dprintf(CONSOLE, "task exiting \r\n");
 
     // volatile removes potentially bad compiler optimizations
     asm volatile(
@@ -209,22 +193,19 @@ void Exit(){
 
 
 
-void otherTask(){
-    uart_printf(CONSOLE, "Other Task\r\n");
+void user_task(){
     int tid = MyTid();
     int parent_tid = MyParentTid();
     uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
     Yield();
-    tid = MyTid();
-    parent_tid = MyParentTid();
     uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
 }
 
 void rootTask(){
-    uart_printf(CONSOLE, "Root Task\r\n");
+    // uart_printf(CONSOLE, "Root Task\r\n");
     int tid = MyTid();
     int parent_tid = MyParentTid();
-    uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
+    // uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
     // int tid = MyTid();
     // int parent_tid = MyParentTid();
     // uart_printf(CONSOLE, "MyTid: %d, MyParentTid: %d\r\n", tid, parent_tid);
@@ -235,10 +216,17 @@ void rootTask(){
     // parent_tid = MyParentTid();
     // uart_printf(CONSOLE, "MyTid: %d, MyParentTid: %d\r\n", tid, parent_tid);
 
-    Create(1, &otherTask);
-    Create(1, &otherTask);
-    Create(2, &otherTask);
-    Create(2, &otherTask);
+    // lower value priority --> higher higher
+    int tid1 = Create(3, &user_task);
+    uart_printf(CONSOLE, "Created: %u\r\n", tid1);
+    int tid2 = Create(3, &user_task);
+    uart_printf(CONSOLE, "Created: %u\r\n", tid2);
+    int tid3 = Create(1, &user_task);
+    uart_printf(CONSOLE, "Created: %u\r\n", tid3);
+    int tid4 = Create(1, &user_task);
+    uart_printf(CONSOLE, "Created: %u\r\n", tid4);
+    
+    uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
 void context_switch_to_task(TaskFrame *tf) {
@@ -325,9 +313,7 @@ void context_switch_to_task(TaskFrame *tf) {
     asm volatile("mov x28, %0" : : "r"(tf->x[28]));
     asm volatile("mov x29, %0" : : "r"(tf->x[29]));
     asm volatile("mov x30, %0" : : "r"(tf->x[30]));
-    // asm volatile("mov %0, fp" : "=r"(tf->fp));
     // asm volatile("mrs %0, sp_el0" : "=r"(tf->sp));
-    // asm volatile("mov %0, lr" : "=r"(tf->lr));
     // asm volatile("mrs %0, elr_el1" : "=r"(tf->pc));
     // asm volatile("mrs %0, spsr_el1" : "=r"(tf->spsr));
 
@@ -362,12 +348,12 @@ void context_switch_to_task(TaskFrame *tf) {
 }
 
 int run_task(TaskFrame *tf){
-    uart_printf(CONSOLE, "running task tid: %u\r\n", tf->tid);
+    uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
 
     context_switch_to_task(tf);
 
     // exit from exception
-    uart_printf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
+    uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
     message = -1;
 
     // read exception code
@@ -389,16 +375,14 @@ uint32_t get_time(){
     return *(volatile uint32_t *)((char*) 0xFe003000 + 0x04);
 }
 
-void task_init(TaskFrame* tf, uint32_t priority, void (*function)(), uint32_t* next_tid, uint32_t parent_tid, uint64_t lr, uint64_t spsr) {
+void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)(), uint32_t tid, uint32_t parent_tid, uint64_t lr, uint64_t spsr) {
     tf->priority = priority;
     tf->pc = function;
-    uint32_t tid = *next_tid;
-    *(next_tid) += 1;
     tf->tid = tid;
     tf->parentTid = parent_tid;
     tf->x[30] = lr;
     tf->spsr = spsr;
-    tf->added_time = get_time();
+    tf->added_time = time;
 }
 
 
@@ -430,12 +414,13 @@ int kmain() {
     TaskFrame* tfs_heap[NUM_FREE_TASK_FRAMES];
     heap_init(&heap, tfs_heap, NUM_FREE_TASK_FRAMES, task_cmp);
 
-    int next_user_tid = 1;
+    int next_user_tid = 0;
 
     // FIRST TASK INITIALIZATION
     TaskFrame* first_task = getNextFreeTaskFrame();
     // bits 3-0 must be 0 for ELOt stack pointer
-    task_init(first_task, 2, &rootTask, &next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    task_init(first_task, 2, get_time(), &rootTask, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    next_user_tid+=1;
     heap_push(&heap, first_task);
 
     message = -1;
@@ -443,7 +428,7 @@ int kmain() {
         currentTaskFrame = heap_pop(&heap);
 
         if (currentTaskFrame == NULL) {
-            uart_printf(CONSOLE, "NO TASKS\r\n");
+            uart_dprintf(CONSOLE, "Finished tasks\r\n");
             for (;;){}
         }
 
@@ -453,26 +438,38 @@ int kmain() {
             TaskFrame* created_task = getNextFreeTaskFrame();
             int priority;
             void (*function)();
+            int test;
+            int test2;
+
             asm volatile(
                 "mov %[priority], x9\n"
                 "mov %[function], x10"
-                : [priority]"=r"(priority),
+                : 
+                [test]"=r"(test),
+                [test2]"=r"(test2),
+                [priority]"=r"(priority),
                 [function]"=r"(function)
             );
-            task_init(created_task, priority, function, &next_user_tid, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
+            task_init(created_task, priority, get_time(),function, next_user_tid, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
             heap_push(&heap, created_task);
+            currentTaskFrame->added_time = get_time();
+            currentTaskFrame->x[9] = next_user_tid;
             heap_push(&heap, currentTaskFrame);
+            next_user_tid +=1;
         } else if(exception_code==EXIT){
             reclaimTaskFrame(currentTaskFrame);
         } else if(exception_code==MY_TID){
             // SET RETURN REGISTER TO BE TF TID
             currentTaskFrame->x[9] = currentTaskFrame->tid;
+            currentTaskFrame->added_time = get_time();
             heap_push(&heap, currentTaskFrame);
         } else if(exception_code==MY_PARENT_TID){
             // SET RETURN REGISTER TO BE TF TID
             currentTaskFrame->x[9] = currentTaskFrame->parentTid;
+            currentTaskFrame->added_time = get_time();
             heap_push(&heap, currentTaskFrame);
         } else if(exception_code==YIELD){
+            currentTaskFrame->added_time = get_time();
             heap_push(&heap, currentTaskFrame);
         } else{
             uart_printf(CONSOLE, "\x1b[31mUnrecognized exception code %u\x1b[0m\r\n", exception_code);

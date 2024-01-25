@@ -197,3 +197,12 @@ void uart_printf( size_t line, char *fmt, ... ) {
 	uart_format_print( line, fmt, va );
 	va_end(va);
 }
+
+void uart_dprintf( size_t line, char *fmt, ... ) {
+    if (DEBUG) {
+        va_list va;
+        va_start(va,fmt);
+        uart_format_print( line, fmt, va );
+        va_end(va);
+    }
+}

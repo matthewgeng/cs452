@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#define DEBUG 0
 
 // Serial line 1 on the RPi hat is used for the console; 2 for Marklin
 #define CONSOLE 1
@@ -15,5 +16,6 @@ void uart_putc(size_t line, unsigned char c);
 void uart_putl(size_t line, const char *buf, size_t blen);
 void uart_puts(size_t line, const char *buf);
 void uart_printf(size_t line, char *fmt, ...);
+void uart_dprintf(size_t line, char *fmt, ...);
 
 #endif /* rpi.h */

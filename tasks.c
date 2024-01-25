@@ -24,11 +24,18 @@ int task_cmp(const TaskFrame* tf1, const TaskFrame* tf2) {
     } else if (tf1->priority > tf2->priority) {
         return 1;
     } else {
-        if (tf1->added_time < tf2->added_time) {
-            return 1;
-        } else if (tf1->added_time > tf2->added_time) {
+        // if tf1 is older than tf2
+        // use subtraction to prevent time overflow comparison issues
+        if (tf2->added_time > tf1->added_time) {
             return -1;
+        } else if (tf1->added_time > tf2->added_time) {
+            return 1;
         }
+        // if ((tf2->added_time - tf1->added_time) > 0) {
+        //     return -1;
+        // } else if ((tf1->added_time - tf2->added_time) > 0) {
+        //     return 1;
+        // }
     }
     return 0;
 }
