@@ -385,7 +385,6 @@ void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)
     tf->added_time = time;
 }
 
-
 int kmain() {
 
     init_exception_vector(); 
