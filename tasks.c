@@ -25,7 +25,7 @@ int task_cmp(const TaskFrame* tf1, const TaskFrame* tf2) {
         return 1;
     } else {
         // if tf1 is older than tf2
-        if (tf2->added_time > tf1->added_time) {
+        if (tf1->added_time < tf2->added_time) {
             return -1;
         } else if (tf1->added_time > tf2->added_time) {
             return 1;

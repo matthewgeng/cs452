@@ -114,7 +114,7 @@ curr_el_spx_serror:
 
 lower_el_aarch64_sync:
     mov x0, #8
-    b exception_handler
+    b return_to_kernel
 lower_el_aarch64_irq:
     mov x0, #9
     b invalid_exception
