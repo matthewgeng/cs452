@@ -163,12 +163,39 @@ int Reply(int tid, const char *reply, int rplen){
 
 }
 
-int RegisterAs(const char *name){
+int str_len(const char *name){
+    int len = 0;
+    while(*name!='\0'){
+        len += 1;
+        name += 1;
+    }
+    return len;
+}
 
+int RegisterAs(const char *name){
+    // assuming name_server tid is always 1
+    int intended_reply_len = Send(1, name, str_len(name), NULL, 0);
+    if(intended_reply_len < 0){
+        return -1;
+    }
+    if(intended_reply_len != 0){
+        uart_printf(CONSOLE, "\x1b[31mRegisterAs unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
+        for(;;){}
+    }
+    return 0;
 }
 
 int WhoIs(const char *name){
-
+    char tid;
+    int intended_reply_len = Send(1, name, str_len(name), tid, 1);
+    if(intended_reply_len < 0 ){
+        return -1;
+    }
+    if(intended_reply_len != 1){
+        uart_printf(CONSOLE, "\x1b[31mWhoIs unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
+        for(;;){}
+    }
+    return (int)tid;
 }
 
 
@@ -196,11 +223,11 @@ void name_server(){
         char name[TASK_NAME_MAX_CHAR+1];
         tid_to_name[i] = &name;
     }
+
     char msg[TASK_NAME_MAX_CHAR+2];
     int tid;
-    char reply[TASK_NAME_MAX_CHAR+1];
     for(;;){
-        int msglen = Receive(&tid, msg, 2);
+        int msglen = Receive(&tid, msg, TASK_NAME_MAX_CHAR+1);
         msg[msglen] = '\0';
         if(msglen<2){
             uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server\x1b[0m\r\n");
@@ -209,31 +236,37 @@ void name_server(){
         if(msg[0]=='r'){
             char *arg_name = msg+1;
             int index = 0;
+            // check if another task has the same name
+            // TODO: maybe make this a hashmap
+            for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
+                if(str_cmp(arg_name, tid_to_name[i])){
+                    uart_printf(CONSOLE, "Name overwritten for task %d\r\n", i);
+                    tid_to_name[i][0] = '\0';
+                }
+            }
             while (*(arg_name+index)!='\0'){
                 tid_to_name[tid][index] = *(arg_name+index);
                 index += 1;
             }
-            const char *reply = "\0";
-            Reply(tid, reply, 0);
+            Reply(tid, NULL, 0);
         }else if(msg[0]=='w'){
             char *arg_name = msg+1;
             int reply_tid = -1;
             for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
-                char *c1 = tid_to_name[i];
-                char *c2 = arg_name;
-                if(str_cmp(c1, c2)){
+                if(str_cmp(tid_to_name[i], arg_name)){
                     reply_tid = i;
                     break;
                 }
             }
+            char reply[1];
             if(reply_tid==-1){
-                const char *reply = "\0";
-                Reply(tid, reply, 0);
+                // if name not registered, return an error as a tid > max possible tid
+                reply[0] = NUM_FREE_TASK_FRAMES+1;
+                Reply(tid, reply, 1);
             }else{
-                char reply[3];
-                int rplen = i2a(reply_tid, reply);
-                reply[rplen] = '\0';
-                Reply(tid, (const char *)reply, rplen);
+                char reply[1];
+                reply[0] = reply_tid;
+                Reply(tid, (const char *)reply, 1);
             }
         }else{
             uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server\x1b[0m\r\n");
