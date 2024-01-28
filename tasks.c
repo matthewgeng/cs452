@@ -15,6 +15,10 @@ void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, si
         }
         // stack initialization
         task_frames[i].sp = stack_base + i*stack_size;
+        task_frames[i].status = INACTIVE;
+        task_frames[i].sd = NULL;
+        task_frames[i].rd = NULL;
+        task_frames[i].sender_queue_len = 0;
     }
 }
 
@@ -41,10 +45,12 @@ TaskFrame *getNextFreeTaskFrame(){
   }
   TaskFrame *tf = nextFreeTaskFrame;
   nextFreeTaskFrame = nextFreeTaskFrame->next;
+  tf->status = READY;
   return tf;
 }
 
 void reclaimTaskFrame(TaskFrame *tf){
-  tf->next = nextFreeTaskFrame;
-  nextFreeTaskFrame = tf;
+    tf->status = INACTIVE;
+    tf->next = nextFreeTaskFrame;
+    nextFreeTaskFrame = tf;
 }
