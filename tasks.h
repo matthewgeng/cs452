@@ -8,6 +8,8 @@
 #define USER_STACK_START 580000
 #define USER_STACK_SIZE 1000
 
+#define TASK_NAME_MAX_CHAR 20
+
 
 /*
 task: 

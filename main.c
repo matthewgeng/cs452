@@ -1,4 +1,5 @@
 #include "rpi.h"
+#include "util.h"
 #include "exception.h"
 #include "tasks.h"
 #include "heap.h"
@@ -88,33 +89,116 @@ void Exit(){
     );
 }
 
+int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
 
-
-void user_task(){
-    uart_dprintf(CONSOLE, "User Task\r\n");
-    int tid = MyTid();
-    int parent_tid = MyParentTid();
-    uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
-    Yield();
-    uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
 }
 
-void rootTask(){
-    uart_dprintf(CONSOLE, "Root Task\r\n");
-    int tid = MyTid();
-    int parent_tid = MyParentTid();
-    // lower value priority --> higher higher
-    int tid1 = Create(3, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid1);
-    int tid2 = Create(3, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid2);
-    int tid3 = Create(1, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid3);
-    int tid4 = Create(1, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid4);
+int Receive(int *tid, char *msg, int msglen){
+
+}
+
+int Reply(int tid, const char *reply, int rplen){
+
+}
+
+int str_cmp(char *c1, char *c2){
+    while(1){
+        if(*c1=='\0' && *c2=='\0'){
+            return 1;
+        }else if(*c1=='\0'){
+            return 0;
+        }else if(*c2=='\0'){
+            return 0;
+        }else if(*c1!=*c2){
+            return 0;
+        }else{
+            c1 += 1;
+            c2 += 1;
+        }
+    }
+}
+
+// define messages to name server as r+name or w+name
+void name_server(){
+    char *tid_to_name[NUM_FREE_TASK_FRAMES];
+    for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
+        char name[TASK_NAME_MAX_CHAR+1];
+        tid_to_name[i] = &name;
+    }
+    char msg[TASK_NAME_MAX_CHAR+2];
+    int tid;
+    char reply[TASK_NAME_MAX_CHAR+1];
+    for(;;){
+        int msglen = Receive(&tid, msg, 2);
+        msg[msglen] = '\0';
+        if(msglen<2){
+            uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server\x1b[0m\r\n");
+            for(;;){}
+        }
+        if(msg[0]=='r'){
+            char *arg_name = msg+1;
+            int index = 0;
+            while (*(arg_name+index)!='\0'){
+                tid_to_name[tid][index] = *(arg_name+index);
+                index += 1;
+            }
+            const char *reply = "\0";
+            Reply(tid, reply, 0);
+        }else if(msg[0]=='w'){
+            char *arg_name = msg+1;
+            int reply_tid = -1;
+            for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
+                char *c1 = tid_to_name[i];
+                char *c2 = arg_name;
+                if(str_cmp(c1, c2)){
+                    reply_tid = i;
+                    break;
+                }
+            }
+            if(reply_tid==-1){
+                const char *reply = "\0";
+                Reply(tid, reply, 0);
+            }else{
+                char reply[3];
+                int rplen = i2a(reply_tid, reply);
+                reply[rplen] = '\0';
+                Reply(tid, (const char *)reply, rplen);
+            }
+        }else{
+            uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server\x1b[0m\r\n");
+            for(;;){}
+        }
+        
+    }
+}
+
+
+
+// void user_task(){
+//     uart_dprintf(CONSOLE, "User Task\r\n");
+//     int tid = MyTid();
+//     int parent_tid = MyParentTid();
+//     uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
+//     Yield();
+//     uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
+// }
+
+// void rootTask(){
+//     uart_dprintf(CONSOLE, "Root Task\r\n");
+//     int tid = MyTid();
+//     int parent_tid = MyParentTid();
+//     // lower value priority --> higher higher
+//     int tid1 = Create(3, &user_task);
+//     uart_printf(CONSOLE, "Created: %u\r\n", tid1);
+//     int tid2 = Create(3, &user_task);
+//     uart_printf(CONSOLE, "Created: %u\r\n", tid2);
+//     int tid3 = Create(1, &user_task);
+//     uart_printf(CONSOLE, "Created: %u\r\n", tid3);
+//     int tid4 = Create(1, &user_task);
+//     uart_printf(CONSOLE, "Created: %u\r\n", tid4);
     
-    uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
-}
+//     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
+// }
 
 int run_task(TaskFrame *tf){
     uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
@@ -184,11 +268,11 @@ int kmain() {
     int next_user_tid = 0;
 
     // FIRST TASK INITIALIZATION
-    TaskFrame* first_task = getNextFreeTaskFrame();
+    // TaskFrame* first_task = getNextFreeTaskFrame();
     // bits 3-0 must be 0 for ELOt stack pointer
-    task_init(first_task, 2, get_time(), &rootTask, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    next_user_tid+=1;
-    heap_push(&heap, first_task);
+    // task_init(first_task, 2, get_time(), &rootTask, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    // next_user_tid+=1;
+    // heap_push(&heap, first_task);
 
     for(;;){
         currentTaskFrame = heap_pop(&heap);

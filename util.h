@@ -6,8 +6,8 @@
 // conversions
 int a2d(char ch);
 char a2i(char ch, char **src, int base, int *nump);
-void ui2a(unsigned int num, unsigned int base, char *bf);
-void i2a(int num, char *bf);
+unsigned int ui2a(unsigned int num, unsigned int base, char *bf);
+unsigned int i2a(int num, char *bf);
 
 // memory
 void *memset(void *s, int c, size_t n);

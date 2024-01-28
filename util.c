@@ -9,12 +9,15 @@ int a2d( char ch ) {
 }
 
 // unsigned int to ascii string
-void ui2a( unsigned int num, unsigned int base, char *bf ) {
+unsigned int ui2a( unsigned int num, unsigned int base, char *bf ) {
 	int n = 0;
 	int dgt;
 	unsigned int d = 1;
-
-	while( (num / d) >= base ) d *= base;
+	unsigned int digits = 1;
+	while( (num / d) >= base ){ 
+		d *= base;
+		digits += 1;
+	}
 	while( d != 0 ) {
 		dgt = num / d;
 		num %= d;
@@ -25,15 +28,16 @@ void ui2a( unsigned int num, unsigned int base, char *bf ) {
 		}
 	}
 	*bf = 0;
+	return digits;
 }
 
 // signed int to ascii string
-void i2a( int num, char *bf ) {
+unsigned int i2a( int num, char *bf ) {
 	if( num < 0 ) {
 		num = -num;
 		*bf++ = '-';
 	}
-	ui2a( num, 10, bf );
+	return ui2a( num, 10, bf );
 }
 
 // define our own memset to avoid SIMD instructions emitted from the compiler
