@@ -1,4 +1,5 @@
 #include "heap.h"
+#include "rpi.h"
 
 // MIN HEAP
 
@@ -32,6 +33,7 @@ void sift_up(Heap* heap, size_t elem_idx) {
 void heap_push(Heap* heap, void* item) {
     if (heap->length == heap->capacity) {
         // TODO: handle somehow
+        uart_printf(CONSOLE, "heap_push failed\r\n");
         return;
     }
 

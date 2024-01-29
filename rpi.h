@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#define DEBUG 0
+#define DEBUG 1
 
 // Serial line 1 on the RPi hat is used for the console; 2 for Marklin
 #define CONSOLE 1
