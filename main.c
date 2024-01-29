@@ -22,10 +22,9 @@ int Create(int priority, void (*function)()){
     
     int tid;
 
-    // x9-x15 are scratch registers
     asm volatile(
-        "mov x9, %[priority]\n"
-        "mov x10, %[function]\n"
+        "mov x0, %[priority]\n"
+        "mov x1, %[function]\n"
         "svc %[SYS_CODE]"
         :
         : [priority] "r" (priority),
@@ -33,7 +32,7 @@ int Create(int priority, void (*function)()){
         [SYS_CODE] "i"(CREATE) 
     );
 
-    asm volatile("mov %0, x9" : "=r"(tid));
+    asm volatile("mov %0, x0" : "=r"(tid));
     return tid;
 }
 
@@ -46,7 +45,7 @@ int MyTid(){
         :
         : [SYS_CODE] "i"(MY_TID) 
     );
-    asm volatile("mov %0, x9" : "=r"(tid));
+    asm volatile("mov %0, x0" : "=r"(tid));
     uart_dprintf(CONSOLE, "MyTid: %d\r\n", tid);
 
     return tid;
@@ -61,7 +60,7 @@ int MyParentTid(){
         :
         : [SYS_CODE] "i"(MY_PARENT_TID) 
     );
-    asm volatile("mov %0, x9" : "=r"(parent_tid));
+    asm volatile("mov %0, x0" : "=r"(parent_tid));
     uart_dprintf(CONSOLE, "MyParentTid: %d\r\n", parent_tid);
 
     return parent_tid;
@@ -209,8 +208,8 @@ int kmain() {
             int test2;
 
             asm volatile(
-                "mov %[priority], x9\n"
-                "mov %[function], x10"
+                "mov %[priority], x0\n"
+                "mov %[function], x1"
                 : 
                 [test]"=r"(test),
                 [test2]"=r"(test2),
@@ -220,19 +219,19 @@ int kmain() {
             task_init(created_task, priority, get_time(),function, next_user_tid, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
             heap_push(&heap, created_task);
             currentTaskFrame->added_time = get_time();
-            currentTaskFrame->x[9] = next_user_tid;
+            currentTaskFrame->x[0] = next_user_tid;
             heap_push(&heap, currentTaskFrame);
             next_user_tid +=1;
         } else if(exception_code==EXIT){
             reclaimTaskFrame(currentTaskFrame);
         } else if(exception_code==MY_TID){
             // SET RETURN REGISTER TO BE TF TID
-            currentTaskFrame->x[9] = currentTaskFrame->tid;
+            currentTaskFrame->x[0] = currentTaskFrame->tid;
             currentTaskFrame->added_time = get_time();
             heap_push(&heap, currentTaskFrame);
         } else if(exception_code==MY_PARENT_TID){
             // SET RETURN REGISTER TO BE TF TID
-            currentTaskFrame->x[9] = currentTaskFrame->parentTid;
+            currentTaskFrame->x[0] = currentTaskFrame->parentTid;
             currentTaskFrame->added_time = get_time();
             heap_push(&heap, currentTaskFrame);
         } else if(exception_code==YIELD){
