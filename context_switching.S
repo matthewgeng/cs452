@@ -32,76 +32,77 @@ context_switch_to_task:
     str x28, [x11, #224]
     str x29, [x11, #232]
     str x30, [x11, #240]
-    mov x9, sp
-    str x9, [x11, #248]
+    mov x0, sp
+    str x0, [x11, #248]
 
     ldr x11, =currentTaskFrame
     ldr x11, [x11]
-    ldr x9, [x11, #0]
-    mov x0, x9
-    ldr x9, [x11, #8]
-    mov x1, x9
-    ldr x9, [x11, #16]
-    mov x2, x9
-    ldr x9, [x11, #24]
-    mov x3, x9
-    ldr x9, [x11, #32]
-    mov x4, x9
-    ldr x9, [x11, #40]
-    mov x5, x9
-    ldr x9, [x11, #48]
-    mov x6, x9
-    ldr x9, [x11, #56]
-    mov x7, x9
-    ldr x9, [x11, #64]
-    mov x8, x9
-    ldr x9, [x11, #80]
-    mov x10, x9
-    ldr x9, [x11, #96]
-    mov x12, x9
-    ldr x9, [x11, #104]
-    mov x13, x9
-    ldr x9, [x11, #112]
-    mov x14, x9
-    ldr x9, [x11, #120]
-    mov x15, x9
-    ldr x9, [x11, #128]
-    mov x16, x9
-    ldr x9, [x11, #136]
-    mov x17, x9
-    ldr x9, [x11, #144]
-    mov x18, x9
-    ldr x9, [x11, #152]
-    mov x19, x9
-    ldr x9, [x11, #160]
-    mov x20, x9
-    ldr x9, [x11, #168]
-    mov x21, x9
-    ldr x9, [x11, #176]
-    mov x22, x9
-    ldr x9, [x11, #184]
-    mov x23, x9
-    ldr x9, [x11, #192]
-    mov x24, x9
-    ldr x9, [x11, #200]
-    mov x25, x9
-    ldr x9, [x11, #208]
-    mov x26, x9
-    ldr x9, [x11, #216]
-    mov x27, x9
-    ldr x9, [x11, #224]
-    mov x28, x9
-    ldr x9, [x11, #232]
-    mov x29, x9
-    ldr x9, [x11, #240]
-    mov x30, x9
+    ldr x0, [x11, #8]
+    mov x1, x0
+    ldr x0, [x11, #16]
+    mov x2, x0
+    ldr x0, [x11, #24]
+    mov x3, x0
+    ldr x0, [x11, #32]
+    mov x4, x0
+    ldr x0, [x11, #40]
+    mov x5, x0
+    ldr x0, [x11, #48]
+    mov x6, x0
+    ldr x0, [x11, #56]
+    mov x7, x0
+    ldr x0, [x11, #64]
+    mov x8, x0
+    ldr x0, [x11, #80]
+    mov x10, x0
+    ldr x0, [x11, #96]
+    mov x12, x0
+    ldr x0, [x11, #104]
+    mov x13, x0
+    ldr x0, [x11, #112]
+    mov x14, x0
+    ldr x0, [x11, #120]
+    mov x15, x0
+    ldr x0, [x11, #128]
+    mov x16, x0
+    ldr x0, [x11, #136]
+    mov x17, x0
+    ldr x0, [x11, #144]
+    mov x18, x0
+    ldr x0, [x11, #152]
+    mov x19, x0
+    ldr x0, [x11, #160]
+    mov x20, x0
+    ldr x0, [x11, #168]
+    mov x21, x0
+    ldr x0, [x11, #176]
+    mov x22, x0
+    ldr x0, [x11, #184]
+    mov x23, x0
+    ldr x0, [x11, #192]
+    mov x24, x0
+    ldr x0, [x11, #200]
+    mov x25, x0
+    ldr x0, [x11, #208]
+    mov x26, x0
+    ldr x0, [x11, #216]
+    mov x27, x0
+    ldr x0, [x11, #224]
+    mov x28, x0
+    ldr x0, [x11, #232]
+    mov x29, x0
+    ldr x0, [x11, #240]
+    mov x30, x0
 
-    ldr x9, [x11, #256]
-    msr elr_el1, x9
-    ldr x9, [x11, #248]
-    msr sp_el0, x9
-    ldr x9, [x11, #264]
-    msr spsr_el1, x9
+    ldr x0, [x11, #256]
+    msr elr_el1, x0
+    ldr x0, [x11, #248]
+    msr sp_el0, x0
+    ldr x0, [x11, #264]
+    msr spsr_el1, x0
+    
+    ldr x0, [x11, #0]
+    mov x0, x0
 
     mov lr, x30
     eret
@@ -141,74 +142,85 @@ return_to_kernel:
     str x28, [x11, #224]
     str x29, [x11, #232]
     str x30, [x11, #240]
-    mrs x9, sp_el0
-    str x9, [x11, #248]
-    mrs x9, elr_el1
-    str x9, [x11, #256]
-    mrs x9, spsr_el1
-    str x9, [x11, #264]
+    mrs x0, sp_el0
+    str x0, [x11, #248]
+    mrs x0, elr_el1
+    str x0, [x11, #256]
+    mrs x0, spsr_el1
+    str x0, [x11, #264]
 
     ldr x11, =kf
     ldr x11, [x11]
-    ldr x9, [x11, #0]
-    mov x0, x9
-    ldr x9, [x11, #8]
-    mov x1, x9
-    ldr x9, [x11, #16]
-    mov x2, x9
-    ldr x9, [x11, #24]
-    mov x3, x9
-    ldr x9, [x11, #32]
-    mov x4, x9
-    ldr x9, [x11, #40]
-    mov x5, x9
-    ldr x9, [x11, #48]
-    mov x6, x9
-    ldr x9, [x11, #56]
-    mov x7, x9
-    ldr x9, [x11, #64]
-    mov x8, x9
-    ldr x9, [x11, #80]
-    mov x10, x9
-    ldr x9, [x11, #96]
-    mov x12, x9
-    ldr x9, [x11, #104]
-    mov x13, x9
-    ldr x9, [x11, #112]
-    mov x14, x9
-    ldr x9, [x11, #120]
-    mov x15, x9
-    ldr x9, [x11, #128]
-    mov x16, x9
-    ldr x9, [x11, #136]
-    mov x17, x9
-    ldr x9, [x11, #144]
-    mov x18, x9
-    ldr x9, [x11, #152]
-    mov x19, x9
-    ldr x9, [x11, #160]
-    mov x20, x9
-    ldr x9, [x11, #168]
-    mov x21, x9
-    ldr x9, [x11, #176]
-    mov x22, x9
-    ldr x9, [x11, #184]
-    mov x23, x9
-    ldr x9, [x11, #192]
-    mov x24, x9
-    ldr x9, [x11, #200]
-    mov x25, x9
-    ldr x9, [x11, #208]
-    mov x26, x9
-    ldr x9, [x11, #216]
-    mov x27, x9
-    ldr x9, [x11, #224]
-    mov x28, x9
-    ldr x9, [x11, #232]
-    mov x29, x9
-    ldr x9, [x11, #240]
-    mov x30, x9
+    
+    ldr x0, [x11, #8]
+    mov x1, x0
+    ldr x0, [x11, #16]
+    mov x2, x0
+    ldr x0, [x11, #24]
+    mov x3, x0
+    ldr x0, [x11, #32]
+    mov x4, x0
+    ldr x0, [x11, #40]
+    mov x5, x0
+    ldr x0, [x11, #48]
+    mov x6, x0
+    ldr x0, [x11, #56]
+    mov x7, x0
+    ldr x0, [x11, #64]
+    mov x8, x0
 
-    ldr x9, [x11, #248]
-    mov sp, x9
+    ldr x11, =currentTaskFrame
+    ldr x11, [x11]
+    ldr x0, [x11, #72]
+    mov x9, x0
+    ldr x0, [x11, #80]
+    mov x10, x0
+
+    ldr x11, =kf
+    ldr x11, [x11]
+    ldr x0, [x11, #96]
+    mov x12, x0
+    ldr x0, [x11, #104]
+    mov x13, x0
+    ldr x0, [x11, #112]
+    mov x14, x0
+    ldr x0, [x11, #120]
+    mov x15, x0
+    ldr x0, [x11, #128]
+    mov x16, x0
+    ldr x0, [x11, #136]
+    mov x17, x0
+    ldr x0, [x11, #144]
+    mov x18, x0
+    ldr x0, [x11, #152]
+    mov x19, x0
+    ldr x0, [x11, #160]
+    mov x20, x0
+    ldr x0, [x11, #168]
+    mov x21, x0
+    ldr x0, [x11, #176]
+    mov x22, x0
+    ldr x0, [x11, #184]
+    mov x23, x0
+    ldr x0, [x11, #192]
+    mov x24, x0
+    ldr x0, [x11, #200]
+    mov x25, x0
+    ldr x0, [x11, #208]
+    mov x26, x0
+    ldr x0, [x11, #216]
+    mov x27, x0
+    ldr x0, [x11, #224]
+    mov x28, x0
+    ldr x0, [x11, #232]
+    mov x29, x0
+    ldr x0, [x11, #240]
+    mov x30, x0
+
+    ldr x0, [x11, #248]
+    mov sp, x0
+
+    ldr x0, [x11, #0]
+    mov x0, x0
+
     ret

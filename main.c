@@ -23,8 +23,8 @@ int Create(int priority, void (*function)()){
     int tid;
 
     asm volatile(
-        "mov x0, %[priority]\n"
-        "mov x1, %[function]\n"
+        "mov x9, %[priority]\n"
+        "mov x10, %[function]\n"
         "svc %[SYS_CODE]"
         :
         : [priority] "r" (priority),
@@ -208,8 +208,8 @@ int kmain() {
             int test2;
 
             asm volatile(
-                "mov %[priority], x0\n"
-                "mov %[function], x1"
+                "mov %[priority], x9\n"
+                "mov %[function], x10"
                 : 
                 [test]"=r"(test),
                 [test2]"=r"(test2),
