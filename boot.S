@@ -109,9 +109,18 @@ el1_entry:
     ldr x13, =SCTLR_VALUE_MMU_DISABLED
     msr sctlr_el1, x13
 
+    // set bss to 0
+    adr	x0, bss_begin
+    adr	x1, bss_end
+    sub	x1, x1, x0
+    zero:
+        str xzr, [x0], #8
+        subs x1, x1, #8
+        b.gt zero
+
     // initialize SP
     msr SPSel, #1
-    ldr x14, =stackend
+    ldr x14, =stack_end
     mov sp, x14
     // Jump to our main() routine in C/C++
     bl  kmain
@@ -133,10 +142,11 @@ exit:
     wfi
     b  exit
 
-.section .bss
+.section .stack
 .balign 16
-stack:
-    .rept 0x10000
+stack_start:
+    .rept 0x7FFF0 // last 16 byte aligned address before kernel load address, stack set to get hard fault on stack overflow
     .byte 0
     .endr
-stackend:
+stack_end:
+
