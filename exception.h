@@ -3,5 +3,4 @@
 
 extern void exception_vector(void);
 void init_exception_vector();
-// int get_el();
 #endif
