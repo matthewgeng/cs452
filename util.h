@@ -13,7 +13,4 @@ void i2a(int num, char *bf);
 void *memset(void *s, int c, size_t n);
 void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 
-// defined in boot_util.S
-extern int get_el(void);
-
 #endif /* util.h */

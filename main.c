@@ -87,8 +87,6 @@ void Exit(){
     );
 }
 
-
-
 void user_task(){
     uart_dprintf(CONSOLE, "User Task\r\n");
     int tid = MyTid();
@@ -204,15 +202,11 @@ int kmain() {
             TaskFrame* created_task = getNextFreeTaskFrame();
             int priority;
             void (*function)();
-            int test;
-            int test2;
 
             asm volatile(
                 "mov %[priority], x9\n"
                 "mov %[function], x10"
                 : 
-                [test]"=r"(test),
-                [test2]"=r"(test2),
                 [priority]"=r"(priority),
                 [function]"=r"(function)
             );
