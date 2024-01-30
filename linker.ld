@@ -6,6 +6,9 @@ ENTRY(start)
 
 /* defines the layout of specific sections in the output binary */
 SECTIONS {
+    .stack : {
+        KEEP(*(.stack))
+    }
 
     /* sets current address to 0x80000, start of kernel8.img which is loaded by RPI*/
     . = 0x80000;
@@ -32,9 +35,9 @@ SECTIONS {
     . = ALIGN(16);
 	.data : { *(.data) }
 
-    /* define BSS (block starting symbol) section, uninitialized global and static data*/
+    /* define BSS (block starting symbol) section, uninitialized global and static data
+    bss_begin and bss_end used to initialize this section of data to 0 */
     /* TODO: note sure if we need to align here or if 16 bytes is correct */
-    /* TODO: memset all this data to 0*/
     . = ALIGN(16);
     bss_begin = .;
     .bss : { *(.bss) }
