@@ -97,9 +97,6 @@ curr_el_sp0_serror:
     b invalid_exception
 
 curr_el_spx_sync:
-    // load kernel registers
-    // jump to the last kernel pc, should be in the activate function
-
     mov x0, #4
     b invalid_exception
 curr_el_spx_irq:

@@ -40,6 +40,8 @@ unsigned int i2a( int num, char *bf ) {
 	return ui2a( num, 10, bf );
 }
 
+// memory
+
 // define our own memset to avoid SIMD instructions emitted from the compiler
 void *memset(void *s, int c, size_t n) {
   for (char* it = (char*)s; n > 0; --n) *it++ = c;
@@ -52,4 +54,33 @@ void* memcpy(void* restrict dest, const void* restrict src, size_t n) {
   char* cdest = (char*)dest;
   for (size_t i = 0; i < n; ++i) *(cdest++) = *(sit++);
   return dest;
+}
+
+
+// string
+
+int str_len(const char *str){
+    int len = 0;
+    while(*str!='\0'){
+        len += 1;
+        str += 1;
+    }
+    return len;
+}
+
+int str_equal(const char *c1, const char *c2){
+    while(1){
+        if(*c1=='\0' && *c2=='\0'){
+            return 1;
+        }else if(*c1=='\0'){
+            return 0;
+        }else if(*c2=='\0'){
+            return 0;
+        }else if(*c1!=*c2){
+            return 0;
+        }else{
+            c1 += 1;
+            c2 += 1;
+        }
+    }
 }

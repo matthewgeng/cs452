@@ -1,5 +1,5 @@
-#ifndef _util_h_
-#define _util_h_
+#ifndef UTIL_H
+#define UTIL_H
 
 #include <stddef.h>
 
@@ -13,4 +13,8 @@ unsigned int i2a(int num, char *bf);
 void *memset(void *s, int c, size_t n);
 void *memcpy(void *restrict dest, const void *restrict src, size_t n);
 
-#endif /* util.h */
+// string
+int str_len(const char *str);
+int str_equal(const char *c1, const char *c2);
+
+#endif

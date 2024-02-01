@@ -1,5 +1,5 @@
-#ifndef _tasks_h_
-#define _tasks_h_ 1
+#ifndef TASK_H
+#define TASK_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -10,11 +10,9 @@
 #define RECEIVE_WAIT 3
 #define REPLY_WAIT 4
 
-#define NUM_FREE_TASK_FRAMES 20
+#define MAX_NUM_TASKS 20
 #define USER_STACK_START 580000
 #define USER_STACK_SIZE 1024
-
-#define TASK_NAME_MAX_CHAR 20
 #define SENDER_QUEUE_SIZE 5
 
 
@@ -25,6 +23,7 @@ typedef struct SendData {
   char *reply;
   int rplen;
 } SendData;
+
 typedef struct ReceiveData {
   int *tid;
   const char *msg;
@@ -54,4 +53,4 @@ int task_cmp(const TaskFrame *tf1, const TaskFrame* tf2);
 TaskFrame *getNextFreeTaskFrame();
 void reclaimTaskFrame(TaskFrame *tf);
 
-#endif /* tasks.h */
+#endif

@@ -1,345 +1,34 @@
 #include "rpi.h"
 #include "util.h"
 #include "exception.h"
-#include "tasks.h"
+#include "task.h"
 #include "heap.h"
-
-#define CREATE 1
-#define MY_TID 2
-#define MY_PARENT_TID 3
-#define YIELD 4
-#define EXIT 5
-#define SEND 6
-#define RECEIVE 7
-#define REPLY 8
+#include "syscall.h"
+#include "nameserver.h"
 
 extern TaskFrame *kf = 0;
 extern TaskFrame *currentTaskFrame = 0;
 
-
-
-int str_len(const char *name){
-    int len = 0;
-    while(*name!='\0'){
-        len += 1;
-        name += 1;
-    }
-    return len;
-}
-
-int str_cmp(char *c1, char *c2){
-    while(1){
-        if(*c1=='\0' && *c2=='\0'){
-            return 1;
-        }else if(*c1=='\0'){
-            return 0;
-        }else if(*c2=='\0'){
-            return 0;
-        }else if(*c1!=*c2){
-            return 0;
-        }else{
-            c1 += 1;
-            c2 += 1;
-        }
-    }
-}
-
-void str_cpy(char *src, char *dest, int size){
-    for(int i = 0; i<size; i++){
-        dest[i] = src[i];
-    }
-}
-
 int copy_msg(char *src, int srclen, char *dest, int destlen){
     int reslen = (srclen < destlen) ? srclen : destlen;
-    str_cpy(src, dest, reslen);
+    memcpy(dest, src, reslen);
     return reslen;
 }
 
-
-void invalid_exception(uint32_t exception) {
-    uart_printf(CONSOLE, "Invalid exception %u", exception);
-    for (;;) {}
-}
-
-int Create(int priority, void (*function)()){
-    uart_dprintf(CONSOLE, "creating task: %d %x \r\n", priority, function);
-    
-    int tid;
-
-    asm volatile(
-        "mov x0, %[priority]\n"
-        "mov x1, %[function]\n"
-        "svc %[SYS_CODE]"
-        :
-        : [priority] "r" (priority),
-        [function] "r" (function),
-        [SYS_CODE] "i"(CREATE) 
-        : "x9", "x10"
-    );
-
-    // asm volatile(
-    //     "mov x1, %[priority]\n"
-    //     "mov x2, %[function]\n"
-    //     "svc %[SYS_CODE]"
-    //     :
-    //     : [priority] "r" (priority),
-    //     [function] "r" (function),
-    //     [SYS_CODE] "i"(CREATE) 
-    // );
-
-    asm volatile("mov %0, x0" : "=r"(tid));
-    return tid;
-}
-
-int MyTid(){
-    uart_dprintf(CONSOLE, "fetching tid \r\n");
-    int tid;
-
-    asm volatile(
-        "svc %[SYS_CODE]"
-        :
-        : [SYS_CODE] "i"(MY_TID) 
-    );
-    asm volatile("mov %0, x0" : "=r"(tid));
-    uart_dprintf(CONSOLE, "MyTid: %d\r\n", tid);
-
-    return tid;
-}
-
-int MyParentTid(){
-    uart_dprintf(CONSOLE, "fetching parent tid \r\n");
-    int parent_tid;
-
-    asm volatile(
-        "svc %[SYS_CODE]"
-        :
-        : [SYS_CODE] "i"(MY_PARENT_TID) 
-    );
-    asm volatile("mov %0, x0" : "=r"(parent_tid));
-
-    return parent_tid;
-}
-
-void Yield(){
-    uart_dprintf(CONSOLE, "task yielding \r\n");
-
-    asm volatile(
-        "svc %[SYS_CODE]\n"
-        :
-        : [SYS_CODE] "i"(YIELD) 
-    );
-}
-
-void Exit(){
-    uart_dprintf(CONSOLE, "task exiting \r\n");
-    // TODO: maybe remove tid from nameserver
-    asm volatile(
-        "svc %[SYS_CODE]\n"
-        :
-        : [SYS_CODE] "i"(EXIT) 
-    );
-}
-
-int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
-
-    // TODO: note that if a function gets a -2 return from send, should just throw error and halt
-    
-    uart_dprintf(CONSOLE, "Send %d %d %d %d %d\r\n", tid, msg, msglen, reply, rplen);
-
-    asm volatile(
-        "mov x9, %[tid]\n"
-        "mov x10, %[msg]\n"
-        "mov x11, %[msglen]\n"
-        "mov x12, %[reply]\n"
-        "mov x13, %[rplen]\n"
-        "mov x0, x9\n"
-        "mov x1, x10\n"
-        "mov x2, x11\n"
-        "mov x3, x12\n"
-        "mov x4, x13\n"
-        "svc %[SYS_CODE]"
-        :
-        : [tid] "r" (tid),
-        [msg] "r" (msg),
-        [msglen] "r" (msglen),
-        [reply] "r" (reply),
-        [rplen] "r" (rplen),
-        [SYS_CODE] "i"(SEND) 
-    );
-
-
-    int intended_reply_len;
-
-    asm volatile("mov %0, x0" : "=r"(intended_reply_len));
-    return intended_reply_len;
-}
-
-int Receive(int *tid, char *msg, int msglen){
-
-    uart_dprintf(CONSOLE, "Receive %d %d %d\r\n", tid, msg, msglen);
-
-    asm volatile(
-        "mov x9, %[tid]\n"
-        "mov x10, %[msg]\n"
-        "mov x11, %[msglen]\n"
-        "mov x0, x9\n"
-        "mov x1, x10\n"
-        "mov x2, x11\n"
-        "svc %[SYS_CODE]"
-        :
-        : [tid] "r" (tid),
-        [msg] "r" (msg),
-        [msglen] "r" (msglen),
-        [SYS_CODE] "i"(RECEIVE) 
-    );
-
-    int intended_sent_len;
-    asm volatile("mov %0, x0" : "=r"(intended_sent_len));
-    return intended_sent_len;
-}
-
-int Reply(int tid, const char *reply, int rplen){
-    uart_dprintf(CONSOLE, "Reply %d %d %d\r\n", tid, reply, rplen);
-
-    asm volatile(
-        "mov x9, %[tid]\n"
-        "mov x10, %[reply]\n"
-        "mov x11, %[rplen]\n"
-        "mov x0, x9\n"
-        "mov x1, x10\n"
-        "mov x2, x11\n"
-        "svc %[SYS_CODE]"
-        :
-        : 
-        [tid] "r" (tid),
-        [reply] "r" (reply),
-        [rplen] "r" (rplen),
-        [SYS_CODE] "i"(REPLY) 
-    );    
-
-    // uart_dprintf(CONSOLE, "Back to reply %d %x %d\r\n", tid, reply, rplen);
-
-
-    int actual_reply_len;
-    asm volatile("mov %0, x0" : "=r"(actual_reply_len));
-    return actual_reply_len;
-
-}
-
-int RegisterAs(const char *name){
-    // assuming name_server tid is always 1
-    uart_dprintf(CONSOLE, "RegisterAs \r\n");
-    int name_len = str_len(name);
-    char msg[name_len+1];
-    msg[0]='r';
-    str_cpy(name, msg+1, name_len);
-    
-    int intended_reply_len = Send(0, msg, name_len+1, NULL, 0);
-    if(intended_reply_len < 0){
-        return -1;
-    }
-    if(intended_reply_len != 0){
-        uart_printf(CONSOLE, "\x1b[31mRegisterAs unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
-        for(;;){}
-    }
-    return 0;
-}
-
-int WhoIs(const char *name){
-    uart_dprintf(CONSOLE, "WhoIs \r\n");
-    int name_len = str_len(name);
-    char msg[name_len+1];
-    msg[0]='w';
-    str_cpy(name, msg+1, name_len);
-
-    char tid[0];
-    tid[0] = 160;
-    asm volatile("mov x30, x30");
-    int intended_reply_len = Send(0, msg, name_len+1, tid, 1);
-    if(intended_reply_len < 0 ){
-        return -1;
-    }
-    if(intended_reply_len == 0){
-        uart_printf(CONSOLE, "\x1b[31mCannot find corresponding tid %d %d\x1b[0m\r\n", intended_reply_len, tid);
-        for(;;){}
-    }
-    if(intended_reply_len != 1){
-        uart_printf(CONSOLE, "\x1b[31mWhoIs unexpected behaviour %d %d\x1b[0m\r\n", intended_reply_len, tid);
-        for(;;){}
-    }
-    if(tid[0]==160){
-        uart_printf(CONSOLE, "\x1b[31mtid not set\x1b[0m\r\n");
-        for(;;){}
-    }
-    return (int)tid[0];
-}
-
-
-// define messages to name server as r+name or w+name
-void name_server(){
-    char tid_to_name[NUM_FREE_TASK_FRAMES][TASK_NAME_MAX_CHAR+1];
-    // char *tid_to_name[NUM_FREE_TASK_FRAMES];
-    for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
-        tid_to_name[i][0] = '\0';
-    }
-
-    char msg[TASK_NAME_MAX_CHAR+2];
-    int tid;
-    char reply[1];
-    for(;;){
-        int msglen = Receive(&tid, msg, TASK_NAME_MAX_CHAR+1);
-        msg[msglen] = '\0';
-        if(msglen<2){
-            uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server %d\x1b[0m\r\n", msglen);
-            for(;;){}
-        }
-        if(msg[0]=='r'){
-            char *arg_name = msg+1;
-            int index = 0;
-            // check if another task has the same name
-            for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
-                if(str_cmp(arg_name, tid_to_name[i])){
-                    uart_printf(CONSOLE, "Name overwritten for task %d\r\n", i);
-                    tid_to_name[i][0] = '\0';
-                }
-            }
-            while (arg_name[index]!='\0'){
-                char c = arg_name[index];
-                tid_to_name[tid][index] = c;
-                index += 1;
-            }
-            tid_to_name[tid][index]='\0';
-            Reply(tid, NULL, 0);
-        }else if(msg[0]=='w'){
-            char *arg_name = msg+1;
-            int reply_tid = -1;
-            for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
-                if(str_cmp(tid_to_name[i], arg_name)){
-                    reply_tid = i;
-                    break;
-                }
-            }
-            if(reply_tid==-1){
-                // if name not registered, return an error as a tid > max possible tid
-                Reply(tid, NULL, 0);
-            }else{
-                reply[0] = reply_tid;
-                Reply(tid, (const char *)reply, 1);
-            }
-        }else{
-            uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server\x1b[0m\r\n");
-            for(;;){}
-        }
-        
-    }
-}
-
-void game_client(){
+void game_client1(){
     const char *name = "game_client1";
     RegisterAs(name);
     int server_tid = WhoIs("game_server");
     uart_printf(CONSOLE, "Server tid: %d\r\n", server_tid);
+
+    // s = signup, p = play, q = quit
+    char action = 's';
+    int send;
+    int recieve;
+
+    char reply;
+    send = Send(server_tid, &action, 1, &reply, 1);
+
 }
 
 void game_server(){
@@ -349,6 +38,7 @@ void game_server(){
         uart_printf(CONSOLE, "\x1b[31mgame_server registeras failed\x1b[0m\r\n");
         for(;;){}
     }
+
     int server_tid = WhoIs(name);
     if(server_tid<0){
         uart_printf(CONSOLE, "\x1b[31mgame_server whois failed\x1b[0m\r\n");
@@ -458,13 +148,13 @@ int kmain() {
     kf = &kernel_frame;
 
     // USER TASK INITIALIZATION
-    TaskFrame user_tasks[NUM_FREE_TASK_FRAMES];
-    tasks_init(user_tasks, USER_STACK_START, USER_STACK_SIZE, NUM_FREE_TASK_FRAMES);
+    TaskFrame user_tasks[MAX_NUM_TASKS];
+    tasks_init(user_tasks, USER_STACK_START, USER_STACK_SIZE, MAX_NUM_TASKS);
 
     // SCHEDULER INITIALIZATION
     Heap heap; // min heap
-    TaskFrame* tfs_heap[NUM_FREE_TASK_FRAMES];
-    heap_init(&heap, tfs_heap, NUM_FREE_TASK_FRAMES, task_cmp);
+    TaskFrame* tfs_heap[MAX_NUM_TASKS];
+    heap_init(&heap, tfs_heap, MAX_NUM_TASKS, task_cmp);
 
     // TODO: make this intrinsically linked
     SendData send_datas[20];
@@ -476,7 +166,7 @@ int kmain() {
 
     // FIRST TASKS INITIALIZATION
     TaskFrame* name_server_task = getNextFreeTaskFrame();
-    task_init(name_server_task, 2, get_time(), &name_server, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    task_init(name_server_task, 2, get_time(), &nameserver, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
     next_user_tid+=1;
     heap_push(&heap, name_server_task);
 
@@ -537,7 +227,7 @@ int kmain() {
             // if recipient in ready, sender status ready->send-wait and add to recipient queue
             // if recipient in receive-wait, copy data, recipient wait->ready, sender ready->reply-wait
             // receive data can be in receive task frame?
-            if(tid>NUM_FREE_TASK_FRAMES || user_tasks[tid].status==INACTIVE){
+            if(tid>MAX_NUM_TASKS || user_tasks[tid].status==INACTIVE){
                 uart_dprintf(CONSOLE, "\x1b[31mOn send tid invalid %d\x1b[0m\r\n", tid);
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
                 continue;
@@ -604,7 +294,7 @@ int kmain() {
                 currentTaskFrame->rd = rd;
             }else{
                 int sender_tid = currentTaskFrame->sender_queue[0];
-                if(sender_tid>NUM_FREE_TASK_FRAMES){
+                if(sender_tid>MAX_NUM_TASKS){
                     uart_printf(CONSOLE, "\x1b[31mOn receive sender tid invalid %u\x1b[0m\r\n", exception_code);
                     for(;;){}
                 }
@@ -634,7 +324,7 @@ int kmain() {
             uart_dprintf(CONSOLE, "On reply %d %x %d\r\n", tid, reply, rplen);
             // if receive status not in ready or send status not in reply-wait, error
             // copy data and set both status to ready
-            if(tid>NUM_FREE_TASK_FRAMES || user_tasks[tid].status==INACTIVE){
+            if(tid>MAX_NUM_TASKS || user_tasks[tid].status==INACTIVE){
                 uart_dprintf(CONSOLE, "\x1b[31mtid not valid %d \x1b[0m\r\n", tid);
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
                 continue;
