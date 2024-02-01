@@ -201,22 +201,22 @@ int Reply(int tid, const char *reply, int rplen){
     uart_dprintf(CONSOLE, "Reply %d %d %d\r\n", tid, reply, rplen);
     // TODO: for some reason i have to do this...
     // if not, x2 copies x0, x3 copies x1 idk why
-    int t1 = tid;
-    int t2 = (int)reply;
-    int t3 = rplen;
+    // int t1 = tid;
+    // int t2 = (int)reply;
+    // int t3 = rplen;
     
     asm volatile(
-        "mov x3, %[rplen]\n"
         "mov x0, %[garbage]\n"
         "mov x1, %[tid]\n"
         "mov x2, %[reply]\n"
+        "mov x3, %[rplen]\n"
         "svc %[SYS_CODE]"
         :
         : 
-        [rplen] "r" (t3),
-        [garbage] "r" (t2),
-        [tid] "r" (t1),
-        [reply] "r" (t2),
+        [garbage] "r" (tid),
+        [tid] "r" (tid),
+        [reply] "r" (reply),
+        [rplen] "r" (rplen),
         [SYS_CODE] "i"(REPLY) 
     );    
     // uart_dprintf(CONSOLE, "Back to reply %d %x %d\r\n", tid, reply, rplen);
@@ -286,6 +286,7 @@ void name_server(){
 
     char msg[TASK_NAME_MAX_CHAR+2];
     int tid;
+    char reply[1];
     for(;;){
         int msglen = Receive(&tid, msg, TASK_NAME_MAX_CHAR+1);
         msg[msglen] = '\0';
@@ -309,27 +310,22 @@ void name_server(){
                 index += 1;
             }
             tid_to_name[tid][index]='\0';
-            uart_dprintf(CONSOLE, "name server tid to name %d %s\r\n", tid, tid_to_name[tid]);
-            uart_dprintf(CONSOLE, "other names %s %s\r\n", tid_to_name[0], tid_to_name[2]);
             Reply(tid, NULL, 0);
         }else if(msg[0]=='w'){
             char *arg_name = msg+1;
             int reply_tid = -1;
-            uart_dprintf(CONSOLE, "other names %s %s %s\r\n", tid_to_name[0], tid_to_name[1], tid_to_name[2]);
             for(int i = 0; i<NUM_FREE_TASK_FRAMES; i++){
                 if(str_cmp(tid_to_name[i], arg_name)){
-                    uart_dprintf(CONSOLE, "name match: %s %s\r\n", tid_to_name[i], arg_name);
                     reply_tid = i;
                     break;
                 }
             }
-            uart_dprintf(CONSOLE, "name server name to tid %s %d\r\n",arg_name, reply_tid);
             if(reply_tid==-1){
                 // if name not registered, return an error as a tid > max possible tid
                 Reply(tid, NULL, 0);
             }else{
-                char reply[1];
                 reply[0] = reply_tid;
+                uart_dprintf(CONSOLE, "name server reply %d\r\n", reply[0]);
                 Reply(tid, (const char *)reply, 1);
             }
         }else{
@@ -400,7 +396,7 @@ int run_task(TaskFrame *tf){
 
     context_switch_to_task();
 
-    uart_dprintf(CONSOLE, "reg 0 1 2 3: %d, %d, %d, %d\r\n", currentTaskFrame->x[0], currentTaskFrame->x[1], currentTaskFrame->x[2], currentTaskFrame->x[3]);
+    uart_dprintf(CONSOLE, "reg 0 1 2 3 4 5: %d, %d, %d, %d, %d, %d\r\n", currentTaskFrame->x[0], currentTaskFrame->x[1], currentTaskFrame->x[2], currentTaskFrame->x[3], currentTaskFrame->x[4], currentTaskFrame->x[5]);
     // exit from exception
     uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
 
@@ -581,6 +577,7 @@ int kmain() {
                 recipient->rd = NULL;
                 reschedule_task_with_return(&heap, recipient, msglen);
             }
+            uart_dprintf(CONSOLE, "sender sd, reply, rplen: %x %x %d\r\n", currentTaskFrame->sd, currentTaskFrame->sd->reply, currentTaskFrame->sd->rplen);
             
         } else if(exception_code==RECEIVE){
             int *tid = (int *)(currentTaskFrame->x[1]);
@@ -656,7 +653,9 @@ int kmain() {
             if(currentTaskFrame->status!=READY){
                 uart_dprintf(CONSOLE, "\x1b[31mOn reply current status not ready %d\x1b[0m\r\n", sender->status);
                 for(;;){}
-            }
+            }            
+            uart_dprintf(CONSOLE, "sender sd, reply, rplen: %x %x %d\r\n", sender->sd, sender->sd->reply, sender->sd->rplen);
+
             sender->status = READY;
             SendData *sd = sender->sd;
             sender->sd = NULL;
