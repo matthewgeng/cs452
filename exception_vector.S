@@ -113,7 +113,6 @@ curr_el_spx_serror:
     b invalid_exception
 
 lower_el_aarch64_sync:
-    mov x0, #8
     b return_to_kernel
 lower_el_aarch64_irq:
     mov x0, #9
