@@ -68,13 +68,11 @@ int Create(int priority, void (*function)()){
     int tid;
 
     asm volatile(
-        "mov x0, %[garbage]\n"
-        "mov x1, %[priority]\n"
-        "mov x2, %[function]\n"
+        "mov x0, %[priority]\n"
+        "mov x1, %[function]\n"
         "svc %[SYS_CODE]"
         :
-        : [garbage] "r" (priority),
-        [priority] "r" (priority),
+        : [priority] "r" (priority),
         [function] "r" (function),
         [SYS_CODE] "i"(CREATE) 
         : "x9", "x10"
@@ -146,21 +144,23 @@ void Exit(){
 int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
 
     // TODO: note that if a function gets a -2 return from send, should just throw error and halt
-    uart_dprintf(CONSOLE, "Send %x %x %x %x %x\r\n", tid, msg, msglen, reply, rplen);
     
-    int intended_reply_len;
+    uart_dprintf(CONSOLE, "Send %d %d %d %d %d\r\n", tid, msg, msglen, reply, rplen);
 
     asm volatile(
-        "mov x0, %[garbage]\n"
-        "mov x1, %[tid]\n"
-        "mov x2, %[msg]\n"
-        "mov x3, %[msglen]\n"
-        "mov x4, %[reply]\n"
-        "mov x5, %[rplen]\n"
+        "mov x9, %[tid]\n"
+        "mov x10, %[msg]\n"
+        "mov x11, %[msglen]\n"
+        "mov x12, %[reply]\n"
+        "mov x13, %[rplen]\n"
+        "mov x0, x9\n"
+        "mov x1, x10\n"
+        "mov x2, x11\n"
+        "mov x3, x12\n"
+        "mov x4, x13\n"
         "svc %[SYS_CODE]"
         :
-        : [garbage] "r" (tid),
-        [tid] "r" (tid),
+        : [tid] "r" (tid),
         [msg] "r" (msg),
         [msglen] "r" (msglen),
         [reply] "r" (reply),
@@ -168,57 +168,56 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
         [SYS_CODE] "i"(SEND) 
     );
 
+
+    int intended_reply_len;
+
     asm volatile("mov %0, x0" : "=r"(intended_reply_len));
     return intended_reply_len;
 }
 
 int Receive(int *tid, char *msg, int msglen){
 
-    uart_dprintf(CONSOLE, "Receive\r\n");
-    
-    int intended_sent_len;
+    uart_dprintf(CONSOLE, "Receive %d %d %d\r\n", tid, msg, msglen);
 
     asm volatile(
-        "mov x0, %[garbage]\n"
-        "mov x1, %[tid]\n"
-        "mov x2, %[msg]\n"
-        "mov x3, %[msglen]\n"
+        "mov x9, %[tid]\n"
+        "mov x10, %[msg]\n"
+        "mov x11, %[msglen]\n"
+        "mov x0, x9\n"
+        "mov x1, x10\n"
+        "mov x2, x11\n"
         "svc %[SYS_CODE]"
         :
-        : [garbage] "r" (tid),
-        [tid] "r" (tid),
+        : [tid] "r" (tid),
         [msg] "r" (msg),
         [msglen] "r" (msglen),
         [SYS_CODE] "i"(RECEIVE) 
     );
 
+    int intended_sent_len;
     asm volatile("mov %0, x0" : "=r"(intended_sent_len));
     return intended_sent_len;
 }
 
 int Reply(int tid, const char *reply, int rplen){
-
     uart_dprintf(CONSOLE, "Reply %d %d %d\r\n", tid, reply, rplen);
-    // TODO: for some reason i have to do this...
-    // if not, x2 copies x0, x3 copies x1 idk why
-    // int t1 = tid;
-    // int t2 = (int)reply;
-    // int t3 = rplen;
-    
+
     asm volatile(
-        "mov x0, %[garbage]\n"
-        "mov x1, %[tid]\n"
-        "mov x2, %[reply]\n"
-        "mov x3, %[rplen]\n"
+        "mov x9, %[tid]\n"
+        "mov x10, %[reply]\n"
+        "mov x11, %[rplen]\n"
+        "mov x0, x9\n"
+        "mov x1, x10\n"
+        "mov x2, x11\n"
         "svc %[SYS_CODE]"
         :
         : 
-        [garbage] "r" (tid),
         [tid] "r" (tid),
         [reply] "r" (reply),
         [rplen] "r" (rplen),
         [SYS_CODE] "i"(REPLY) 
     );    
+
     // uart_dprintf(CONSOLE, "Back to reply %d %x %d\r\n", tid, reply, rplen);
 
 
@@ -256,6 +255,7 @@ int WhoIs(const char *name){
 
     char tid[0];
     tid[0] = 160;
+    asm volatile("mov x30, x30");
     int intended_reply_len = Send(0, msg, name_len+1, tid, 1);
     if(intended_reply_len < 0 ){
         return -1;
@@ -325,7 +325,6 @@ void name_server(){
                 Reply(tid, NULL, 0);
             }else{
                 reply[0] = reply_tid;
-                uart_dprintf(CONSOLE, "name server reply %d\r\n", reply[0]);
                 Reply(tid, (const char *)reply, 1);
             }
         }else{
@@ -396,7 +395,7 @@ int run_task(TaskFrame *tf){
 
     context_switch_to_task();
 
-    uart_dprintf(CONSOLE, "reg 0 1 2 3 4 5: %d, %d, %d, %d, %d, %d\r\n", currentTaskFrame->x[0], currentTaskFrame->x[1], currentTaskFrame->x[2], currentTaskFrame->x[3], currentTaskFrame->x[4], currentTaskFrame->x[5]);
+    // uart_dprintf(CONSOLE, "reg 0 1 2 3 4 5: %d, %d, %d, %d, %d, %d\r\n", currentTaskFrame->x[0], currentTaskFrame->x[1], currentTaskFrame->x[2], currentTaskFrame->x[3], currentTaskFrame->x[4], currentTaskFrame->x[5]);
     // exit from exception
     uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
 
@@ -502,8 +501,8 @@ int kmain() {
         int exception_code = run_task(currentTaskFrame);
 
         if(exception_code==CREATE){
-            int priority = (int)(currentTaskFrame->x[1]);
-            void (*function)() = (void *)(currentTaskFrame->x[2]);
+            int priority = (int)(currentTaskFrame->x[0]);
+            void (*function)() = (void *)(currentTaskFrame->x[1]);
             TaskFrame* created_task = getNextFreeTaskFrame();
             task_init(created_task, priority, get_time(),function, next_user_tid, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
             heap_push(&heap, created_task);
@@ -527,11 +526,11 @@ int kmain() {
             currentTaskFrame->added_time = get_time();
             heap_push(&heap, currentTaskFrame);
         } else if(exception_code==SEND){
-            int tid = (int)(currentTaskFrame->x[1]);
-            const char *msg = (const char *)(currentTaskFrame->x[2]);
-            int msglen = (int)(currentTaskFrame->x[3]);
-            char *reply = (char *)(currentTaskFrame->x[4]);
-            int rplen = (int)(currentTaskFrame->x[5]);            
+            int tid = (int)(currentTaskFrame->x[0]);
+            const char *msg = (const char *)(currentTaskFrame->x[1]);
+            int msglen = (int)(currentTaskFrame->x[2]);
+            char *reply = (char *)(currentTaskFrame->x[3]);
+            int rplen = (int)(currentTaskFrame->x[4]);            
 
             // find recipient tid, if not exist, return -1
             // if sender task not in ready, error
@@ -577,12 +576,11 @@ int kmain() {
                 recipient->rd = NULL;
                 reschedule_task_with_return(&heap, recipient, msglen);
             }
-            uart_dprintf(CONSOLE, "sender sd, reply, rplen: %x %x %d\r\n", currentTaskFrame->sd, currentTaskFrame->sd->reply, currentTaskFrame->sd->rplen);
             
         } else if(exception_code==RECEIVE){
-            int *tid = (int *)(currentTaskFrame->x[1]);
-            const char *msg = (const char *)(currentTaskFrame->x[2]);
-            int msglen = (int)(currentTaskFrame->x[3]);
+            int *tid = (int *)(currentTaskFrame->x[0]);
+            const char *msg = (const char *)(currentTaskFrame->x[1]);
+            int msglen = (int)(currentTaskFrame->x[2]);
             // if receive status not in ready, error
             // check queue to see if any senders ready
             // if not, status ready->receive-wait
@@ -630,13 +628,10 @@ int kmain() {
             }
         } else if(exception_code==REPLY){
             // asm volatile("mov x30, x30\nmov x30, x30\nmov x30, x30\nmov x30, x30\n");
-            int tid = (int)(currentTaskFrame->x[1]);
-            char *reply = (char *)(currentTaskFrame->x[2]);
-            int rplen = (int)(currentTaskFrame->x[3]);     
+            int tid = (int)(currentTaskFrame->x[0]);
+            char *reply = (char *)(currentTaskFrame->x[1]);
+            int rplen = (int)(currentTaskFrame->x[2]);     
             uart_dprintf(CONSOLE, "On reply %d %x %d\r\n", tid, reply, rplen);
-            if(rplen>0){
-                uart_dprintf(CONSOLE, "reply[0] %u\r\n", reply[0]);
-            }
             // if receive status not in ready or send status not in reply-wait, error
             // copy data and set both status to ready
             if(tid>NUM_FREE_TASK_FRAMES || user_tasks[tid].status==INACTIVE){
@@ -654,13 +649,11 @@ int kmain() {
                 uart_dprintf(CONSOLE, "\x1b[31mOn reply current status not ready %d\x1b[0m\r\n", sender->status);
                 for(;;){}
             }            
-            uart_dprintf(CONSOLE, "sender sd, reply, rplen: %x %x %d\r\n", sender->sd, sender->sd->reply, sender->sd->rplen);
 
             sender->status = READY;
             SendData *sd = sender->sd;
             sender->sd = NULL;
             int reslen = copy_msg(reply, rplen, sd->reply, sd->rplen);
-            uart_dprintf(CONSOLE, "msglen, rplen, reslen: %d %d %d\r\n", rplen, sd->rplen, reslen);
             reschedule_task_with_return(&heap, currentTaskFrame, reslen);
             reschedule_task_with_return(&heap, sender, rplen);
         } else{
