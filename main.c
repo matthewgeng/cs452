@@ -174,7 +174,7 @@ int kmain() {
     task_init(game_server_task, 2, get_time(), &game_server, kf->tid, (uint64_t)&Exit, 0x600002C0);
     heap_push(&heap, game_server_task);
 
-    // TaskFrame* root_task = getNextFreeTaskFrame();
+    // TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
     // task_init(root_task, 2, get_time(), &rootTask, kf->tid, (uint64_t)&Exit, 0x600002C0);
     // heap_push(&heap, root_task);
 
@@ -191,28 +191,28 @@ int kmain() {
         if(exception_code==CREATE){
             int priority = (int)(currentTaskFrame->x[0]);
             void (*function)() = (void *)(currentTaskFrame->x[1]);
+            if(priority<0){
+                uart_dprintf(CONSOLE, "\x1b[31mInvalid priority %d\x1b[0m\r\n", priority);
+                reschedule_task_with_return(&heap, currentTaskFrame, -1);
+                continue;
+            }
             TaskFrame* created_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+            if(created_task==NULL){
+                uart_dprintf(CONSOLE, "\x1b[31mKernel out of task descriptors\x1b[0m\r\n");
+                reschedule_task_with_return(&heap, currentTaskFrame, -2);
+                continue;
+            }
             task_init(created_task, priority, get_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
             heap_push(&heap, created_task);
-            currentTaskFrame->added_time = get_time();
-            currentTaskFrame->x[0] = created_task->tid;
-            heap_push(&heap, currentTaskFrame);
-            // TODO: error handling
+            reschedule_task_with_return(&heap, currentTaskFrame, created_task->tid);
         } else if(exception_code==EXIT){
             reclaimTaskFrame(nextFreeTaskFrame, currentTaskFrame);
         } else if(exception_code==MY_TID){
-            // SET RETURN REGISTER TO BE TF TID
-            currentTaskFrame->x[0] = currentTaskFrame->tid;
-            currentTaskFrame->added_time = get_time();
-            heap_push(&heap, currentTaskFrame);
+            reschedule_task_with_return(&heap, currentTaskFrame, currentTaskFrame->tid);
         } else if(exception_code==MY_PARENT_TID){
-            // SET RETURN REGISTER TO BE TF TID
-            currentTaskFrame->x[0] = currentTaskFrame->parentTid;
-            currentTaskFrame->added_time = get_time();
-            heap_push(&heap, currentTaskFrame);
+            reschedule_task_with_return(&heap, currentTaskFrame, currentTaskFrame->parentTid);
         } else if(exception_code==YIELD){
-            currentTaskFrame->added_time = get_time();
-            heap_push(&heap, currentTaskFrame);
+            reschedule_task_with_return(&heap, currentTaskFrame, 0);
         } else if(exception_code==SEND){
             int tid = (int)(currentTaskFrame->x[0]);
             const char *msg = (const char *)(currentTaskFrame->x[1]);
