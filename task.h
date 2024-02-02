@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "cb.h"
 
 #define INACTIVE 0
 #define READY 1
@@ -10,7 +11,6 @@
 #define RECEIVE_WAIT 3
 #define REPLY_WAIT 4
 
-#define MAX_NUM_TASKS 20
 #define USER_STACK_START 580000
 #define USER_STACK_SIZE 1024
 #define SENDER_QUEUE_SIZE 5
@@ -45,8 +45,7 @@ typedef struct TaskFrame {
   struct SendData *sd;
   struct ReceiveData *rd;
   // TODO: make this a circular array
-  int sender_queue[SENDER_QUEUE_SIZE];
-  int sender_queue_len;
+  IntCB sender_queue;
   struct TaskFrame *next;
 } TaskFrame;
 

@@ -246,8 +246,7 @@ int kmain() {
             currentTaskFrame->sd = sd;
             if(recipient->status==READY){
                 currentTaskFrame->status = SEND_WAIT;
-                recipient->sender_queue[recipient->sender_queue_len] = currentTaskFrame->tid;
-                recipient->sender_queue_len += 1;
+                push(&(recipient->sender_queue), currentTaskFrame->tid);
             }else if(recipient->status==RECEIVE_WAIT){
 
                 ReceiveData *rd = recipient->rd;
@@ -278,7 +277,7 @@ int kmain() {
                 uart_printf(CONSOLE, "\x1b[31mOn receive task status not ready %u\x1b[0m\r\n", exception_code);
                 for(;;){}
             }
-            if(currentTaskFrame->sender_queue_len==0){
+            if(is_empty(currentTaskFrame->sender_queue)){
                 if(currentTaskFrame->rd!=NULL){
                     uart_printf(CONSOLE, "\x1b[31mOn receive task rd not null %u\x1b[0m\r\n", exception_code);
                     for(;;){}
@@ -290,7 +289,7 @@ int kmain() {
                 currentTaskFrame->status = RECEIVE_WAIT;
                 currentTaskFrame->rd = rd;
             }else{
-                int sender_tid = currentTaskFrame->sender_queue[0];
+                int sender_tid = pop(&(currentTaskFrame->sender_queue));
                 if(sender_tid>MAX_NUM_TASKS){
                     uart_printf(CONSOLE, "\x1b[31mOn receive sender tid invalid %u\x1b[0m\r\n", exception_code);
                     for(;;){}
@@ -300,13 +299,6 @@ int kmain() {
                     uart_printf(CONSOLE, "\x1b[31mOn receive sender status not valid %u\x1b[0m\r\n", exception_code);
                     for(;;){}
                 }
-
-                // TODO: make this a circular array
-                for(int i = 1; i<currentTaskFrame->sender_queue_len; i++){
-                    currentTaskFrame->sender_queue[i-1] = currentTaskFrame->sender_queue[i];
-                }
-                currentTaskFrame->sender_queue_len -= 1;
-
                 SendData *sd = sender->sd;
                 *tid = sender_tid;
                 copy_msg(sd->msg, sd->msglen, msg, msglen);
