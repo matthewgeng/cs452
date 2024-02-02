@@ -22,12 +22,14 @@ typedef struct SendData {
   int msglen;
   char *reply;
   int rplen;
+  struct SendData *next;
 } SendData;
 
 typedef struct ReceiveData {
   int *tid;
   const char *msg;
   int msglen;
+  struct ReceiveData *next;
 } ReceiveData;
 
 typedef struct TaskFrame {
@@ -48,9 +50,17 @@ typedef struct TaskFrame {
   struct TaskFrame *next;
 } TaskFrame;
 
-void tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t num_task_frames);
+TaskFrame *tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t num_task_frames);
 int task_cmp(const TaskFrame *tf1, const TaskFrame* tf2);
-TaskFrame *getNextFreeTaskFrame();
-void reclaimTaskFrame(TaskFrame *tf);
+TaskFrame *getNextFreeTaskFrame(TaskFrame **nextFreeTaskFrame);
+void reclaimTaskFrame(TaskFrame **nextFreeTaskFrame, TaskFrame *tf);
+
+SendData *sds_init(SendData* sds, size_t size);
+SendData *getNextFreeSendData(SendData **nextFreeSendData);
+void reclaimSendData(SendData **nextFreeSendData, SendData *sd);
+
+ReceiveData *rds_init(ReceiveData* rds, size_t size);
+ReceiveData *getNextFreeReceiveData(ReceiveData **nextFreeReceiveData);
+void reclaimReceiveData(ReceiveData **nextFreeReceiveData, ReceiveData *rd);
 
 #endif

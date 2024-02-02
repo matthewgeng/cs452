@@ -112,10 +112,9 @@ uint32_t get_time(){
     return *(volatile uint32_t *)((char*) 0xFe003000 + 0x04);
 }
 
-void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)(), uint32_t tid, uint32_t parent_tid, uint64_t lr, uint64_t spsr) {
+void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)(), uint32_t parent_tid, uint64_t lr, uint64_t spsr) {
     tf->priority = priority;
     tf->pc = function;
-    tf->tid = tid;
     tf->parentTid = parent_tid;
     tf->x[30] = lr;
     tf->spsr = spsr;
@@ -148,36 +147,35 @@ int kmain() {
     kf = &kernel_frame;
 
     // USER TASK INITIALIZATION
+    TaskFrame *nextFreeTaskFrame;
     TaskFrame user_tasks[MAX_NUM_TASKS];
-    tasks_init(user_tasks, USER_STACK_START, USER_STACK_SIZE, MAX_NUM_TASKS);
+    nextFreeTaskFrame = tasks_init(user_tasks, USER_STACK_START, USER_STACK_SIZE, MAX_NUM_TASKS);
 
-    // SCHEDULER INITIALIZATION
+    // TASK DESCRIPTOR INITIALIZATION
     Heap heap; // min heap
     TaskFrame* tfs_heap[MAX_NUM_TASKS];
     heap_init(&heap, tfs_heap, MAX_NUM_TASKS, task_cmp);
 
-    // TODO: make this intrinsically linked
-    SendData send_datas[20];
-    int sd_index = 0;
-    ReceiveData receive_datas[20];
-    int rd_index = 0;
+    // SEND RECEIVE REPLY INITIALIZATION
+    SendData *nextFreeSendData;
+    SendData send_datas[MAX_NUM_TASKS];
+    nextFreeSendData = sds_init(send_datas, MAX_NUM_TASKS);
 
-    int next_user_tid = 0;
+    ReceiveData *nextFreeReceiveData;
+    ReceiveData receive_datas[MAX_NUM_TASKS];
+    nextFreeReceiveData = rds_init(receive_datas, MAX_NUM_TASKS);
 
     // FIRST TASKS INITIALIZATION
-    TaskFrame* name_server_task = getNextFreeTaskFrame();
-    task_init(name_server_task, 2, get_time(), &nameserver, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    next_user_tid+=1;
+    TaskFrame* name_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    task_init(name_server_task, 2, get_time(), &nameserver, kf->tid, (uint64_t)&Exit, 0x600002C0);
     heap_push(&heap, name_server_task);
 
-    TaskFrame* game_server_task = getNextFreeTaskFrame();
-    task_init(game_server_task, 2, get_time(), &game_server, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    next_user_tid+=1;
+    TaskFrame* game_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    task_init(game_server_task, 2, get_time(), &game_server, kf->tid, (uint64_t)&Exit, 0x600002C0);
     heap_push(&heap, game_server_task);
 
     // TaskFrame* root_task = getNextFreeTaskFrame();
-    // task_init(root_task, 2, get_time(), &rootTask, next_user_tid, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    // next_user_tid+=1;
+    // task_init(root_task, 2, get_time(), &rootTask, kf->tid, (uint64_t)&Exit, 0x600002C0);
     // heap_push(&heap, root_task);
 
     for(;;){
@@ -193,15 +191,15 @@ int kmain() {
         if(exception_code==CREATE){
             int priority = (int)(currentTaskFrame->x[0]);
             void (*function)() = (void *)(currentTaskFrame->x[1]);
-            TaskFrame* created_task = getNextFreeTaskFrame();
-            task_init(created_task, priority, get_time(),function, next_user_tid, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
+            TaskFrame* created_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+            task_init(created_task, priority, get_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
             heap_push(&heap, created_task);
             currentTaskFrame->added_time = get_time();
-            currentTaskFrame->x[0] = next_user_tid;
+            currentTaskFrame->x[0] = created_task->tid;
             heap_push(&heap, currentTaskFrame);
-            next_user_tid +=1;
+            // TODO: error handling
         } else if(exception_code==EXIT){
-            reclaimTaskFrame(currentTaskFrame);
+            reclaimTaskFrame(nextFreeTaskFrame, currentTaskFrame);
         } else if(exception_code==MY_TID){
             // SET RETURN REGISTER TO BE TF TID
             currentTaskFrame->x[0] = currentTaskFrame->tid;
@@ -239,8 +237,7 @@ int kmain() {
                 continue;
             }
 
-            SendData *sd = send_datas + sd_index;
-            sd_index += 1;            
+            SendData *sd = getNextFreeSendData(&nextFreeSendData);
             sd->tid = tid;
             sd->msg = msg;
             sd->msglen = msglen;
@@ -263,6 +260,7 @@ int kmain() {
                 copy_msg(msg, msglen, rd->msg, rd->msglen);
                 currentTaskFrame->status = REPLY_WAIT;
                 recipient->status = READY;
+                reclaimReceiveData(&nextFreeReceiveData, recipient->rd);
                 recipient->rd = NULL;
                 reschedule_task_with_return(&heap, recipient, msglen);
             }
@@ -285,8 +283,7 @@ int kmain() {
                     uart_printf(CONSOLE, "\x1b[31mOn receive task rd not null %u\x1b[0m\r\n", exception_code);
                     for(;;){}
                 }
-                ReceiveData *rd = receive_datas + rd_index;
-                rd_index += 1;
+                ReceiveData *rd = getNextFreeReceiveData(&nextFreeReceiveData);
                 rd->msg = msg;
                 rd->msglen = msglen;
                 rd->tid = tid;
@@ -342,6 +339,7 @@ int kmain() {
 
             sender->status = READY;
             SendData *sd = sender->sd;
+            reclaimSendData(&nextFreeSendData, sender->sd);
             sender->sd = NULL;
             int reslen = copy_msg(reply, rplen, sd->reply, sd->rplen);
             reschedule_task_with_return(&heap, currentTaskFrame, reslen);
