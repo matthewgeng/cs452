@@ -77,8 +77,8 @@ void rootTask(){
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
-#define timing_buffer_len 256
 #define timing_n 1000
+int receive_tid;
 
 void sender_task(){
 
@@ -89,25 +89,35 @@ void sender_task(){
     uart_printf(CONSOLE, "clock operation time: %u\r\n", clock_overhead);
 
     int ret;
-    char msg[timing_buffer_len], reply[timing_buffer_len];
+    int buffer_lens[] = {4, 64, 256};
 
-    t1 = get_time();
-    for(int i = 0; i<timing_n; i++){
-        ret = Send(0, msg, timing_buffer_len, reply, timing_buffer_len);
+    for (int j = 0; j<3; j++){
+        int buffer_len = buffer_lens[j];
+        char msg[buffer_len], reply[buffer_len];
+
+        t1 = get_time();
+        for(int i = 0; i<timing_n; i++){
+            ret = Send(receive_tid, msg, buffer_len, reply, buffer_len);
+        }
+        t2 = get_time();
+        uart_printf(CONSOLE, "buffer length: %d, ave time %u, %u excluding clock overhead\r\n", buffer_len, (t2-t1)/timing_n, (t2-t1)/timing_n-clock_overhead);
     }
-    t2 = get_time();
-    uart_printf(CONSOLE, "%d SRR operations: ave time %u, %u excluding clock overhead\r\n", timing_n, (t2-t1)/timing_n, (t2-t1)/timing_n-clock_overhead);
 }
 
 void receiver_task(){
 
     int tid;
     int ret;
-    char msg[timing_buffer_len], reply[timing_buffer_len];
+    int buffer_lens[] = {4, 64, 256};
 
-    for(int i = 0; i<timing_n; i++){
-        ret = Receive(&tid, msg, timing_buffer_len);
-        ret = Reply(tid, reply, timing_buffer_len);
+    for (int j = 0; j<3; j++){
+        int buffer_len = buffer_lens[j];
+        char msg[buffer_len], reply[buffer_len];
+
+        for(int i = 0; i<timing_n; i++){
+            ret = Receive(&tid, msg, buffer_len);
+            ret = Reply(tid, reply, buffer_len);
+        }
     }
 
 }
@@ -207,11 +217,12 @@ int kmain() {
     // heap_push(&heap, root_task);
 
     // SRR MEASUREMENTS
+    receive_tid = 0;
 
     TaskFrame* receive_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
     task_init(receive_tf, 2, get_time(), &receiver_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
     heap_push(&heap, receive_tf);
-    
+
     TaskFrame* send_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
     task_init(send_tf, 2, get_time(), &sender_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
     heap_push(&heap, send_tf);
