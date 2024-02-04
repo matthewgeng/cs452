@@ -12,7 +12,7 @@ int RegisterAs(const char *name){
     msg[0]='r';
     memcpy(msg+1, name, name_len);
     
-    int intended_reply_len = Send(0, msg, name_len+1, NULL, 0);
+    int intended_reply_len = Send(1, msg, name_len+1, NULL, 0);
     if(intended_reply_len < 0){
         return -1;
     }
@@ -33,7 +33,7 @@ int WhoIs(const char *name){
     char tid[0];
     tid[0] = 160;
     asm volatile("mov x30, x30");
-    int intended_reply_len = Send(0, msg, name_len+1, tid, 1);
+    int intended_reply_len = Send(1, msg, name_len+1, tid, 1);
     if(intended_reply_len < 0 ){
         return -1;
     }
@@ -54,6 +54,7 @@ int WhoIs(const char *name){
 
 // define messages to name server as r+name or w+name
 void nameserver(){
+    uart_dprintf(CONSOLE, "Running nameserver tid %u\r\n", MyTid());
     char tid_to_name[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
     // char *tid_to_name[MAX_NUM_TASKS];
     for(int i = 0; i<MAX_NUM_TASKS; i++){

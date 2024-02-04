@@ -3,13 +3,9 @@
 #include "nameserver.h"
 #include "rpi.h"
 
-int gameserver_tid = 0;
+char gameserver_name[] = "gameserver";
 
-void gameserver_init(char* name) {
-   gameserver_tid = RegisterAs(name);
-}
-
-int gameserver_signup() {
+int gameserver_signup(int tid) {
     GameMsg msg = {
         SIGNUP,
         "",
@@ -21,17 +17,19 @@ int gameserver_signup() {
 
     char reply[sizeof(msg)];
 
-    Send(gameserver_tid, byte_array, sizeof(msg), reply, sizeof(msg));
+    Send(tid, byte_array, sizeof(msg), reply, sizeof(msg));
 
     GameMsg* response = (GameMsg*) reply;
-    if (response->code == OK) {
 
+    if (response->code == OK) {
+        int game_id = response->body[0];
+        return game_id;
     } else {
         uart_printf(CONSOLE, "Recieved error\r\n");
     }
 }
 
-int gameserver_play(int match, char action) {
+int gameserver_play(int tid, int match, int action) {
 
     char body[2] = {match, action};
 
@@ -46,18 +44,18 @@ int gameserver_play(int match, char action) {
 
     char reply[sizeof(msg)];
 
-    Send(gameserver_tid, byte_array, sizeof(msg), reply, sizeof(msg));
-
+    Send(tid, byte_array, sizeof(msg), reply, sizeof(msg));
 
     GameMsg* response = (GameMsg*) reply;
     if (response->code == OK) {
-
+        int result = response->body[0];
+        return result;
     } else {
         uart_printf(CONSOLE, "Recieved error\r\n");
     }
 }
 
-int gameserver_quit(int match) {
+int gameserver_quit(int tid, int match) {
     char body = match;
 
     GameMsg msg = {
@@ -71,7 +69,7 @@ int gameserver_quit(int match) {
 
     char reply[sizeof(msg)];
 
-    Send(gameserver_tid, byte_array, sizeof(msg), reply, sizeof(msg));
+    Send(tid, byte_array, sizeof(msg), reply, sizeof(msg));
 
     GameMsg* response = (GameMsg*) reply;
     if (response->code == OK) {
@@ -92,6 +90,10 @@ int winner(int p1move, int p2move) {
 }
 
 void gameserver() {
+    int gameserver_tid = MyTid();
+    uart_printf(CONSOLE, "Starting gameserver tid %u\r\n", gameserver_tid);
+
+    RegisterAs(gameserver_name);
     
     // initialize max number of games
     Game games[MAX_GAMES];
@@ -107,11 +109,13 @@ void gameserver() {
     for (;;) {
         int tid;
         char byte_msg[sizeof(GameMsg)];
+        uart_dprintf(CONSOLE, "gameserver tid %u recieving\r\n", gameserver_tid);
         int response = Receive(&tid, byte_msg, sizeof(GameMsg));
 
         GameMsg* msg = (GameMsg *) byte_msg;
 
         if (msg->code == SIGNUP) {
+            uart_printf(CONSOLE, "tid %u signing up\r\n", tid);
 
             // check if game is full    
             if (games[game_idx].p1 != NULL && games[game_idx].p2 != NULL) {
@@ -173,7 +177,7 @@ void gameserver() {
                 if (games[game].p2 == NULL && games[game].p2_move == QUIT) {
 
                     // response to p1 to quit
-                    char body[] = "quit";
+                    char body = QUIT;
 
                     GameMsg res = {
                         OK,
@@ -190,14 +194,14 @@ void gameserver() {
                 }
 
                 games[game].p1_move = move;
-                uart_printf(CONSOLE, "Player 1: %u called %u in game %u\r\n", games[game].p1, move, game);
+                uart_printf(CONSOLE, "Player 1: %u played %u in game %u\r\n", games[game].p1, move, game);
                 
             } else if (games[game].p2 == tid) {
                 // check if other person quit
                 if (games[game].p1 == NULL && games[game].p1_move == QUIT) {
 
                     // response to p2 to quit
-                    char body[] = "quit";
+                    char body = QUIT;
 
                     GameMsg res = {
                         OK,
@@ -208,13 +212,13 @@ void gameserver() {
                     uart_printf(CONSOLE, "Responded to Player 2: %u to quit in game %u\r\n", tid, game);
                     response = Reply(tid, (char*)&res, sizeof(GameMsg));
                     continue;
-                } else if (games[game].p1_move != NULL) {
+                } else if (games[game].p2_move != NULL) {
                     // TODO: error check, already made a move
                     continue;
                 }
 
                 games[game].p2_move = move;
-                uart_printf(CONSOLE, "Player 2: %u called %u in game %u\r\n", games[game].p2, move, game);
+                uart_printf(CONSOLE, "Player 2: %u played %u in game %u\r\n", games[game].p2, move, game);
             } else {
                 // TODO: throw error
             }
@@ -254,8 +258,8 @@ void gameserver() {
                     uart_printf(CONSOLE, "Player 2: %u in game %u won\r\n", games[game].p2, game);
                 }
 
-                response = Reply(games[game].p1, (char*)&p1, sizeof(GameMsg));
-                response = Reply(games[game].p2, (char*)&p2, sizeof(GameMsg));
+                response = Reply(games[game].p1, (char*)&p1_res, sizeof(GameMsg));
+                response = Reply(games[game].p2, (char*)&p2_res, sizeof(GameMsg));
                 continue;
             }
         } else if (msg->code == QUIT) {

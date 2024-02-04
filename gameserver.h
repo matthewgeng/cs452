@@ -3,6 +3,8 @@
 
 #define MAX_GAMES 10
 
+extern char gameserver_name[11];
+
 // TODO: use an enum?
 #define SIGNUP 1
 #define PLAY 2
@@ -34,10 +36,9 @@ typedef struct Game {
     int p2_move;
 } Game;
 
-void gameserver_init(char* name);
-int gameserver_signup();
-int gameserver_play(int match, char action);
-int gameserver_quit(int match);
+int gameserver_signup(int tid);
+int gameserver_play(int tid, int match, int action);
+int gameserver_quit(int tid, int match);
 void gameserver();
 
 #endif

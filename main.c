@@ -5,6 +5,8 @@
 #include "heap.h"
 #include "syscall.h"
 #include "nameserver.h"
+#include "gameserver.h"
+#include "gameclient.h"
 
 extern TaskFrame *kf = 0;
 extern TaskFrame *currentTaskFrame = 0;
@@ -19,37 +21,37 @@ int copy_msg(char *src, int srclen, char *dest, int destlen){
     return reslen;
 }
 
-void game_client1(){
-    const char *name = "game_client1";
-    RegisterAs(name);
-    int server_tid = WhoIs("game_server");
-    uart_printf(CONSOLE, "Server tid: %d\r\n", server_tid);
+// void game_client1(){
+//     const char *name = "game_client1";
+//     RegisterAs(name);
+//     int server_tid = WhoIs("game_server");
+//     uart_printf(CONSOLE, "Server tid: %d\r\n", server_tid);
 
-    // s = signup, p = play, q = quit
-    char action = 's';
-    int send;
-    int recieve;
+//     // s = signup, p = play, q = quit
+//     char action = 's';
+//     int send;
+//     int recieve;
 
-    char reply;
-    send = Send(server_tid, &action, 1, &reply, 1);
+//     char reply;
+//     send = Send(server_tid, &action, 1, &reply, 1);
 
-}
+// }
 
-void game_server(){
-    const char *name = "game_server";
-    int register_status = RegisterAs(name);
-    if(register_status<0){
-        uart_printf(CONSOLE, "\x1b[31mgame_server registeras failed\x1b[0m\r\n");
-        for(;;){}
-    }
+// void game_server(){
+//     const char *name = "game_server";
+//     int register_status = RegisterAs(name);
+//     if(register_status<0){
+//         uart_printf(CONSOLE, "\x1b[31mgame_server registeras failed\x1b[0m\r\n");
+//         for(;;){}
+//     }
 
-    int server_tid = WhoIs(name);
-    if(server_tid<0){
-        uart_printf(CONSOLE, "\x1b[31mgame_server whois failed\x1b[0m\r\n");
-        for(;;){}
-    }
-    uart_printf(CONSOLE, "Server tid: %d\r\n", server_tid);
-}
+//     int server_tid = WhoIs(name);
+//     if(server_tid<0){
+//         uart_printf(CONSOLE, "\x1b[31mgame_server whois failed\x1b[0m\r\n");
+//         for(;;){}
+//     }
+//     uart_printf(CONSOLE, "Server tid: %d\r\n", server_tid);
+// }
 
 void user_task(){
     uart_dprintf(CONSOLE, "User Task\r\n");
@@ -60,7 +62,7 @@ void user_task(){
     uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
 }
 
-void rootTask(){
+void rootTask_old(){
     uart_dprintf(CONSOLE, "Root Task\r\n");
     int tid = MyTid();
     int parent_tid = MyParentTid();
@@ -109,7 +111,18 @@ void receiver_task(){
         ret = Receive(&tid, msg, timing_buffer_len);
         ret = Reply(tid, reply, timing_buffer_len);
     }
+}
 
+void rootTask(){
+    uart_dprintf(CONSOLE, "Root Task\r\n");
+    int tid = MyTid();
+    int parent_tid = MyParentTid();
+    int tid1 = Create(1, &nameserver);
+    int tid2 = Create(1, &gameserver);
+    int tid3 = Create(1, &gameclient1);
+    int tid4 = Create(1, &gameclient2);
+    
+    uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
 
@@ -201,17 +214,9 @@ int kmain() {
     nextFreeReceiveData = rds_init(receive_datas, MAX_NUM_TASKS);
 
     // FIRST TASKS INITIALIZATION
-    TaskFrame* name_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(name_server_task, 2, get_time(), &nameserver, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    heap_push(&heap, name_server_task);
-
-    TaskFrame* game_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(game_server_task, 2, get_time(), &game_server, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    heap_push(&heap, game_server_task);
-
-    // TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    // task_init(root_task, 2, get_time(), &rootTask, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    // heap_push(&heap, root_task);
+    TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    task_init(root_task, 100, get_time(), &rootTask, 0, (uint64_t)&Exit, 0x600002C0);
+    heap_push(&heap, root_task);
 
     // SRR MEASUREMENTS
 
