@@ -2,7 +2,6 @@
 #include "rpi.h"
 
 int Create(int priority, void (*function)()){
-    uart_dprintf(CONSOLE, "creating task: %d %x \r\n", priority, function);
     
     int tid;
 
@@ -23,7 +22,6 @@ int Create(int priority, void (*function)()){
 
 
 int MyTid(){
-    uart_dprintf(CONSOLE, "fetching tid \r\n");
     int tid;
 
     asm volatile(
@@ -38,7 +36,6 @@ int MyTid(){
 }
 
 int MyParentTid(){
-    uart_dprintf(CONSOLE, "fetching parent tid \r\n");
     int parent_tid;
 
     asm volatile(
@@ -52,7 +49,6 @@ int MyParentTid(){
 }
 
 void Yield(){
-    uart_dprintf(CONSOLE, "task yielding \r\n");
 
     asm volatile(
         "svc %[SYS_CODE]\n"
@@ -62,7 +58,6 @@ void Yield(){
 }
 
 void Exit(){
-    uart_dprintf(CONSOLE, "task exiting \r\n");
     // TODO: maybe remove tid from nameserver
     asm volatile(
         "svc %[SYS_CODE]\n"
@@ -75,7 +70,6 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
 
     // TODO: note that if a function gets a -2 return from send, should just throw error and halt
     
-    uart_dprintf(CONSOLE, "Send %d %d %d %d %d\r\n", tid, msg, msglen, reply, rplen);
 
     asm volatile(
         "mov x9, %[tid]\n"
@@ -107,7 +101,6 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
 
 int Receive(int *tid, char *msg, int msglen){
 
-    uart_dprintf(CONSOLE, "Receive %d %d %d\r\n", tid, msg, msglen);
 
     asm volatile(
         "mov x9, %[tid]\n"
@@ -130,7 +123,6 @@ int Receive(int *tid, char *msg, int msglen){
 }
 
 int Reply(int tid, const char *reply, int rplen){
-    uart_dprintf(CONSOLE, "Reply %d %d %d\r\n", tid, reply, rplen);
 
     asm volatile(
         "mov x9, %[tid]\n"

@@ -46,10 +46,13 @@ https://s-matyukevich.github.io/raspberry-pi-os/docs/lesson01/rpi-os.html
 // SCTLR_EL1, System Control Register (EL1)
 // Architecture Reference Manual Section D17.2.118
 // ***************************************
+#define SCTLR_DCACHE (1<<2)
+#define SCTLR_ICACHE (1<<12)
+#define SCTLR_BCACHE (1<<2) | (1<<12)
 #define SCTLR_RESERVED (3 << 28) | (3 << 22) | (1 << 20) | (1 << 11)
 #define USER_MASK_ACCESS (1 << 9)
 #define SCTLR_WFE_WFI_ENABLED (1 << 18) | (1 << 16)
-#define SCTLR_VALUE_MMU_DISABLED (SCTLR_RESERVED | USER_MASK_ACCESS | SCTLR_WFE_WFI_ENABLED)
+#define SCTLR_VALUE_MMU_DISABLED (SCTLR_RESERVED | USER_MASK_ACCESS | SCTLR_WFE_WFI_ENABLED | SCTLR_BCACHE)
 
 // ***************************************
 // HCR_EL2, Hypervisor Configuration Register (EL2)

@@ -77,7 +77,7 @@ void rootTask(){
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
-#define timing_buffer_len 4
+#define timing_buffer_len 256
 #define timing_n 1000
 
 void sender_task(){
@@ -114,7 +114,6 @@ void receiver_task(){
 
 
 int run_task(TaskFrame *tf){
-    uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
     
     // uint32_t test1, test2;
     // asm volatile("mov %0, lr" : "=r"(test1));
@@ -126,15 +125,10 @@ int run_task(TaskFrame *tf){
 
     // uart_dprintf(CONSOLE, "reg 0 1 2 3 4 5: %d, %d, %d, %d, %d, %d\r\n", currentTaskFrame->x[0], currentTaskFrame->x[1], currentTaskFrame->x[2], currentTaskFrame->x[3], currentTaskFrame->x[4], currentTaskFrame->x[5]);
     // exit from exception
-    uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
 
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
     uint64_t exception_code = esr & 0xFULL;
-
-    // asm volatile("mov %0, lr" : "=r"(test1));
-    // asm volatile("mov %0, sp" : "=r"(test2));
-    // uart_dprintf(CONSOLE, "lr, sp: %x, %x\r\n", test1, test2);
 
     return exception_code;
 }
@@ -161,7 +155,6 @@ void reschedule_task_with_return(Heap *heap, TaskFrame *tf, long long ret){
     tf->added_time = get_time();
     heap_push(heap, tf);
 }
-
 int kmain() {
 
     init_exception_vector(); 
@@ -201,13 +194,13 @@ int kmain() {
     nextFreeReceiveData = rds_init(receive_datas, MAX_NUM_TASKS);
 
     // FIRST TASKS INITIALIZATION
-    TaskFrame* name_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(name_server_task, 2, get_time(), &nameserver, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    heap_push(&heap, name_server_task);
+    // TaskFrame* name_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    // task_init(name_server_task, 2, get_time(), &nameserver, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    // heap_push(&heap, name_server_task);
 
-    TaskFrame* game_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(game_server_task, 2, get_time(), &game_server, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    heap_push(&heap, game_server_task);
+    // TaskFrame* game_server_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    // task_init(game_server_task, 2, get_time(), &game_server, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    // heap_push(&heap, game_server_task);
 
     // TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
     // task_init(root_task, 2, get_time(), &rootTask, kf->tid, (uint64_t)&Exit, 0x600002C0);
@@ -215,16 +208,15 @@ int kmain() {
 
     // SRR MEASUREMENTS
 
-    // TaskFrame* receive_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    // task_init(receive_tf, 2, get_time(), &receiver_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    // heap_push(&heap, receive_tf);
+    TaskFrame* receive_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    task_init(receive_tf, 2, get_time(), &receiver_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    heap_push(&heap, receive_tf);
     
-    // TaskFrame* send_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    // task_init(send_tf, 2, get_time(), &sender_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    // heap_push(&heap, send_tf);
+    TaskFrame* send_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    task_init(send_tf, 2, get_time(), &sender_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    heap_push(&heap, send_tf);
 
     for(;;){
-        uart_dprintf(CONSOLE, "start of loop\r\n");
         currentTaskFrame = heap_pop(&heap);
 
         if (currentTaskFrame == NULL) {
@@ -356,7 +348,6 @@ int kmain() {
             int tid = (int)(currentTaskFrame->x[0]);
             char *reply = (char *)(currentTaskFrame->x[1]);
             int rplen = (int)(currentTaskFrame->x[2]);     
-            uart_dprintf(CONSOLE, "On reply %d %x %d\r\n", tid, reply, rplen);
             // if receive status not in ready or send status not in reply-wait, error
             // copy data and set both status to ready
             if(tid>MAX_NUM_TASKS || user_tasks[tid].status==INACTIVE){
