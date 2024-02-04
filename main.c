@@ -9,6 +9,10 @@
 extern TaskFrame *kf = 0;
 extern TaskFrame *currentTaskFrame = 0;
 
+uint32_t get_time(){
+    return *(volatile uint32_t *)((char*) 0xFe003000 + 0x04);
+}
+
 int copy_msg(char *src, int srclen, char *dest, int destlen){
     int reslen = (srclen < destlen) ? srclen : destlen;
     memcpy(dest, src, reslen);
@@ -73,6 +77,41 @@ void rootTask(){
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
+#define timing_buffer_len 4
+#define timing_n 1000
+
+void sender_task(){
+
+    uint32_t t1, t2;
+    t1 = get_time();
+    t2 = get_time();
+    uint32_t clock_overhead = t2-t1;
+    uart_printf(CONSOLE, "clock operation time: %u\r\n", clock_overhead);
+
+    int ret;
+    char msg[timing_buffer_len], reply[timing_buffer_len];
+
+    t1 = get_time();
+    for(int i = 0; i<timing_n; i++){
+        ret = Send(0, msg, timing_buffer_len, reply, timing_buffer_len);
+    }
+    t2 = get_time();
+    uart_printf(CONSOLE, "%d SRR operations: ave time %u, %u excluding clock overhead\r\n", timing_n, (t2-t1)/timing_n, (t2-t1)/timing_n-clock_overhead);
+}
+
+void receiver_task(){
+
+    int tid;
+    int ret;
+    char msg[timing_buffer_len], reply[timing_buffer_len];
+
+    for(int i = 0; i<timing_n; i++){
+        ret = Receive(&tid, msg, timing_buffer_len);
+        ret = Reply(tid, reply, timing_buffer_len);
+    }
+
+}
+
 
 int run_task(TaskFrame *tf){
     uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
@@ -106,10 +145,6 @@ void kernel_frame_init(TaskFrame* kernel_frame) {
     kernel_frame->parentTid = 0;
     kernel_frame->next = NULL;
     kernel_frame->priority = 0;
-}
-
-uint32_t get_time(){
-    return *(volatile uint32_t *)((char*) 0xFe003000 + 0x04);
 }
 
 void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)(), uint32_t parent_tid, uint64_t lr, uint64_t spsr) {
@@ -178,7 +213,18 @@ int kmain() {
     // task_init(root_task, 2, get_time(), &rootTask, kf->tid, (uint64_t)&Exit, 0x600002C0);
     // heap_push(&heap, root_task);
 
+    // SRR MEASUREMENTS
+
+    // TaskFrame* receive_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    // task_init(receive_tf, 2, get_time(), &receiver_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    // heap_push(&heap, receive_tf);
+    
+    // TaskFrame* send_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    // task_init(send_tf, 2, get_time(), &sender_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
+    // heap_push(&heap, send_tf);
+
     for(;;){
+        uart_dprintf(CONSOLE, "start of loop\r\n");
         currentTaskFrame = heap_pop(&heap);
 
         if (currentTaskFrame == NULL) {
@@ -274,12 +320,12 @@ int kmain() {
             // if so, remove sender from queue, copy data, sender send-wait->reply-wait
             // if sender task is not in send-wait, error 
             if(currentTaskFrame->status!=READY){
-                uart_printf(CONSOLE, "\x1b[31mOn receive task status not ready %u\x1b[0m\r\n", exception_code);
+                uart_printf(CONSOLE, "\x1b[31mOn receive task status not ready %u\x1b[0m\r\n", currentTaskFrame->status);
                 for(;;){}
             }
             if(is_empty(currentTaskFrame->sender_queue)){
                 if(currentTaskFrame->rd!=NULL){
-                    uart_printf(CONSOLE, "\x1b[31mOn receive task rd not null %u\x1b[0m\r\n", exception_code);
+                    uart_printf(CONSOLE, "\x1b[31mOn receive task rd not null\x1b[0m\r\n");
                     for(;;){}
                 }
                 ReceiveData *rd = getNextFreeReceiveData(&nextFreeReceiveData);
@@ -290,13 +336,13 @@ int kmain() {
                 currentTaskFrame->rd = rd;
             }else{
                 int sender_tid = pop(&(currentTaskFrame->sender_queue));
-                if(sender_tid>MAX_NUM_TASKS){
-                    uart_printf(CONSOLE, "\x1b[31mOn receive sender tid invalid %u\x1b[0m\r\n", exception_code);
+                if(sender_tid<0 || sender_tid>MAX_NUM_TASKS){
+                    uart_printf(CONSOLE, "\x1b[31mOn receive sender tid invalid %u\x1b[0m\r\n", sender_tid);
                     for(;;){}
                 }
                 TaskFrame *sender = user_tasks + sender_tid;
                 if(sender->status!=SEND_WAIT || sender->sd==NULL){
-                    uart_printf(CONSOLE, "\x1b[31mOn receive sender status not valid %u\x1b[0m\r\n", exception_code);
+                    uart_printf(CONSOLE, "\x1b[31mOn receive sender status not valid %u\x1b[0m\r\n", sender->status);
                     for(;;){}
                 }
                 SendData *sd = sender->sd;
@@ -320,7 +366,7 @@ int kmain() {
             }
             TaskFrame *sender = user_tasks + tid;
             if(sender->status!=REPLY_WAIT){
-                uart_dprintf(CONSOLE, "\x1b[31mSender status not reply_wait %d\x1b[0m\r\n", sender->status);
+                uart_dprintf(CONSOLE, "\x1b[31mOn reply sender status not reply_wait %d\x1b[0m\r\n", sender->status);
                 reschedule_task_with_return(&heap, currentTaskFrame, -2);
                 continue;
             }

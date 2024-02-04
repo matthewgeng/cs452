@@ -21,7 +21,7 @@ void push(IntCB *cb, int v){
         uart_dprintf(CONSOLE, "\x1b[31msender queue out of bound\x1b[0m\r\n");
         return;
     }
-    cb->queue[next] = v;
+    cb->queue[cb->end] = v;
     cb->end = next;
 }
 
