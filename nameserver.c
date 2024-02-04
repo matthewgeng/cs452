@@ -65,6 +65,10 @@ void nameserver(){
     char reply[1];
     for(;;){
         int msglen = Receive(&tid, msg, MAX_TASK_NAME_CHAR+1);
+        if(msglen>MAX_TASK_NAME_CHAR+1){
+            uart_printf(CONSOLE, "Supplied name exceeded maximum task name length\r\n");
+            msglen = MAX_TASK_NAME_CHAR+1;
+        }
         msg[msglen] = '\0';
         if(msglen<2){
             uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server %d\x1b[0m\r\n", msglen);
@@ -97,7 +101,6 @@ void nameserver(){
                 }
             }
             if(reply_tid==-1){
-                // if name not registered, return an error as a tid > max possible tid
                 Reply(tid, NULL, 0);
             }else{
                 reply[0] = reply_tid;
