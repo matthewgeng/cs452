@@ -3,3 +3,4 @@
 *.o
 *.img
 test
+.DS_Store
