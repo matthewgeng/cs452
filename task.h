@@ -15,7 +15,6 @@
 #define USER_STACK_SIZE 1024
 #define SENDER_QUEUE_SIZE 5
 
-
 typedef struct SendData {
   int tid;
   const char *msg;
@@ -44,7 +43,6 @@ typedef struct TaskFrame {
   uint16_t status; // 0=inactive, 1=ready, 2=send-wait, 3=receive-wait, 4=reply-wait
   struct SendData *sd;
   struct ReceiveData *rd;
-  // TODO: make this a circular array
   IntCB sender_queue;
   struct TaskFrame *next;
 } TaskFrame;

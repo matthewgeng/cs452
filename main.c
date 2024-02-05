@@ -21,38 +21,6 @@ int copy_msg(char *src, int srclen, char *dest, int destlen){
     return reslen;
 }
 
-// void game_client1(){
-//     const char *name = "game_client1";
-//     RegisterAs(name);
-//     int server_tid = WhoIs("game_server");
-//     uart_printf(CONSOLE, "Server tid: %d\r\n", server_tid);
-
-//     // s = signup, p = play, q = quit
-//     char action = 's';
-//     int send;
-//     int recieve;
-
-//     char reply;
-//     send = Send(server_tid, &action, 1, &reply, 1);
-
-// }
-
-// void game_server(){
-//     const char *name = "game_server";
-//     int register_status = RegisterAs(name);
-//     if(register_status<0){
-//         uart_printf(CONSOLE, "\x1b[31mgame_server registeras failed\x1b[0m\r\n");
-//         for(;;){}
-//     }
-
-//     int server_tid = WhoIs(name);
-//     if(server_tid<0){
-//         uart_printf(CONSOLE, "\x1b[31mgame_server whois failed\x1b[0m\r\n");
-//         for(;;){}
-//     }
-//     uart_printf(CONSOLE, "Server tid: %d\r\n", server_tid);
-// }
-
 void user_task(){
     uart_dprintf(CONSOLE, "User Task\r\n");
     int tid = MyTid();
@@ -79,48 +47,35 @@ void rootTask_old(){
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
-#define timing_buffer_len 4
-#define timing_n 1000
+void test() {
+    uart_printf(CONSOLE, "Beginning testing\r\n");
 
-void sender_task(){
+    uart_printf(CONSOLE, "Test 1\r\n");
+    Create(1, &test1);
+    uart_printf(CONSOLE, "Test 1 finished\r\n");
 
-    uint32_t t1, t2;
-    t1 = get_time();
-    t2 = get_time();
-    uint32_t clock_overhead = t2-t1;
-    uart_printf(CONSOLE, "clock operation time: %u\r\n", clock_overhead);
+    uart_printf(CONSOLE, "Press any key to continue\r\n");
+    char c = uart_getc(CONSOLE);
 
-    int ret;
-    char msg[timing_buffer_len], reply[timing_buffer_len];
+    uart_printf(CONSOLE, "Test 2\r\n");
+    Create(1, &test2);
+    uart_printf(CONSOLE, "Test 2 finished\r\n");
 
-    t1 = get_time();
-    for(int i = 0; i<timing_n; i++){
-        ret = Send(0, msg, timing_buffer_len, reply, timing_buffer_len);
-    }
-    t2 = get_time();
-    uart_printf(CONSOLE, "%d SRR operations: ave time %u, %u excluding clock overhead\r\n", timing_n, (t2-t1)/timing_n, (t2-t1)/timing_n-clock_overhead);
-}
+    uart_printf(CONSOLE, "Press any key to continue\r\n");
+    c = uart_getc(CONSOLE);
+    
+    uart_printf(CONSOLE, "Test 3\r\n");
+    Create(1, &test1);
+    uart_printf(CONSOLE, "Test 3 finished\r\n");
 
-void receiver_task(){
-
-    int tid;
-    int ret;
-    char msg[timing_buffer_len], reply[timing_buffer_len];
-
-    for(int i = 0; i<timing_n; i++){
-        ret = Receive(&tid, msg, timing_buffer_len);
-        ret = Reply(tid, reply, timing_buffer_len);
-    }
+    uart_printf(CONSOLE, "Finished testing\r\n");
 }
 
 void rootTask(){
     uart_dprintf(CONSOLE, "Root Task\r\n");
-    int tid = MyTid();
-    int parent_tid = MyParentTid();
-    int tid1 = Create(1, &nameserver);
-    int tid2 = Create(1, &gameserver);
-    int tid3 = Create(1, &gameclient1);
-    int tid4 = Create(1, &gameclient2);
+    Create(1, &nameserver);
+    Create(2, &gameserver);
+    Create(100, &test);
     
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
@@ -129,25 +84,14 @@ void rootTask(){
 int run_task(TaskFrame *tf){
     uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
     
-    // uint32_t test1, test2;
-    // asm volatile("mov %0, lr" : "=r"(test1));
-    // asm volatile("mov %0, sp" : "=r"(test2));
-    // uart_dprintf(CONSOLE, "lr, sp: %x, %x\r\n", test1, test2);
-
-
     context_switch_to_task();
 
-    // uart_dprintf(CONSOLE, "reg 0 1 2 3 4 5: %d, %d, %d, %d, %d, %d\r\n", currentTaskFrame->x[0], currentTaskFrame->x[1], currentTaskFrame->x[2], currentTaskFrame->x[3], currentTaskFrame->x[4], currentTaskFrame->x[5]);
     // exit from exception
     uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
 
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
     uint64_t exception_code = esr & 0xFULL;
-
-    // asm volatile("mov %0, lr" : "=r"(test1));
-    // asm volatile("mov %0, sp" : "=r"(test2));
-    // uart_dprintf(CONSOLE, "lr, sp: %x, %x\r\n", test1, test2);
 
     return exception_code;
 }
@@ -215,18 +159,8 @@ int kmain() {
 
     // FIRST TASKS INITIALIZATION
     TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(root_task, 100, get_time(), &rootTask, 0, (uint64_t)&Exit, 0x600002C0);
+    task_init(root_task, 0, get_time(), &rootTask, 0, (uint64_t)&Exit, 0x600002C0);
     heap_push(&heap, root_task);
-
-    // SRR MEASUREMENTS
-
-    // TaskFrame* receive_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    // task_init(receive_tf, 2, get_time(), &receiver_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    // heap_push(&heap, receive_tf);
-    
-    // TaskFrame* send_tf = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    // task_init(send_tf, 2, get_time(), &sender_task, kf->tid, (uint64_t)&Exit, 0x600002C0);
-    // heap_push(&heap, send_tf);
 
     for(;;){
         uart_dprintf(CONSOLE, "start of loop\r\n");
@@ -257,6 +191,11 @@ int kmain() {
             heap_push(&heap, created_task);
             reschedule_task_with_return(&heap, currentTaskFrame, created_task->tid);
         } else if(exception_code==EXIT){
+            int num_tasks_waiting_on_msg = currentTaskFrame->sender_queue.count;
+            if (num_tasks_waiting_on_msg > 0) {
+                uart_printf(CONSOLE, "\x1b[31mTask %u exiting with %u waiting tasks \x1b[0m\r\n", currentTaskFrame->tid, num_tasks_waiting_on_msg);
+            }
+
             reclaimTaskFrame(nextFreeTaskFrame, currentTaskFrame);
         } else if(exception_code==MY_TID){
             reschedule_task_with_return(&heap, currentTaskFrame, currentTaskFrame->tid);
@@ -314,7 +253,6 @@ int kmain() {
                 recipient->rd = NULL;
                 reschedule_task_with_return(&heap, recipient, msglen);
             }
-            
         } else if(exception_code==RECEIVE){
             int *tid = (int *)(currentTaskFrame->x[0]);
             const char *msg = (const char *)(currentTaskFrame->x[1]);

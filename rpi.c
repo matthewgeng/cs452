@@ -200,13 +200,13 @@ void uart_printf( size_t line, char *fmt, ... ) {
 
 void uart_dprintf( size_t line, char *fmt, ... ) {
     if (DEBUG) {
-        char color[] = "\x1B[36m\0";
+        char color[] = "\x1B[36m";
         uart_puts(line, color);
         va_list va;
         va_start(va,fmt);
         uart_format_print( line, fmt, va );
         va_end(va);
-        char reset[] = "\033[0m\0";
+        char reset[] = "\033[0m";
         uart_puts(line, reset);
     }
 }
