@@ -44,7 +44,7 @@ int quit(int tid, int gs, int game) {
     return response;
 }
 
-void gameclient1() {
+void rps_quit() {
     int tid = MyTid();
     uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
 
@@ -61,7 +61,7 @@ void gameclient1() {
     quit(tid, gs, game);
 }
 
-void gameclient2() {
+void rps_move_quit() {
     int tid = MyTid();
     uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
 
@@ -81,37 +81,10 @@ void gameclient2() {
         return;
     }
 
-    if (result == OPPONENT_QUIT) {
-        quit(tid, gs, game);
-    }
+    quit(tid, gs, game);
 }
 
-
-void gameclient3() {
-    int tid = MyTid();
-    uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
-
-    int gs = lookup_gameserver(tid);
-    int game = signup(tid, gs);
-
-    for (int i = 0; i < sizeof(moves)/sizeof(moves[0]); i++) {
-        int result = move(tid, gs, game, moves[i]);
-        if (result == -1) {
-            return;
-        }
-    }
-
-    int result = move(tid, gs, game, ROCK);
-    if (result == -1) {
-        return;
-    }
-
-    if (result == OPPONENT_QUIT) {
-        quit(tid, gs, game);
-    }
-}
-
-void gameclient4() {
+void spr_quit() {
     int tid = MyTid();
     uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
 
@@ -132,16 +105,96 @@ void gameclient4() {
     }
 }
 
+void rock_quit() {
+    int tid = MyTid();
+    uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
+
+    int gs = lookup_gameserver(tid);
+    int game = signup(tid, gs);
+
+    for (int i = 0; i < sizeof(moves)/sizeof(moves[0]); i++) {
+        int result = move(tid, gs, game, ROCK);
+        if (result == -1) {
+            return;
+        }
+    }
+
+    quit(tid, gs, game);
+}
+
+void paper_move_quit() {
+    int tid = MyTid();
+    uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
+
+    int gs = lookup_gameserver(tid);
+    int game = signup(tid, gs);
+
+    for (int i = 0; i < sizeof(moves)/sizeof(moves[0]); i++) {
+        int result = move(tid, gs, game, PAPER);
+        if (result == -1) {
+            return;
+        }
+    }
+
+    int result = move(tid, gs, game, PAPER);
+    if (result == -1) {
+        return;
+    }
+
+    quit(tid, gs, game);
+}
+
+void paper_quit() {
+    int tid = MyTid();
+    uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
+
+    int gs = lookup_gameserver(tid);
+    int game = signup(tid, gs);
+
+    for (int i = 0; i < sizeof(moves)/sizeof(moves[0]); i++) {
+        int result = move(tid, gs, game, PAPER);
+        if (result == -1) {
+            return;
+        }
+    }
+
+    quit(tid, gs, game);
+}
+
+void scissor_quit() {
+    int tid = MyTid();
+    uart_printf(CONSOLE, "[client %u] starting\r\n", tid);
+
+    int gs = lookup_gameserver(tid);
+    int game = signup(tid, gs);
+
+    for (int i = 0; i < sizeof(moves)/sizeof(moves[0]); i++) {
+        int result = move(tid, gs, game, SCISSOR);
+        if (result == -1) {
+            return;
+        }
+    }
+
+    quit(tid, gs, game);
+}
+
 void test1() {
-    Create(3, &gameclient1);
-    Create(3, &gameclient2);
-    Create(3, &gameclient3);
-    Create(3, &gameclient4);
+    Create(3, &rps_quit);
+    Create(3, &rps_move_quit);
+    Create(3, &rps_move_quit);
+    Create(3, &spr_quit);
 }
 
 void test2() {
-    Create(4, &gameclient1);
-    Create(5, &gameclient2);
-    Create(6, &gameclient3);
-    Create(7, &gameclient4);
+    Create(4, &rps_quit);
+    Create(5, &rock_quit);
+    Create(6, &scissor_quit);
+    Create(7, &rps_move_quit);
+}
+
+void test3() {
+    Create(3, &rps_quit);
+    Create(3, &paper_move_quit);
+    Create(3, &rps_move_quit);
+    Create(3, &paper_quit);
 }

@@ -65,7 +65,7 @@ void test() {
     c = uart_getc(CONSOLE);
     
     uart_printf(CONSOLE, "Test 3\r\n");
-    Create(1, &test1);
+    Create(1, &test3);
     uart_printf(CONSOLE, "Test 3 finished\r\n");
 
     uart_printf(CONSOLE, "Finished testing\r\n");
