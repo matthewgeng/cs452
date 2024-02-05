@@ -8,7 +8,8 @@
 typedef struct IntCB{
     size_t end;
     size_t start;
-    size_t size;
+    size_t capacity;
+    size_t count;
     int queue[MAX_NUM_TASKS];
 } IntCB;
 

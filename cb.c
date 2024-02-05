@@ -4,25 +4,26 @@
 void initialize(IntCB *cb){
     cb->end = 0;
     cb->start = 0;
-    cb->size = MAX_NUM_TASKS;
+    cb->count = 0;
+    cb->capacity = MAX_NUM_TASKS;
 }
 
-
-size_t increment(size_t size, size_t v){
-    if(v+1==size){
+size_t increment(size_t capacity, size_t v){
+    if(v+1==capacity){
         return 0;
     }
     return v+1;
 }
 
 void push(IntCB *cb, int v){
-    size_t next = increment(cb->size, cb->end);
+    size_t next = increment(cb->capacity, cb->end);
     if(next==cb->start){
         uart_dprintf(CONSOLE, "\x1b[31msender queue out of bound\x1b[0m\r\n");
         return;
     }
     cb->queue[cb->end] = v;
     cb->end = next;
+    cb->count++;
 }
 
 int is_empty(IntCB cb){
@@ -35,6 +36,7 @@ int pop(IntCB *cb){
         return -1;
     }
     int res = cb->queue[cb->start];
-    cb->start = increment(cb->size, cb->start);
+    cb->start = increment(cb->capacity, cb->start);
+    cb->count--;
     return res;
 }
