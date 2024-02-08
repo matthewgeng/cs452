@@ -65,7 +65,7 @@ https://s-matyukevich.github.io/raspberry-pi-os/docs/lesson01/rpi-os.html
 // is taken to an exception level that uses AArch64 state, allows process state to be restored after exception handled
 // ***************************************
 
-#define SPSR_MASK_ALL (11 << 6) // SError interrupt and IRQ interrupt mask 
+#define SPSR_MASK_ALL (11 << 6) // 1011 (DAIF), debug, irq, fiq masked (hardware SError's allowed)
 #define SPSR_EL1       (5 << 0) // sets EL1h stack pointer selection
 #define SPSR_VALUE (SPSR_MASK_ALL | SPSR_EL1)
 

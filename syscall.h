@@ -22,4 +22,8 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen);
 int Receive(int *tid, char *msg, int msglen);
 int Reply(int tid, const char *reply, int rplen);
 
+// K3
+// blocks until the event identified by eventid occurs then returns with event-specific data, if any. -1 = invalid event
+int AwaitEvent(int eventType);
+
 #endif
