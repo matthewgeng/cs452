@@ -8,6 +8,8 @@
 #include "nameserver.h"
 #include "gameserver.h"
 #include "gameclient.h"
+#include "timer.h"
+#include "interrupt.h"
 
 extern TaskFrame *kf = 0;
 extern TaskFrame *currentTaskFrame = 0;
@@ -75,6 +77,19 @@ void test() {
     uart_printf(CONSOLE, "Finished testing\r\n");
 }
 
+static char* const ST_BASE = (char*)(0xFE003000); // todo use MMIO_BASE
+
+static const uint32_t ST_UPDATE_FREQ = 1000000; // given frequency
+
+// system timer register offsets
+static const uint32_t ST_CS = 0x00;
+static const uint32_t ST_CLO = 0x04;
+static const uint32_t ST_CHI = 0x08;
+static const uint32_t ST_CO = 0x0c;
+static const uint32_t ST_C1 = 0x10;
+static const uint32_t ST_C2 = 0x14;
+static const uint32_t ST_C3 = 0x18;
+
 void rootTask(){
     uart_dprintf(CONSOLE, "Root Task\r\n");
     // order or nameserver and idle_task matters since their tid values are assumed in implementation
@@ -82,6 +97,24 @@ void rootTask(){
     Create(1000, &idle_task);
     Create(2, &gameserver);
     Create(100, &test);
+    // uart_printf(CONSOLE, "\033[2J");
+    // for (;;) {
+    //     // uart_printf(CONSOLE, "\033[1;1Htime: %d", get_time());
+    //     uart_printf(CONSOLE, "time: %d\r", get_time());
+    //     uint32_t cs = *(uint32_t*)(ST_BASE);
+    //     // uart_printf(CONSOLE, "\033[3;1Hcs %d", cs);
+    //     if (cs & (1 << 1)) {
+    //         uart_printf(CONSOLE, "\r\nc1 match cs = %d\r\n", cs);
+    //     }
+
+    //     if (cs > 0) {
+    //         uart_printf(CONSOLE, "\r\nc1 > 0 %d\r\n", cs);
+    //         uart_printf(CONSOLE, "c0 time %d\r\n", *(uint32_t*)(ST_BASE+ST_CO));
+    //         uart_printf(CONSOLE, "c1 time %d\r\n", *(uint32_t*)(ST_BASE+ST_C1));
+    //         uart_printf(CONSOLE, "c2 time %d\r\n", *(uint32_t*)(ST_BASE+ST_C2));
+    //         uart_printf(CONSOLE, "c3 time %d\r\n", *(uint32_t*)(ST_BASE+ST_C3));
+    //     }
+    // }
     
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
@@ -89,15 +122,21 @@ void rootTask(){
 int run_task(TaskFrame *tf){
     uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
     
-    context_switch_to_task();
+    int exception_type = context_switch_to_task();
 
     // exit from exception
 
+    uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
+
+    // return interrupt if irq
+    if (exception_type == 1) {
+        return IRQ;
+    }
+
+    // return exception
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
     uint64_t exception_code = esr & 0xFULL;
-
-    uart_dprintf(CONSOLE, "back in kernel from exception code: %u\r\n", exception_code);
 
     return exception_code;
 }
@@ -127,8 +166,6 @@ void reschedule_task_with_return(Heap *heap, TaskFrame *tf, long long ret){
 
 int kmain() {
 
-    init_exception_vector(); 
-
     // set up GPIO pins for both console and marklin uarts
     gpio_init();
 
@@ -136,6 +173,17 @@ int kmain() {
     // but we'll configure the line anyway, so we know what state it is in
     uart_config_and_enable(CONSOLE);
     uart_config_and_enable(MARKLIN);
+
+    // below is initialized after above due to use of print statements
+
+    // EXCEPTIONS
+    init_exception_vector(); 
+
+    // INTERRUPTS
+    enable_irqs();
+
+    // timer
+    timer_init();
 
     uart_printf(CONSOLE, "Program starting\r\n\r\n");
 
@@ -147,6 +195,9 @@ int kmain() {
     TaskFrame kernel_frame;
     kernel_frame_init(&kernel_frame);
     kf = &kernel_frame;
+
+    // IRQ event type to blocked task map
+    TaskFrame* blocked_on_irq[NUM_IRQ_EVENTS] = {NULL};
 
     // USER TASK INITIALIZATION
     TaskFrame *nextFreeTaskFrame;
@@ -169,7 +220,7 @@ int kmain() {
 
     // FIRST TASKS INITIALIZATION
     TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(root_task, 0, get_time(), &rootTask, 0, (uint64_t)&Exit, 0x600002C0);
+    task_init(root_task, 0, get_time(), &rootTask, 0, (uint64_t)&Exit, 0x60000240); // 1001 bits for DAIF
     heap_push(&heap, root_task);
 
     for(;;){
@@ -204,7 +255,7 @@ int kmain() {
                 reschedule_task_with_return(&heap, currentTaskFrame, -2);
                 continue;
             }
-            task_init(created_task, priority, get_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x600002C0);
+            task_init(created_task, priority, get_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x60000240);
             heap_push(&heap, created_task);
             reschedule_task_with_return(&heap, currentTaskFrame, created_task->tid);
         } else if(exception_code==EXIT){
@@ -342,7 +393,47 @@ int kmain() {
             int reslen = copy_msg(reply, rplen, sd->reply, sd->rplen);
             reschedule_task_with_return(&heap, currentTaskFrame, reslen);
             reschedule_task_with_return(&heap, sender, rplen);
-        } else{
+        
+        } else if (exception_code == AWAIT_EVENT) {
+            int type = (int)(currentTaskFrame->x[0]);
+
+            if (type < CLOCK || type > TODO) {
+                reschedule_task_with_return(&heap, currentTaskFrame, -1);
+            }
+
+            // TODO: not sure if we should buffer the tasks and what to return when we reach that
+            // currently, we can only have a single element waiting
+            if (blocked_on_irq[type] != NULL) {
+                reschedule_task_with_return(&heap, currentTaskFrame, -1);
+            }
+
+            blocked_on_irq[type] = currentTaskFrame;
+        } else if (exception_code == IRQ) {
+            uart_dprintf(CONSOLE, "On irq\r\n");
+
+            uint32_t irq_ack = *(uint32_t*)(GICC_IAR);
+            uint32_t irq_id_bit_mask = 0x1FF; // 9 bits
+            uint32_t irq = (irq_ack & irq_id_bit_mask);
+
+            if (irq == SYSTEM_TIMER_IRQ_1) {
+                if (blocked_on_irq[CLOCK] != NULL) {
+                    reschedule_task_with_return(&heap, blocked_on_irq[CLOCK], 0);
+                }
+                // update system timer C1
+                *(uint32_t*)(ST_BASE+ST_C1) = *(uint32_t*)(ST_BASE+ST_C1) + INTERVAL;
+
+                // update clock status register
+                *(uint32_t*)(ST_BASE) = *(uint32_t*)(ST_BASE) | 1 << 1;
+
+                // finish irq processing
+                *(uint32_t*)(GICC_EOIR) = irq_ack;
+            } else {
+                uart_printf(CONSOLE, "Unrecognized interrupt %d\r\n", irq);
+                for(;;){}
+            }
+
+            heap_push(&heap, currentTaskFrame);
+        } else {
             uart_printf(CONSOLE, "\x1b[31mUnrecognized exception code %u\x1b[0m\r\n", exception_code);
             for(;;){}
         }

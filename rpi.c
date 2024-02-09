@@ -103,13 +103,17 @@ void gpio_init() {
 // Configure the line properties (e.g, parity, baud rate) of a UART and ensure that it is enabled
 void uart_config_and_enable(size_t line) {
 
+   // ival = integer part of baud rate divisor value 
+   // fval = fractional part of baud rate divisor value
   uint32_t baud_ival, baud_fval;
 
   switch (line) {
     // setting baudrate to approx. 115246.09844 (best we can do)
     case CONSOLE: baud_ival =  26; baud_fval = 2; break;
-    // setting baudrate to 2400
-    case MARKLIN: baud_ival = 125; baud_fval = 0; break;
+
+    // TODO: try and understand later
+    case MARKLIN: baud_ival = 1250; baud_fval = 1; break;
+     
     default: return;
   }
 
@@ -121,12 +125,44 @@ void uart_config_and_enable(size_t line) {
   UART_REG(line, UART_IBRD) = baud_ival;
   UART_REG(line, UART_FBRD) = baud_fval;
   // set the line control registers: 8 bit, no parity, 1 stop bit, FIFOs enabled
-  UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_FEN;
+    switch(line){
+    case CONSOLE: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_FEN; break;
+    case MARKLIN: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_FEN | UART_LCRH_STP2; break;
+    default: return;
+    }
 
   // re-enable the UART; enable both transmit and receive regardless of previous state
   UART_REG(line, UART_CR) = cr_state | UART_CR_UARTEN | UART_CR_TXE | UART_CR_RXE;
 }
 
+// register checks
+int uart_can_read(size_t line) {
+    return !(UART_REG(line, UART_FR) & UART_FR_RXFE);
+}
+
+int uart_can_write(size_t line) {
+    return !(UART_REG(line, UART_FR) & UART_FR_TXFF);
+}
+
+// non-blocking
+unsigned char uart_readc(size_t line) {
+    if (!uart_can_read(line)) {
+        return 1;
+    }
+    unsigned char ch = UART_REG(line, UART_DR);
+    return ch;
+}
+
+int uart_writec(size_t line, unsigned char c) {
+    if (!uart_can_write(line)) {
+        return 1;
+    }
+
+    UART_REG(line, UART_DR) = c;
+    return 0;
+}
+
+// blocking
 unsigned char uart_getc(size_t line) {
   unsigned char ch;
   /* wait for data if necessary */
