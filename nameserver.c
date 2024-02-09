@@ -30,7 +30,7 @@ int WhoIs(const char *name){
     msg[0]='w';
     memcpy(msg+1, name, name_len);
 
-    char tid[0];
+    char tid[1];
     tid[0] = 160;
     asm volatile("mov x30, x30");
     int intended_reply_len = Send(1, msg, name_len+1, tid, 1);
@@ -54,16 +54,18 @@ int WhoIs(const char *name){
 
 // define messages to name server as r+name or w+name
 void nameserver(){
-    uart_dprintf(CONSOLE, "Running nameserver tid %u\r\n", MyTid());
+    uart_dprintf(CONSOLE, "Running nameserver \r\n");
     char tid_to_name[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
-    // char *tid_to_name[MAX_NUM_TASKS];
+    char blocked_whois[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
+
     for(int i = 0; i<MAX_NUM_TASKS; i++){
         tid_to_name[i][0] = '\0';
+        blocked_whois[i][0] = '\0';
     }
 
     char msg[MAX_TASK_NAME_CHAR+2];
     int tid;
-    char reply[1];
+    char reply[MAX_NUM_TASKS][1];
     for(;;){
         int msglen = Receive(&tid, msg, MAX_TASK_NAME_CHAR+1);
         if(msglen>MAX_TASK_NAME_CHAR+1){
@@ -92,6 +94,12 @@ void nameserver(){
             }
             tid_to_name[tid][index]='\0';
             Reply(tid, NULL, 0);
+            for(int i = 0; i<MAX_NUM_TASKS; i++){
+                if(str_equal(arg_name, blocked_whois[i])){
+                    reply[i][0] = tid;
+                    Reply(i, (const char *)(reply[i]), 1);
+                }
+            }
         }else if(msg[0]=='w'){
             char *arg_name = msg+1;
             int reply_tid = -1;
@@ -102,10 +110,10 @@ void nameserver(){
                 }
             }
             if(reply_tid==-1){
-                Reply(tid, NULL, 0);
+                memcpy(blocked_whois[tid], arg_name, msglen);
             }else{
-                reply[0] = reply_tid;
-                Reply(tid, (const char *)reply, 1);
+                reply[tid][0] = reply_tid;
+                Reply(tid, (const char *)reply[tid], 1);
             }
         }else{
             uart_printf(CONSOLE, "\x1b[31mInvalid msg received by name_server\x1b[0m\r\n");

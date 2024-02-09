@@ -2,8 +2,7 @@
 #define CB_H
 
 #include <stddef.h>
-
-#define MAX_NUM_TASKS 20
+#include "constants.h"
 
 typedef struct IntCB{
     size_t end;

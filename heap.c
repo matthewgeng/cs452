@@ -70,6 +70,16 @@ void sift_down(Heap* heap, size_t elem_idx) {
     }
 }
 
+void* heap_peek(Heap* heap) {
+    if (heap->length == 0) {
+        // TODO: handle somehow
+        return NULL;
+    }
+
+    void* min = heap->data[0];
+    return min;
+}
+
 void* heap_pop(Heap* heap) {
     if (heap->length == 0) {
         // TODO: handle somehow

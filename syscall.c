@@ -77,6 +77,8 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
     
     uart_dprintf(CONSOLE, "Send %d %d %d %d %d\r\n", tid, msg, msglen, reply, rplen);
 
+    int intended_reply_len;
+
     asm volatile(
         "mov x9, %[tid]\n"
         "mov x10, %[msg]\n"
@@ -99,8 +101,6 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
     );
 
 
-    int intended_reply_len;
-
     asm volatile("mov %0, x0" : "=r"(intended_reply_len));
     return intended_reply_len;
 }
@@ -108,6 +108,8 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
 int Receive(int *tid, char *msg, int msglen){
 
     uart_dprintf(CONSOLE, "Receive %d %d %d\r\n", tid, msg, msglen);
+
+    int intended_sent_len;
 
     asm volatile(
         "mov x9, %[tid]\n"
@@ -124,7 +126,6 @@ int Receive(int *tid, char *msg, int msglen){
         [SYS_CODE] "i"(RECEIVE) 
     );
 
-    int intended_sent_len;
     asm volatile("mov %0, x0" : "=r"(intended_sent_len));
     return intended_sent_len;
 }

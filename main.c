@@ -11,10 +11,6 @@
 extern TaskFrame *kf = 0;
 extern TaskFrame *currentTaskFrame = 0;
 
-uint32_t get_time(){
-    return *(volatile uint32_t *)((char*) 0xFe003000 + 0x04);
-}
-
 int copy_msg(char *src, int srclen, char *dest, int destlen){
     int reslen = (srclen < destlen) ? srclen : destlen;
     memcpy(dest, src, reslen);
@@ -80,18 +76,18 @@ void rootTask(){
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
-
 int run_task(TaskFrame *tf){
     uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
     
     context_switch_to_task();
 
     // exit from exception
-    uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
 
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
     uint64_t exception_code = esr & 0xFULL;
+
+    uart_dprintf(CONSOLE, "back in kernel from exception code: %u\r\n", exception_code);
 
     return exception_code;
 }
@@ -141,7 +137,7 @@ int kmain() {
     // USER TASK INITIALIZATION
     TaskFrame *nextFreeTaskFrame;
     TaskFrame user_tasks[MAX_NUM_TASKS];
-    nextFreeTaskFrame = tasks_init(user_tasks, USER_STACK_START, USER_STACK_SIZE, MAX_NUM_TASKS);
+    nextFreeTaskFrame = tasks_init(user_tasks, USER_STACK_START, 2048, MAX_NUM_TASKS);
 
     // TASK DESCRIPTOR INITIALIZATION
     Heap heap; // min heap
