@@ -42,17 +42,10 @@ void parse_st(uint32_t sys_time, uint32_t* minutes, uint32_t* seconds, uint32_t*
 }
 
 void timer_init() {
-    // TODO:
-
-    // temp testing
     uint32_t cur = sys_time();
     uart_printf(CONSOLE, "cur time %d\r\n", cur);
-    cur += 4000000;
+    cur += INTERVAL;
     *(uint32_t*)(ST_BASE + ST_C1) = cur;
-    // asm volatile(
-    //     "str %0, [%1]"
-    //     : : "r"(cur), "r"(ST_BASE+ST_C1)
-    // );
     uart_printf(CONSOLE, "c0 time %d\r\n", *(uint32_t*)(ST_BASE + ST_CO));
     uart_printf(CONSOLE, "c1 time %d\r\n", *(uint32_t*)(ST_BASE + ST_C1));
     uart_printf(CONSOLE, "c2 time %d\r\n", *(uint32_t*)(ST_BASE + ST_C2));

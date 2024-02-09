@@ -10,6 +10,7 @@
 #include "gameclient.h"
 #include "timer.h"
 #include "interrupt.h"
+#include "clock.h"
 
 extern TaskFrame *kf = 0;
 extern TaskFrame *currentTaskFrame = 0;
@@ -21,9 +22,12 @@ int copy_msg(char *src, int srclen, char *dest, int destlen){
 }
 
 void idle_task(){
-    uart_dprintf(CONSOLE, "Idle Task\r\n");
+    uart_printf(CONSOLE, "Idle Task\r\n");
+    uint32_t clock_tid = WhoIs("clock");
     for(;;){
+        uart_printf(CONSOLE, "Idle task parking at system time %u\r\n", Time(clock_tid));
         asm volatile("wfi");
+        // Yield();
     }
 }
 
@@ -90,30 +94,36 @@ static const uint32_t ST_C1 = 0x10;
 static const uint32_t ST_C2 = 0x14;
 static const uint32_t ST_C3 = 0x18;
 
+void time_user() {
+    int tid = MyTid();
+    int parent = MyParentTid();
+
+    char data[2];
+    Send(parent, NULL, 0, data, sizeof(data));
+
+    char delay = data[0];
+    char num_delay = data[1];
+    for (int i = 0; i < num_delay; i++) {
+        uart_printf(CONSOLE, "tid: %u, delay: %u, completed: %u\r\n", tid, delay, i+1);
+    }
+}
+
 void rootTask(){
     uart_dprintf(CONSOLE, "Root Task\r\n");
     // order or nameserver and idle_task matters since their tid values are assumed in implementation
-    Create(1, &nameserver);
+    Create(2, &nameserver);
     Create(1000, &idle_task);
-    Create(2, &gameserver);
-    Create(100, &test);
-    // uart_printf(CONSOLE, "\033[2J");
-    // for (;;) {
-    //     // uart_printf(CONSOLE, "\033[1;1Htime: %d", get_time());
-    //     uart_printf(CONSOLE, "time: %d\r", get_time());
-    //     uint32_t cs = *(uint32_t*)(ST_BASE);
-    //     // uart_printf(CONSOLE, "\033[3;1Hcs %d", cs);
-    //     if (cs & (1 << 1)) {
-    //         uart_printf(CONSOLE, "\r\nc1 match cs = %d\r\n", cs);
-    //     }
+    Create(0, &notifier);
+    Create(1, &clock);
+    // int user1 = Create(3, &time_user);
 
-    //     if (cs > 0) {
-    //         uart_printf(CONSOLE, "\r\nc1 > 0 %d\r\n", cs);
-    //         uart_printf(CONSOLE, "c0 time %d\r\n", *(uint32_t*)(ST_BASE+ST_CO));
-    //         uart_printf(CONSOLE, "c1 time %d\r\n", *(uint32_t*)(ST_BASE+ST_C1));
-    //         uart_printf(CONSOLE, "c2 time %d\r\n", *(uint32_t*)(ST_BASE+ST_C2));
-    //         uart_printf(CONSOLE, "c3 time %d\r\n", *(uint32_t*)(ST_BASE+ST_C3));
-    //     }
+    // int test;
+    // Receive(&test, NULL, 0);
+    // char user1_data = {10, 20};
+    // Reply(user1, user1_data, sizeof(user1_data));
+    // Create(2, &gameserver);
+    // Create(50, &test);
+    // for (;;) {
     // }
     
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
@@ -123,16 +133,15 @@ int run_task(TaskFrame *tf){
     uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
     
     int exception_type = context_switch_to_task();
-
     // exit from exception
-
-    uart_dprintf(CONSOLE, "back in kernel from exception tid: %u\r\n", tf->tid);
 
     // return interrupt if irq
     if (exception_type == 1) {
+        uart_dprintf(CONSOLE, "back in kernel from interrupt cur tid: %u\r\n", tf->tid);
         return IRQ;
     }
 
+    uart_dprintf(CONSOLE, "back in kernel from exception cur tid: %u\r\n", tf->tid);
     // return exception
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
@@ -160,7 +169,7 @@ void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)
 
 void reschedule_task_with_return(Heap *heap, TaskFrame *tf, long long ret){
     tf->x[0] = ret;
-    tf->added_time = get_time();
+    tf->added_time = sys_time();
     heap_push(heap, tf);
 }
 
@@ -182,14 +191,11 @@ int kmain() {
     // INTERRUPTS
     enable_irqs();
 
-    // timer
-    timer_init();
-
     uart_printf(CONSOLE, "Program starting\r\n\r\n");
 
     // IDLE TASK MEASUREMENT SET UP
     uint64_t idle_task_total, idle_task_start, program_start;
-    program_start = get_time();
+    program_start = sys_time();
 
     // set some quality of life defaults, not important to functionality
     TaskFrame kernel_frame;
@@ -220,8 +226,11 @@ int kmain() {
 
     // FIRST TASKS INITIALIZATION
     TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(root_task, 0, get_time(), &rootTask, 0, (uint64_t)&Exit, 0x60000240); // 1001 bits for DAIF
+    task_init(root_task, 100, sys_time(), &rootTask, 0, (uint64_t)&Exit, 0x60000240); // 1001 bits for DAIF
     heap_push(&heap, root_task);
+
+    // timer
+    timer_init();
 
     for(;;){
         uart_dprintf(CONSOLE, "start of loop\r\n");
@@ -232,14 +241,15 @@ int kmain() {
             for (;;){}
         }
 
-        if(currentTaskFrame->tid == 2){
-            idle_task_start = get_time();
-        }
+        // if(currentTaskFrame->tid == 2){
+        //     idle_task_start = sys_time();
+        // }
+
         int exception_code = run_task(currentTaskFrame);
 
-        if(currentTaskFrame->tid == 2){
-            idle_task_total += (get_time()-idle_task_start);
-        }
+        // if(currentTaskFrame->tid == 2){
+        //     idle_task_total += (sys_time()-idle_task_start);
+        // }
 
         if(exception_code==CREATE){
             int priority = (int)(currentTaskFrame->x[0]);
@@ -255,7 +265,7 @@ int kmain() {
                 reschedule_task_with_return(&heap, currentTaskFrame, -2);
                 continue;
             }
-            task_init(created_task, priority, get_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x60000240);
+            task_init(created_task, priority, sys_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x60000240);
             heap_push(&heap, created_task);
             reschedule_task_with_return(&heap, currentTaskFrame, created_task->tid);
         } else if(exception_code==EXIT){
@@ -396,6 +406,7 @@ int kmain() {
         
         } else if (exception_code == AWAIT_EVENT) {
             int type = (int)(currentTaskFrame->x[0]);
+            uart_dprintf(CONSOLE, "AwaitEvent %d\r\n", type);
 
             if (type < CLOCK || type > TODO) {
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
@@ -418,9 +429,16 @@ int kmain() {
             if (irq == SYSTEM_TIMER_IRQ_1) {
                 if (blocked_on_irq[CLOCK] != NULL) {
                     reschedule_task_with_return(&heap, blocked_on_irq[CLOCK], 0);
+                    blocked_on_irq[CLOCK] = NULL;
                 }
+
+                // uart_printf(CONSOLE, "\r\ntime = %u\r\n", sys_time());
+                // uart_printf(CONSOLE, "c1 before = %u\r\n", *(uint32_t*)(ST_BASE+ST_C1));
+
                 // update system timer C1
                 *(uint32_t*)(ST_BASE+ST_C1) = *(uint32_t*)(ST_BASE+ST_C1) + INTERVAL;
+
+                // uart_printf(CONSOLE, "c1 after = %u\r\n", *(uint32_t*)(ST_BASE+ST_C1));
 
                 // update clock status register
                 *(uint32_t*)(ST_BASE) = *(uint32_t*)(ST_BASE) | 1 << 1;
@@ -438,7 +456,7 @@ int kmain() {
             for(;;){}
         }
 
-        uart_printf(CONSOLE, "Idle time ratio: %u\r\n", idle_task_total/(program_start-get_time()));
+        // uart_printf(CONSOLE, "Idle time ratio: %u\r\n", idle_task_total/(program_start-sys_time()));
     }
 
     return 0;

@@ -5,11 +5,6 @@
 #include <stddef.h>
 #include "constants.h"
 
-//TODO: remove after matthew pushes
-#define CLOCK_EVENT 10
-
-uint32_t get_time();
-
 typedef struct DelayedTask{
     int tid;
     uint32_t delay_until;
@@ -24,6 +19,7 @@ int Time(int tid);
 int Delay(int tid, int ticks);
 int DelayUntil(int tid, int ticks);
 
-void clockserver();
+void clock();
+void notifier();
 
 #endif
