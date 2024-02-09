@@ -23,9 +23,9 @@ int copy_msg(char *src, int srclen, char *dest, int destlen){
 
 void idle_task(){
     uart_printf(CONSOLE, "Idle Task\r\n");
-    uint32_t clock_tid = WhoIs("clock");
+    // uint32_t clock_tid = WhoIs("clock");
     for(;;){
-        uart_printf(CONSOLE, "Idle task parking at system time %u\r\n", Time(clock_tid));
+        // uart_printf(CONSOLE, "Idle task parking at system time %u\r\n", Time(clock_tid));
         asm volatile("wfi");
         // Yield();
     }
@@ -97,13 +97,16 @@ static const uint32_t ST_C3 = 0x18;
 void time_user() {
     int tid = MyTid();
     int parent = MyParentTid();
+    int clock = WhoIs("clock");
 
     char data[2];
     Send(parent, NULL, 0, data, sizeof(data));
 
     char delay = data[0];
     char num_delay = data[1];
+
     for (int i = 0; i < num_delay; i++) {
+        Delay(clock, delay);
         uart_printf(CONSOLE, "tid: %u, delay: %u, completed: %u\r\n", tid, delay, i+1);
     }
 }
@@ -115,16 +118,12 @@ void rootTask(){
     Create(1000, &idle_task);
     Create(0, &notifier);
     Create(1, &clock);
-    // int user1 = Create(3, &time_user);
+    int user1 = Create(3, &time_user);
 
-    // int test;
-    // Receive(&test, NULL, 0);
-    // char user1_data = {10, 20};
-    // Reply(user1, user1_data, sizeof(user1_data));
-    // Create(2, &gameserver);
-    // Create(50, &test);
-    // for (;;) {
-    // }
+    Receive(NULL, NULL, 0);
+    char user1_data[2] = {100, 20};
+
+    Reply(user1, user1_data, sizeof(user1_data));
     
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }

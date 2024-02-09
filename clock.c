@@ -9,20 +9,20 @@ int delayed_task_cmp(const DelayedTask* df1, const DelayedTask* df2) {
     return df2->delay_until > df1->delay_until;
 }
 
-void time_to_char_arr(uint32_t time, char *buffer) {
-    buffer[0] = (time >> 24) & 0xFF;
-    buffer[1] = (time >> 16) & 0xFF;
-    buffer[2] = (time >> 8) & 0xFF;
-    buffer[3] = time & 0xFF;
-}
+// void time_to_char_arr(uint32_t time, char *buffer) {
+//     buffer[0] = (time >> 24) & 0xFF;
+//     buffer[1] = (time >> 16) & 0xFF;
+//     buffer[2] = (time >> 8) & 0xFF;
+//     buffer[3] = time & 0xFF;
+// }
 
-uint32_t char_array_to_time(const char *buffer) {
-    uint32_t time = ((uint32_t)(buffer[0]) << 24) |
-           ((uint32_t)(buffer[1]) << 16) |
-           ((uint32_t)(buffer[2]) << 8) |
-           (uint32_t)(buffer[3]);
-    return time;
-}
+// uint32_t char_array_to_time(const char *buffer) {
+//     uint32_t time = ((uint32_t)(buffer[0]) << 24) |
+//            ((uint32_t)(buffer[1]) << 16) |
+//            ((uint32_t)(buffer[2]) << 8) |
+//            (uint32_t)(buffer[3]);
+//     return time;
+// }
 
 
 DelayedTask *dts_init(DelayedTask* dts, size_t size){
@@ -70,9 +70,12 @@ int Delay(int tid, int ticks){
     }
     char msg[5];
     msg[0] = 'd';
-    time_to_char_arr(ticks, msg+1);
-    char reply[4];
-    int intended_reply_len = Send(tid, msg, 1, reply, 4);
+    // time_to_char_arr(ticks, msg+1);
+    // uart_printf(CONSOLE, "%u, %u, %u, %u, cast val= %u\r\n", msg[1], msg[2], msg[3], msg[4], *(uint32_t*)(msg+1));
+    memcpy(msg + 1, (char*)&ticks, sizeof(ticks));
+    int tick;
+
+    int intended_reply_len = Send(tid, msg, sizeof(msg), (char*)&tick, sizeof(tick));
     if(intended_reply_len < 0){
         return -1;
     }
@@ -80,7 +83,7 @@ int Delay(int tid, int ticks){
         uart_printf(CONSOLE, "\x1b[31mTime unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
         for(;;){}
     }
-    return char_array_to_time(reply);
+    return tick;
 }
 
 int DelayUntil(int tid, int ticks){
@@ -89,9 +92,11 @@ int DelayUntil(int tid, int ticks){
     }
     char msg[5];
     msg[0] = 'u';
-    time_to_char_arr(ticks, msg+1);
-    char reply[4];
-    int intended_reply_len = Send(tid, msg, 1, reply, 4);
+    // time_to_char_arr(ticks, msg+1);
+    memcpy(msg + 1, (char*)&ticks, sizeof(ticks));
+    int tick;
+
+    int intended_reply_len = Send(tid, msg, sizeof(msg), (char*)&tick, sizeof(tick));
     if(intended_reply_len < 0){
         return -1;
     }
@@ -99,7 +104,7 @@ int DelayUntil(int tid, int ticks){
         uart_printf(CONSOLE, "\x1b[31mTime unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
         for(;;){}
     }
-    return char_array_to_time(reply);
+    return tick;
 }
 
 void notifier(){
@@ -132,11 +137,11 @@ void clock(){
     DelayedTask* dts[MAX_NUM_TASKS];
     heap_init(&sorted_delayed_tasks, dts, MAX_NUM_TASKS, delayed_task_cmp);
 
-    char msg[3];
+    char msg[5];
     int tid;
     uint32_t tick = 0;
     for(;;){
-        int msglen = Receive(&tid, msg, 3);
+        int msglen = Receive(&tid, msg, 5);
         if(tid == notifier_tid){
             tick++;
             DelayedTask *next_dt = heap_peek(&sorted_delayed_tasks);
@@ -159,20 +164,21 @@ void clock(){
                     uart_printf(CONSOLE, "\x1b[Invalid delay request to clock server\x1b[0m\r\n");
                     for(;;){}
                 }
-                uint32_t delay = char_array_to_time(msg+1);
+                // uint32_t delay = char_array_to_time(msg+1);
+                uint32_t delay = *(uint32_t*)(msg+1);
                 DelayedTask *dt = getNextFreeDelayedTask(&nextFreeDelayedTask);
                 dt->tid = tid;
-                // dt->delay_until = time+delay;
+                dt->delay_until = tick+delay;
                 heap_push(&sorted_delayed_tasks, dt);
             }else if(msg[0]=='u'){
                 if(msglen!=5){
                     uart_printf(CONSOLE, "\x1b[Invalid delay_until request to clock server\x1b[0m\r\n");
                     for(;;){}
                 }
-                // time = char_array_to_time(msg+1);
+                uint32_t time = *(uint32_t*)(msg+1);
                 DelayedTask *dt = getNextFreeDelayedTask(&nextFreeDelayedTask);
                 dt->tid = tid;
-                // dt->delay_until = time;
+                dt->delay_until = time;
                 heap_push(&sorted_delayed_tasks, dt);
             }else{
                 uart_printf(CONSOLE, "\x1b[31mInvalid msg received by clock server\x1b[0m\r\n");
