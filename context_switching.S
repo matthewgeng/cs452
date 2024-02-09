@@ -1,6 +1,5 @@
-.global context_switch_to_task
-context_switch_to_task:
-    ldr x11, =kf
+.macro save_task
+    ldr x11, =currentTaskFrame
     ldr x11, [x11]
     str x0, [x11, #0]
     str x1, [x11, #8]
@@ -32,9 +31,16 @@ context_switch_to_task:
     str x28, [x11, #224]
     str x29, [x11, #232]
     str x30, [x11, #240]
-    mov x12, sp
+    mrs x12, sp_el0
     str x12, [x11, #248]
+    mrs x12, elr_el1
+    str x12, [x11, #256]
+    mrs x12, spsr_el1
+    str x12, [x11, #264]
 
+.endm
+
+.macro load_task
     ldr x11, =currentTaskFrame
     ldr x11, [x11]
     ldr x0, [x11, #0]
@@ -75,12 +81,10 @@ context_switch_to_task:
     msr spsr_el1, x12
 
     mov lr, x30
-    eret
+.endm
 
-
-.global return_to_kernel
-return_to_kernel:
-    ldr x11, =currentTaskFrame
+.macro save_kernel
+    ldr x11, =kf
     ldr x11, [x11]
     str x0, [x11, #0]
     str x1, [x11, #8]
@@ -112,13 +116,11 @@ return_to_kernel:
     str x28, [x11, #224]
     str x29, [x11, #232]
     str x30, [x11, #240]
-    mrs x12, sp_el0
+    mov x12, sp
     str x12, [x11, #248]
-    mrs x12, elr_el1
-    str x12, [x11, #256]
-    mrs x12, spsr_el1
-    str x12, [x11, #264]
+.endm
 
+.macro load_kernel
     ldr x11, =kf
     ldr x11, [x11]
 
@@ -154,5 +156,26 @@ return_to_kernel:
 
     ldr x0, [x11, #248]
     mov sp, x0
+.endm
 
+.global context_switch_to_task
+context_switch_to_task:
+    save_kernel
+    load_task
+    eret
+
+.global return_to_kernel_syscall
+return_to_kernel_syscall:
+    save_task
+    load_kernel
+    // return value from context_switch_to_task, 0 --> SYSCALL
+    mov x0, 0
+    ret
+
+.global return_to_kernel_irq
+return_to_kernel_irq:
+    save_task
+    load_kernel
+    // return value from context_switch_to_task, 1 --> IRQ
+    mov x0, 1
     ret

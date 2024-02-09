@@ -154,5 +154,22 @@ int Reply(int tid, const char *reply, int rplen){
     int actual_reply_len;
     asm volatile("mov %0, x0" : "=r"(actual_reply_len));
     return actual_reply_len;
+}
 
+int AwaitEvent(int eventType) {
+    uart_dprintf(CONSOLE, "AwaitEvent %d \r\n", eventType);
+
+    asm volatile(
+        "mov x9, %[eventType]\n"
+        "mov x0, x9\n"
+        "svc %[SYS_CODE]"
+        :
+        : 
+        [eventType] "r" (eventType),
+        [SYS_CODE] "i"(AWAIT_EVENT) 
+    );    
+
+    int ret;
+    asm volatile("mov %0, x0" : "=r"(ret));
+    return ret;
 }
