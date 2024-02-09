@@ -1,6 +1,7 @@
 #include "rpi.h"
 #include "util.h"
 #include "exception.h"
+#include "clock.h"
 #include "task.h"
 #include "heap.h"
 #include "syscall.h"
@@ -15,6 +16,13 @@ int copy_msg(char *src, int srclen, char *dest, int destlen){
     int reslen = (srclen < destlen) ? srclen : destlen;
     memcpy(dest, src, reslen);
     return reslen;
+}
+
+void idle_task(){
+    uart_dprintf(CONSOLE, "Idle Task\r\n");
+    for(;;){
+        asm volatile("wfi");
+    }
 }
 
 void user_task(){
@@ -69,7 +77,9 @@ void test() {
 
 void rootTask(){
     uart_dprintf(CONSOLE, "Root Task\r\n");
+    // order or nameserver and idle_task matters since their tid values are assumed in implementation
     Create(1, &nameserver);
+    Create(1000, &idle_task);
     Create(2, &gameserver);
     Create(100, &test);
     
@@ -129,6 +139,10 @@ int kmain() {
 
     uart_printf(CONSOLE, "Program starting\r\n\r\n");
 
+    // IDLE TASK MEASUREMENT SET UP
+    uint64_t idle_task_total, idle_task_start, program_start;
+    program_start = get_time();
+
     // set some quality of life defaults, not important to functionality
     TaskFrame kernel_frame;
     kernel_frame_init(&kernel_frame);
@@ -167,7 +181,14 @@ int kmain() {
             for (;;){}
         }
 
+        if(currentTaskFrame->tid == 2){
+            idle_task_start = get_time();
+        }
         int exception_code = run_task(currentTaskFrame);
+
+        if(currentTaskFrame->tid == 2){
+            idle_task_total += (get_time()-idle_task_start);
+        }
 
         if(exception_code==CREATE){
             int priority = (int)(currentTaskFrame->x[0]);
@@ -325,6 +346,8 @@ int kmain() {
             uart_printf(CONSOLE, "\x1b[31mUnrecognized exception code %u\x1b[0m\r\n", exception_code);
             for(;;){}
         }
+
+        uart_printf(CONSOLE, "Idle time ratio: %u\r\n", idle_task_total/(program_start-get_time()));
     }
 
     return 0;
