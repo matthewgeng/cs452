@@ -17,10 +17,10 @@ void route_irq(int irq, int cpu) {
     // int bit3 = 0;
 
     uint32_t* irq_addr = GICD_ITARGETSR + 4*offset;
-    uart_printf(CONSOLE, "route val %d\r\n", *irq_addr);
+    // uart_printf(CONSOLE, "route val %d\r\n", *irq_addr);
 
     *irq_addr = *irq_addr | (bit3 | bit2 | bit1 | bit0);
-    uart_printf(CONSOLE, "route val after %d\r\n", *irq_addr);
+    // uart_printf(CONSOLE, "route val after %d\r\n", *irq_addr);
 }
 
 void enable_irq(int irq) {
@@ -31,9 +31,9 @@ void enable_irq(int irq) {
     int bit_offset = irq % 32;
 
     uint32_t* irq_addr = GICD_ISENABLER + 4*offset;
-    uart_printf(CONSOLE, "irq val before %d\r\n", *irq_addr);
+    // uart_printf(CONSOLE, "irq val before %d\r\n", *irq_addr);
     *irq_addr = *irq_addr | (1 << bit_offset);
-    uart_printf(CONSOLE, "irq val after %d\r\n", *irq_addr);
+    // uart_printf(CONSOLE, "irq val after %d\r\n", *irq_addr);
 }
 
 void disable_irq(int irq) {

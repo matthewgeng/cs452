@@ -6,7 +6,12 @@
 #include "syscall.h"
 
 int delayed_task_cmp(const DelayedTask* df1, const DelayedTask* df2) {
-    return df2->delay_until > df1->delay_until;
+    if (df1->delay_until < df2->delay_until) {
+        return -1;
+    } else if (df1->delay_until < df2->delay_until) {
+        return 1;
+    }
+    return 0;
 }
 
 // void time_to_char_arr(uint32_t time, char *buffer) {
@@ -43,6 +48,7 @@ DelayedTask *getNextFreeDelayedTask(DelayedTask **nextFreeDelayedTask){
     *nextFreeDelayedTask = (*nextFreeDelayedTask)->next;
     return dt;
 }
+
 void reclaimDelayedTask(DelayedTask **nextFreeDelayedTask, DelayedTask *dt){
     dt->next = *nextFreeDelayedTask;
     *nextFreeDelayedTask = dt;
@@ -142,12 +148,27 @@ void clock(){
     uint32_t tick = 0;
     for(;;){
         int msglen = Receive(&tid, msg, 5);
+        if (tid == 23) {
+            uart_printf(CONSOLE, "Bruh\r\n");
+            for(;;){}
+        }
+        
+        // uart_printf(CONSOLE, "\r\nheap data\r\n");
+        // for (int i =0; i < sorted_delayed_tasks.length; i++) {
+        //     uart_printf(CONSOLE, "(%u, %u) ", dts[i]->delay_until, dts[i]->tid);
+        // }
+        // uart_printf(CONSOLE, "\r\n");
+
         if(tid == notifier_tid){
             tick++;
             DelayedTask *next_dt = heap_peek(&sorted_delayed_tasks);
             while(next_dt!=NULL && next_dt->delay_until<=tick){
-                Reply(next_dt->tid, (char*)&tick, sizeof(tick));
                 heap_pop(&sorted_delayed_tasks);
+                // DelayedTask *popped = heap_pop(&sorted_delayed_tasks);
+                // uart_printf(CONSOLE, "Popped tid %u with delay until %u\r\n", popped->tid, popped->delay_until);
+                // uart_printf(CONSOLE, "Clock replying to %u with delay until %u\r\n", next_dt->tid, next_dt->delay_until);
+                Reply(next_dt->tid, (char*)&tick, sizeof(tick));
+                reclaimDelayedTask(&nextFreeDelayedTask, next_dt);
                 next_dt = heap_peek(&sorted_delayed_tasks);
             }
             Reply(notifier_tid, NULL, 0);
@@ -157,7 +178,6 @@ void clock(){
                     uart_printf(CONSOLE, "\x1b[Invalid time request to clock server\x1b[0m\r\n");
                     for(;;){}
                 }
-                // time_to_char_arr(time, reply);
                 Reply(tid, (char*)&tick, sizeof(tick));
             }else if(msg[0]=='d'){
                 if(msglen!=5){

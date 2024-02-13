@@ -12,8 +12,10 @@
 #include "interrupt.h"
 #include "clock.h"
 
-extern TaskFrame *kf = 0;
-extern TaskFrame *currentTaskFrame = 0;
+extern TaskFrame* kf = 0;
+extern TaskFrame* currentTaskFrame = 0;
+static uint64_t* p_idle_task_total = 0;;
+static uint64_t* p_program_start = 0;
 
 int copy_msg(char *src, int srclen, char *dest, int destlen){
     int reslen = (srclen < destlen) ? srclen : destlen;
@@ -22,12 +24,12 @@ int copy_msg(char *src, int srclen, char *dest, int destlen){
 }
 
 void idle_task(){
-    uart_printf(CONSOLE, "Idle Task\r\n");
-    // uint32_t clock_tid = WhoIs("clock");
+    uart_dprintf(CONSOLE, "Idle Task\r\n");
     for(;;){
-        // uart_printf(CONSOLE, "Idle task parking at system time %u\r\n", Time(clock_tid));
+        uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
+        uart_printf(CONSOLE, "\0337\033[3;1HIdle percentage: %u%% \0338", idle_time_percent);
+        // uart_printf(CONSOLE, "\033[2;1HIdle percentage: %u%%", idle_time_percent);
         asm volatile("wfi");
-        // Yield();
     }
 }
 
@@ -101,7 +103,6 @@ void time_user() {
 
     char data[2];
     Send(parent, NULL, 0, data, sizeof(data));
-
     char delay = data[0];
     char num_delay = data[1];
 
@@ -119,28 +120,45 @@ void rootTask(){
     Create(0, &notifier);
     Create(1, &clock);
     int user1 = Create(3, &time_user);
+    int user2 = Create(4, &time_user);
+    int user3 = Create(5, &time_user);
+    int user4 = Create(6, &time_user);
 
     Receive(NULL, NULL, 0);
-    char user1_data[2] = {100, 20};
-
+    char user1_data[2] = {10, 20};
     Reply(user1, user1_data, sizeof(user1_data));
+
+    Receive(NULL, NULL, 0);
+    char user2_data[2] = {23, 9};
+    Reply(user2, user2_data, sizeof(user2_data));
+
+    Receive(NULL, NULL, 0);
+    char user3_data[2] = {33, 6};
+    Reply(user3, user3_data, sizeof(user3_data));
+
+    Receive(NULL, NULL, 0);
+    char user4_data[2] = {71, 3};
+    Reply(user4, user4_data, sizeof(user4_data));
     
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
 int run_task(TaskFrame *tf){
-    uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
+    // disable_irqs();
+    // uart_printf(CONSOLE, "running task tid: %u\r\n", tf->tid);
+    // uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
+    for(int i = 0; i < 1000000;i++) {}
     
     int exception_type = context_switch_to_task();
     // exit from exception
 
     // return interrupt if irq
     if (exception_type == 1) {
-        uart_dprintf(CONSOLE, "back in kernel from interrupt cur tid: %u\r\n", tf->tid);
+        // uart_dprintf(CONSOLE, "\n\rback in kernel from interrupt cur tid: %u\r\n", tf->tid);
         return IRQ;
     }
 
-    uart_dprintf(CONSOLE, "back in kernel from exception cur tid: %u\r\n", tf->tid);
+    // uart_dprintf(CONSOLE, "\n\rback in kernel from exception cur tid: %u\r\n", tf->tid);
     // return exception
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
@@ -157,13 +175,14 @@ void kernel_frame_init(TaskFrame* kernel_frame) {
     kernel_frame->priority = 0;
 }
 
-void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)(), uint32_t parent_tid, uint64_t lr, uint64_t spsr) {
+void task_init(TaskFrame* tf, uint32_t priority, uint32_t time, void (*function)(), uint32_t parent_tid, uint64_t lr, uint64_t spsr, uint16_t status) {
     tf->priority = priority;
     tf->pc = function;
     tf->parentTid = parent_tid;
     tf->x[30] = lr;
     tf->spsr = spsr;
     tf->added_time = time;
+    tf->status = status;
 }
 
 void reschedule_task_with_return(Heap *heap, TaskFrame *tf, long long ret){
@@ -190,11 +209,18 @@ int kmain() {
     // INTERRUPTS
     enable_irqs();
 
-    uart_printf(CONSOLE, "Program starting\r\n\r\n");
+    // clear
+    uart_printf(CONSOLE, "\033[2J");
+    // reset cursor to top left
+    uart_printf(CONSOLE, "\033[H");
+    uart_printf(CONSOLE, "Program starting: \r\n\r\n");
+    uart_printf(CONSOLE, "Idle percentage:   \r\n");
 
     // IDLE TASK MEASUREMENT SET UP
-    uint64_t idle_task_total, idle_task_start, program_start;
+    uint64_t idle_task_total = 0, idle_task_start = 0, program_start = 0;
     program_start = sys_time();
+    p_program_start = &program_start;
+    p_idle_task_total = &idle_task_total;
 
     // set some quality of life defaults, not important to functionality
     TaskFrame kernel_frame;
@@ -207,7 +233,7 @@ int kmain() {
     // USER TASK INITIALIZATION
     TaskFrame *nextFreeTaskFrame;
     TaskFrame user_tasks[MAX_NUM_TASKS];
-    nextFreeTaskFrame = tasks_init(user_tasks, USER_STACK_START, 2048, MAX_NUM_TASKS);
+    nextFreeTaskFrame = tasks_init(user_tasks, USER_STACK_START, USER_STACK_SIZE, MAX_NUM_TASKS);
 
     // TASK DESCRIPTOR INITIALIZATION
     Heap heap; // min heap
@@ -225,7 +251,7 @@ int kmain() {
 
     // FIRST TASKS INITIALIZATION
     TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
-    task_init(root_task, 100, sys_time(), &rootTask, 0, (uint64_t)&Exit, 0x60000240); // 1001 bits for DAIF
+    task_init(root_task, 100, sys_time(), &rootTask, 0, (uint64_t)&Exit, 0x60000240, READY); // 1001 bits for DAIF
     heap_push(&heap, root_task);
 
     // timer
@@ -240,31 +266,31 @@ int kmain() {
             for (;;){}
         }
 
-        // if(currentTaskFrame->tid == 2){
-        //     idle_task_start = sys_time();
-        // }
+        if(currentTaskFrame->tid == 2){
+            idle_task_start = sys_time();
+        }
 
         int exception_code = run_task(currentTaskFrame);
 
-        // if(currentTaskFrame->tid == 2){
-        //     idle_task_total += (sys_time()-idle_task_start);
-        // }
+        if(currentTaskFrame->tid == 2){
+            idle_task_total += (sys_time()-idle_task_start);
+        }
 
         if(exception_code==CREATE){
             int priority = (int)(currentTaskFrame->x[0]);
             void (*function)() = (void *)(currentTaskFrame->x[1]);
             if(priority<0){
-                uart_dprintf(CONSOLE, "\x1b[31mInvalid priority %d\x1b[0m\r\n", priority);
+                uart_printf(CONSOLE, "\x1b[31mInvalid priority %d\x1b[0m\r\n", priority);
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
                 continue;
             }
             TaskFrame* created_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
             if(created_task==NULL){
-                uart_dprintf(CONSOLE, "\x1b[31mKernel out of task descriptors\x1b[0m\r\n");
+                uart_printf(CONSOLE, "\x1b[31mKernel out of task descriptors\x1b[0m\r\n");
                 reschedule_task_with_return(&heap, currentTaskFrame, -2);
                 continue;
             }
-            task_init(created_task, priority, sys_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x60000240);
+            task_init(created_task, priority, sys_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x60000240, READY);
             heap_push(&heap, created_task);
             reschedule_task_with_return(&heap, currentTaskFrame, created_task->tid);
         } else if(exception_code==EXIT){
@@ -273,7 +299,7 @@ int kmain() {
                 uart_printf(CONSOLE, "\x1b[31mTask %u exiting with %u waiting tasks \x1b[0m\r\n", currentTaskFrame->tid, num_tasks_waiting_on_msg);
             }
 
-            reclaimTaskFrame(nextFreeTaskFrame, currentTaskFrame);
+            reclaimTaskFrame(&nextFreeTaskFrame, currentTaskFrame);
         } else if(exception_code==MY_TID){
             reschedule_task_with_return(&heap, currentTaskFrame, currentTaskFrame->tid);
         } else if(exception_code==MY_PARENT_TID){
@@ -299,7 +325,7 @@ int kmain() {
             }
             TaskFrame *recipient = user_tasks + tid;
             if(currentTaskFrame->sd != NULL || currentTaskFrame->status!=READY || recipient->status==SEND_WAIT || recipient->status==REPLY_WAIT){
-                uart_dprintf(CONSOLE, "\x1b[31mOn send sender/recipient status not valid %d %d %d\x1b[0m\r\n", currentTaskFrame->sd, currentTaskFrame->status, recipient->status);
+                uart_printf(CONSOLE, "\x1b[31mOn send sender/recipient status not valid %d %d %d\x1b[0m\r\n", currentTaskFrame->sd, currentTaskFrame->status, recipient->status);
                 reschedule_task_with_return(&heap, currentTaskFrame, -2);
                 continue;
             }
@@ -318,7 +344,7 @@ int kmain() {
 
                 ReceiveData *rd = recipient->rd;
                 if(rd==NULL){
-                    uart_dprintf(CONSOLE, "\x1b[31mOn send recipient rd is null\x1b[0m\r\n");
+                    uart_printf(CONSOLE, "\x1b[31mOn send recipient rd is null\x1b[0m\r\n");
                     reschedule_task_with_return(&heap, currentTaskFrame, -2);
                     continue;
                 }
@@ -380,18 +406,19 @@ int kmain() {
             // if receive status not in ready or send status not in reply-wait, error
             // copy data and set both status to ready
             if(tid>MAX_NUM_TASKS || user_tasks[tid].status==INACTIVE){
-                uart_dprintf(CONSOLE, "\x1b[31mtid not valid %d \x1b[0m\r\n", tid);
+                uart_printf(CONSOLE, "Replier %u sender %u, status %u\r\n", currentTaskFrame->tid, tid, user_tasks[tid].status);
+                uart_printf(CONSOLE, "\x1b[31mOn reply replier %u sender tid not valid %d \x1b[0m\r\n", currentTaskFrame->tid, tid);
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
                 continue;
             }
             TaskFrame *sender = user_tasks + tid;
             if(sender->status!=REPLY_WAIT){
-                uart_dprintf(CONSOLE, "\x1b[31mOn reply sender status not reply_wait %d\x1b[0m\r\n", sender->status);
+                uart_printf(CONSOLE, "\x1b[31mOn reply replier %u to sender %u status not reply_wait %d\x1b[0m\r\n",currentTaskFrame->tid, tid, sender->status);
                 reschedule_task_with_return(&heap, currentTaskFrame, -2);
                 continue;
             }
             if(currentTaskFrame->status!=READY){
-                uart_dprintf(CONSOLE, "\x1b[31mOn reply current status not ready %d\x1b[0m\r\n", sender->status);
+                uart_printf(CONSOLE, "\x1b[31mOn reply current status not ready %d\x1b[0m\r\n", sender->status);
                 for(;;){}
             }            
 
@@ -414,6 +441,7 @@ int kmain() {
             // TODO: not sure if we should buffer the tasks and what to return when we reach that
             // currently, we can only have a single element waiting
             if (blocked_on_irq[type] != NULL) {
+                uart_printf(CONSOLE, "Existing task %u already waiting for %d\r\n", blocked_on_irq[type]->tid, type);
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
             }
 
@@ -427,6 +455,7 @@ int kmain() {
 
             if (irq == SYSTEM_TIMER_IRQ_1) {
                 if (blocked_on_irq[CLOCK] != NULL) {
+                    // uart_dprintf(CONSOLE, "task %u recieved irq event\r\n", blocked_on_irq[CLOCK]->tid);
                     reschedule_task_with_return(&heap, blocked_on_irq[CLOCK], 0);
                     blocked_on_irq[CLOCK] = NULL;
                 }

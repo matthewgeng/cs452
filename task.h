@@ -12,7 +12,7 @@
 #define REPLY_WAIT 4
 
 #define USER_STACK_START 580000
-#define USER_STACK_SIZE 1024
+#define USER_STACK_SIZE 2048
 #define SENDER_QUEUE_SIZE 5
 
 typedef struct SendData {
