@@ -95,8 +95,6 @@ void rootTask(){
 }
 
 int run_task(TaskFrame *tf){
-    for(int i = 0; i < 1000000;i++) {}
-    
     int exception_type = context_switch_to_task();
     // exit from exception
 
