@@ -91,7 +91,7 @@ void rootTask(){
     char user4_data[2] = {71, 3};
     Reply(user4, user4_data, sizeof(user4_data));
     
-    uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
+    // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
 
 int run_task(TaskFrame *tf){
