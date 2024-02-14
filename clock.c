@@ -82,9 +82,17 @@ int Delay(int tid, int ticks){
     int tick;
 
     int intended_reply_len = Send(tid, msg, sizeof(msg), (char*)&tick, sizeof(tick));
+
+    // invalid send 
     if(intended_reply_len < 0){
         return -1;
     }
+
+    // negative delay code
+    if (tick == -2) {
+        return tick;
+    }
+
     if(intended_reply_len != 4){
         uart_printf(CONSOLE, "\x1b[31mTime unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
         for(;;){}
@@ -103,9 +111,17 @@ int DelayUntil(int tid, int ticks){
     int tick;
 
     int intended_reply_len = Send(tid, msg, sizeof(msg), (char*)&tick, sizeof(tick));
+    
+    // invalid send 
     if(intended_reply_len < 0){
         return -1;
     }
+
+    // negative delay code
+    if (tick == -2) {
+        return tick;
+    }
+
     if(intended_reply_len != 4){
         uart_printf(CONSOLE, "\x1b[31mTime unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
         for(;;){}
@@ -142,22 +158,13 @@ void clock(){
     Heap sorted_delayed_tasks;
     DelayedTask* dts[MAX_NUM_TASKS];
     heap_init(&sorted_delayed_tasks, dts, MAX_NUM_TASKS, delayed_task_cmp);
+    int neg_delay_code = -2;
 
     char msg[5];
     int tid;
     uint32_t tick = 0;
     for(;;){
         int msglen = Receive(&tid, msg, 5);
-        if (tid == 23) {
-            uart_printf(CONSOLE, "Bruh\r\n");
-            for(;;){}
-        }
-        
-        // uart_printf(CONSOLE, "\r\nheap data\r\n");
-        // for (int i =0; i < sorted_delayed_tasks.length; i++) {
-        //     uart_printf(CONSOLE, "(%u, %u) ", dts[i]->delay_until, dts[i]->tid);
-        // }
-        // uart_printf(CONSOLE, "\r\n");
 
         if(tid == notifier_tid){
             tick++;
@@ -186,6 +193,11 @@ void clock(){
                 }
                 // uint32_t delay = char_array_to_time(msg+1);
                 uint32_t delay = *(uint32_t*)(msg+1);
+                if (delay < 0) {
+                    Reply(tid, (char*)&neg_delay_code, sizeof(neg_delay_code));
+                    continue;
+                }
+
                 DelayedTask *dt = getNextFreeDelayedTask(&nextFreeDelayedTask);
                 dt->tid = tid;
                 dt->delay_until = tick+delay;
@@ -196,6 +208,12 @@ void clock(){
                     for(;;){}
                 }
                 uint32_t time = *(uint32_t*)(msg+1);
+
+                if (time < 0) {
+                    Reply(tid, (char*)&neg_delay_code, sizeof(neg_delay_code));
+                    continue;
+                }
+
                 DelayedTask *dt = getNextFreeDelayedTask(&nextFreeDelayedTask);
                 dt->tid = tid;
                 dt->delay_until = time;

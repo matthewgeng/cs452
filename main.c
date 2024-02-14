@@ -33,56 +33,7 @@ void idle_task(){
     }
 }
 
-void user_task(){
-    uart_dprintf(CONSOLE, "User Task\r\n");
-    int tid = MyTid();
-    int parent_tid = MyParentTid();
-    uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
-    Yield();
-    uart_printf(CONSOLE, "\x1b[32mMyTid: %d, MyParentTid: %d\x1b[0m\r\n", tid, parent_tid);
-}
-
-void rootTask_old(){
-    uart_dprintf(CONSOLE, "Root Task\r\n");
-    int tid = MyTid();
-    int parent_tid = MyParentTid();
-    // lower value priority --> higher higher
-    int tid1 = Create(3, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid1);
-    int tid2 = Create(3, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid2);
-    int tid3 = Create(1, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid3);
-    int tid4 = Create(1, &user_task);
-    uart_printf(CONSOLE, "Created: %u\r\n", tid4);
-    
-    uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
-}
-
-void test() {
-    uart_printf(CONSOLE, "Beginning testing\r\n");
-
-    uart_printf(CONSOLE, "Test 1\r\n");
-    Create(1, &test1);
-    uart_printf(CONSOLE, "Test 1 finished\r\n");
-
-    uart_printf(CONSOLE, "Press any key to continue\r\n");
-    char c = uart_getc(CONSOLE);
-
-    uart_printf(CONSOLE, "Test 2\r\n");
-    Create(1, &test2);
-    uart_printf(CONSOLE, "Test 2 finished\r\n");
-
-    uart_printf(CONSOLE, "Press any key to continue\r\n");
-    c = uart_getc(CONSOLE);
-    
-    uart_printf(CONSOLE, "Test 3\r\n");
-    Create(1, &test3);
-    uart_printf(CONSOLE, "Test 3 finished\r\n");
-
-    uart_printf(CONSOLE, "Finished testing\r\n");
-}
-
+// remove usage of this, move functionality to timer.c/h
 static char* const ST_BASE = (char*)(0xFE003000); // todo use MMIO_BASE
 
 static const uint32_t ST_UPDATE_FREQ = 1000000; // given frequency
@@ -99,7 +50,7 @@ static const uint32_t ST_C3 = 0x18;
 void time_user() {
     int tid = MyTid();
     int parent = MyParentTid();
-    int clock = WhoIs("clock");
+    int clock = WhoIs("clock"); // TODO: make every server have a function to get name
 
     char data[2];
     Send(parent, NULL, 0, data, sizeof(data));
@@ -144,9 +95,6 @@ void rootTask(){
 }
 
 int run_task(TaskFrame *tf){
-    // disable_irqs();
-    // uart_printf(CONSOLE, "running task tid: %u\r\n", tf->tid);
-    // uart_dprintf(CONSOLE, "running task tid: %u\r\n", tf->tid);
     for(int i = 0; i < 1000000;i++) {}
     
     int exception_type = context_switch_to_task();
@@ -158,7 +106,6 @@ int run_task(TaskFrame *tf){
         return IRQ;
     }
 
-    // uart_dprintf(CONSOLE, "\n\rback in kernel from exception cur tid: %u\r\n", tf->tid);
     // return exception
     uint64_t esr;
     asm volatile("mrs %0, esr_el1" : "=r"(esr));
@@ -213,6 +160,7 @@ int kmain() {
     uart_printf(CONSOLE, "\033[2J");
     // reset cursor to top left
     uart_printf(CONSOLE, "\033[H");
+    // program start
     uart_printf(CONSOLE, "Program starting: \r\n\r\n");
     uart_printf(CONSOLE, "Idle percentage:   \r\n");
 
@@ -244,7 +192,6 @@ int kmain() {
     SendData *nextFreeSendData;
     SendData send_datas[MAX_NUM_TASKS];
     nextFreeSendData = sds_init(send_datas, MAX_NUM_TASKS);
-
     ReceiveData *nextFreeReceiveData;
     ReceiveData receive_datas[MAX_NUM_TASKS];
     nextFreeReceiveData = rds_init(receive_datas, MAX_NUM_TASKS);
@@ -266,12 +213,14 @@ int kmain() {
             for (;;){}
         }
 
+        // idle task time calculation
         if(currentTaskFrame->tid == 2){
             idle_task_start = sys_time();
         }
 
         int exception_code = run_task(currentTaskFrame);
 
+        // idle task time calculation
         if(currentTaskFrame->tid == 2){
             idle_task_total += (sys_time()-idle_task_start);
         }
@@ -436,13 +385,15 @@ int kmain() {
 
             if (type < CLOCK || type > TODO) {
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
+                continue;
             }
 
             // TODO: not sure if we should buffer the tasks and what to return when we reach that
             // currently, we can only have a single element waiting
             if (blocked_on_irq[type] != NULL) {
                 uart_printf(CONSOLE, "Existing task %u already waiting for %d\r\n", blocked_on_irq[type]->tid, type);
-                reschedule_task_with_return(&heap, currentTaskFrame, -1);
+                reschedule_task_with_return(&heap, currentTaskFrame, -2);
+                continue;
             }
 
             blocked_on_irq[type] = currentTaskFrame;
@@ -455,18 +406,12 @@ int kmain() {
 
             if (irq == SYSTEM_TIMER_IRQ_1) {
                 if (blocked_on_irq[CLOCK] != NULL) {
-                    // uart_dprintf(CONSOLE, "task %u recieved irq event\r\n", blocked_on_irq[CLOCK]->tid);
                     reschedule_task_with_return(&heap, blocked_on_irq[CLOCK], 0);
                     blocked_on_irq[CLOCK] = NULL;
                 }
 
-                // uart_printf(CONSOLE, "\r\ntime = %u\r\n", sys_time());
-                // uart_printf(CONSOLE, "c1 before = %u\r\n", *(uint32_t*)(ST_BASE+ST_C1));
-
                 // update system timer C1
                 *(uint32_t*)(ST_BASE+ST_C1) = *(uint32_t*)(ST_BASE+ST_C1) + INTERVAL;
-
-                // uart_printf(CONSOLE, "c1 after = %u\r\n", *(uint32_t*)(ST_BASE+ST_C1));
 
                 // update clock status register
                 *(uint32_t*)(ST_BASE) = *(uint32_t*)(ST_BASE) | 1 << 1;
@@ -474,17 +419,17 @@ int kmain() {
                 // finish irq processing
                 *(uint32_t*)(GICC_EOIR) = irq_ack;
             } else {
-                uart_printf(CONSOLE, "Unrecognized interrupt %d\r\n", irq);
+                // invalid event
+                uart_printf(CONSOLE, "Invalid/Unsupported IRQ \r\n");
                 for(;;){}
             }
 
+            // reschedule 
             heap_push(&heap, currentTaskFrame);
         } else {
             uart_printf(CONSOLE, "\x1b[31mUnrecognized exception code %u\x1b[0m\r\n", exception_code);
             for(;;){}
         }
-
-        // uart_printf(CONSOLE, "Idle time ratio: %u\r\n", idle_task_total/(program_start-sys_time()));
     }
 
     return 0;
