@@ -56,17 +56,31 @@ int WhoIs(const char *name){
     return (int)tid[0];
 }
 
+void set_name(NameMap *map, int tid, char *name){
+    int index = 0;
+    while (name[index]!='\0'){
+        char c = name[index];
+        map->mapping[tid][index] = c;
+        index += 1;
+    }
+    map->mapping[tid][index]='\0';
+}
+
+char* get_name(NameMap *map, int tid){
+    return map->mapping[tid];
+}
+
 // define messages to name server as r+name or w+name
 void nameserver(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Running nameserver \r\n");
     #endif 
-    char tid_to_name[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
-    char blocked_whois[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
+    NameMap tid_to_name;
+    NameMap blocked_whois;
 
     for(int i = 0; i<MAX_NUM_TASKS; i++){
-        tid_to_name[i][0] = '\0';
-        blocked_whois[i][0] = '\0';
+        set_name(&tid_to_name, i, "\0");
+        set_name(&blocked_whois, i, "\0");
     }
 
     char msg[MAX_TASK_NAME_CHAR+2];
@@ -85,23 +99,17 @@ void nameserver(){
         }
         if(msg[0]=='r'){
             char *arg_name = msg+1;
-            int index = 0;
             // check if another task has the same name
             for(int i = 0; i<MAX_NUM_TASKS; i++){
-                if(str_equal(arg_name, tid_to_name[i])){
+                if(str_equal(arg_name, get_name(&tid_to_name, i))){
                     uart_printf(CONSOLE, "Name overwritten for task %d\r\n", i);
-                    tid_to_name[i][0] = '\0';
+                    set_name(&tid_to_name, i, "\0");
                 }
             }
-            while (arg_name[index]!='\0'){
-                char c = arg_name[index];
-                tid_to_name[tid][index] = c;
-                index += 1;
-            }
-            tid_to_name[tid][index]='\0';
+            set_name(&tid_to_name, tid, arg_name);
             Reply(tid, NULL, 0);
             for(int i = 0; i<MAX_NUM_TASKS; i++){
-                if(str_equal(arg_name, blocked_whois[i])){
+                if(str_equal(arg_name, get_name(&blocked_whois, i))){
                     reply[i][0] = tid;
                     Reply(i, (const char *)(reply[i]), 1);
                 }
@@ -110,13 +118,13 @@ void nameserver(){
             char *arg_name = msg+1;
             int reply_tid = -1;
             for(int i = 0; i<MAX_NUM_TASKS; i++){
-                if(str_equal(tid_to_name[i], arg_name)){
+                if(str_equal(get_name(&tid_to_name, i), arg_name)){
                     reply_tid = i;
                     break;
                 }
             }
             if(reply_tid==-1){
-                memcpy(blocked_whois[tid], arg_name, msglen);
+                memcpy(get_name(&blocked_whois, tid), arg_name, msglen);
             }else{
                 reply[tid][0] = reply_tid;
                 Reply(tid, (const char *)reply[tid], 1);
