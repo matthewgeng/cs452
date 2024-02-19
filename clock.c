@@ -56,7 +56,9 @@ void reclaimDelayedTask(DelayedTask **nextFreeDelayedTask, DelayedTask *dt){
 
 
 int Time(int tid){
-    uart_dprintf(CONSOLE, "Time called\r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Time called\r\n");
+    #endif 
     char msg[1] = {'t'};
     uint32_t tick;
     int intended_reply_len = Send(tid, msg, 1, (char*)&tick, sizeof(tick));
@@ -130,7 +132,9 @@ int DelayUntil(int tid, int ticks){
 }
 
 void notifier(){
-    uart_dprintf(CONSOLE, "Running notifier server \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Running notifier server \r\n");
+    #endif 
     RegisterAs("notifier");
     int clock_server_tid = WhoIs("clock");
     for(;;){
@@ -144,7 +148,9 @@ void notifier(){
 }
 
 void clock(){
-    uart_dprintf(CONSOLE, "Running clock server \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Running clock server \r\n");
+    #endif 
     RegisterAs("clock");
     int notifier_tid = WhoIs("notifier");
     if(notifier_tid<0){

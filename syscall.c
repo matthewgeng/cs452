@@ -2,7 +2,9 @@
 #include "rpi.h"
 
 int Create(int priority, void (*function)()){
-    uart_dprintf(CONSOLE, "creating task: %d %x \r\n", priority, function);
+    #if DEBUG
+        uart_dprintf(CONSOLE, "creating task: %d %x \r\n", priority, function);
+    #endif 
     
     int tid;
 
@@ -23,7 +25,9 @@ int Create(int priority, void (*function)()){
 
 
 int MyTid(){
-    uart_dprintf(CONSOLE, "fetching tid \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "fetching tid \r\n");
+    #endif 
     int tid;
 
     asm volatile(
@@ -32,13 +36,17 @@ int MyTid(){
         : [SYS_CODE] "i"(MY_TID) 
     );
     asm volatile("mov %0, x0" : "=r"(tid));
-    uart_dprintf(CONSOLE, "MyTid: %d\r\n", tid);
+    #if DEBUG
+        uart_dprintf(CONSOLE, "MyTid: %d\r\n", tid);
+    #endif 
 
     return tid;
 }
 
 int MyParentTid(){
-    uart_dprintf(CONSOLE, "fetching parent tid \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "fetching parent tid \r\n");
+    #endif 
     int parent_tid;
 
     asm volatile(
@@ -52,7 +60,9 @@ int MyParentTid(){
 }
 
 void Yield(){
-    uart_dprintf(CONSOLE, "task yielding \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "task yielding \r\n");
+    #endif 
 
     asm volatile(
         "svc %[SYS_CODE]\n"
@@ -62,7 +72,9 @@ void Yield(){
 }
 
 void Exit(){
-    uart_dprintf(CONSOLE, "task exiting \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "task exiting \r\n");
+    #endif 
     // TODO: maybe remove tid from nameserver
     asm volatile(
         "svc %[SYS_CODE]\n"
@@ -75,7 +87,9 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
 
     // TODO: note that if a function gets a -2 return from send, should just throw error and halt
     
-    uart_dprintf(CONSOLE, "Send %d %d %d %d %d\r\n", tid, msg, msglen, reply, rplen);
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Send %d %d %d %d %d\r\n", tid, msg, msglen, reply, rplen);
+    #endif 
 
     int intended_reply_len;
 
@@ -107,7 +121,9 @@ int Send(int tid, const char *msg, int msglen, char *reply, int rplen){
 
 int Receive(int *tid, char *msg, int msglen){
 
-    uart_dprintf(CONSOLE, "Receive %d %d %d\r\n", tid, msg, msglen);
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Receive %d %d %d\r\n", tid, msg, msglen);
+    #endif 
 
     int intended_sent_len;
 
@@ -131,7 +147,9 @@ int Receive(int *tid, char *msg, int msglen){
 }
 
 int Reply(int tid, const char *reply, int rplen){
-    uart_dprintf(CONSOLE, "Reply %d %d %d\r\n", tid, reply, rplen);
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Reply %d %d %d\r\n", tid, reply, rplen);
+    #endif 
 
     asm volatile(
         "mov x9, %[tid]\n"
@@ -149,16 +167,15 @@ int Reply(int tid, const char *reply, int rplen){
         [SYS_CODE] "i"(REPLY) 
     );    
 
-    // uart_dprintf(CONSOLE, "Back to reply %d %x %d\r\n", tid, reply, rplen);
-
-
     int actual_reply_len;
     asm volatile("mov %0, x0" : "=r"(actual_reply_len));
     return actual_reply_len;
 }
 
 int AwaitEvent(int eventType) {
-    uart_dprintf(CONSOLE, "AwaitEvent %d \r\n", eventType);
+    #if DEBUG
+        uart_dprintf(CONSOLE, "AwaitEvent %d \r\n", eventType);
+    #endif 
 
     asm volatile(
         "mov x9, %[eventType]\n"

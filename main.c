@@ -24,7 +24,9 @@ int copy_msg(char *src, int srclen, char *dest, int destlen){
 }
 
 void idle_task(){
-    uart_dprintf(CONSOLE, "Idle Task\r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Idle Task\r\n");
+    #endif 
     for(;;){
         uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
         uart_printf(CONSOLE, "\0337\033[3;1HIdle percentage: %u%% \0338", idle_time_percent);
@@ -64,7 +66,9 @@ void time_user() {
 }
 
 void rootTask(){
-    uart_dprintf(CONSOLE, "Root Task\r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Root Task\r\n");
+    #endif 
     // order or nameserver and idle_task matters since their tid values are assumed in implementation
     Create(2, &nameserver);
     Create(1000, &idle_task);
@@ -100,7 +104,6 @@ int run_task(TaskFrame *tf){
 
     // return interrupt if irq
     if (exception_type == 1) {
-        // uart_dprintf(CONSOLE, "\n\rback in kernel from interrupt cur tid: %u\r\n", tf->tid);
         return IRQ;
     }
 
@@ -203,11 +206,15 @@ int kmain() {
     timer_init();
 
     for(;;){
-        uart_dprintf(CONSOLE, "start of loop\r\n");
+        #if DEBUG
+            uart_dprintf(CONSOLE, "start of loop\r\n");
+        #endif 
         currentTaskFrame = heap_pop(&heap);
 
         if (currentTaskFrame == NULL) {
-            uart_dprintf(CONSOLE, "Finished tasks\r\n");
+            #if DEBUG
+                uart_dprintf(CONSOLE, "Finished tasks\r\n");
+            #endif 
             for (;;){}
         }
 
@@ -266,7 +273,9 @@ int kmain() {
             // if recipient in receive-wait, copy data, recipient wait->ready, sender ready->reply-wait
             // receive data can be in receive task frame?
             if(tid>MAX_NUM_TASKS || user_tasks[tid].status==INACTIVE){
-                uart_dprintf(CONSOLE, "\x1b[31mOn send tid invalid %d\x1b[0m\r\n", tid);
+                #if DEBUG
+                    uart_dprintf(CONSOLE, "\x1b[31mOn send tid invalid %d\x1b[0m\r\n", tid);
+                #endif 
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
                 continue;
             }
@@ -349,7 +358,9 @@ int kmain() {
             int tid = (int)(currentTaskFrame->x[0]);
             char *reply = (char *)(currentTaskFrame->x[1]);
             int rplen = (int)(currentTaskFrame->x[2]);     
-            uart_dprintf(CONSOLE, "On reply %d %x %d\r\n", tid, reply, rplen);
+            #if DEBUG
+                uart_dprintf(CONSOLE, "On reply %d %x %d\r\n", tid, reply, rplen);
+            #endif 
             // if receive status not in ready or send status not in reply-wait, error
             // copy data and set both status to ready
             if(tid>MAX_NUM_TASKS || user_tasks[tid].status==INACTIVE){
@@ -379,7 +390,9 @@ int kmain() {
         
         } else if (exception_code == AWAIT_EVENT) {
             int type = (int)(currentTaskFrame->x[0]);
-            uart_dprintf(CONSOLE, "AwaitEvent %d\r\n", type);
+            #if DEBUG
+                uart_dprintf(CONSOLE, "AwaitEvent %d\r\n", type);
+            #endif 
 
             if (type < CLOCK || type > TODO) {
                 reschedule_task_with_return(&heap, currentTaskFrame, -1);
@@ -396,7 +409,9 @@ int kmain() {
 
             blocked_on_irq[type] = currentTaskFrame;
         } else if (exception_code == IRQ) {
-            uart_dprintf(CONSOLE, "On irq\r\n");
+            #if DEBUG
+                uart_dprintf(CONSOLE, "On irq\r\n");
+            #endif 
 
             uint32_t irq_ack = *(uint32_t*)(GICC_IAR);
             uint32_t irq_id_bit_mask = 0x1FF; // 9 bits

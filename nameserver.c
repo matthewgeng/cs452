@@ -6,7 +6,9 @@
 
 int RegisterAs(const char *name){
     // assuming name_server tid is always 1
-    uart_dprintf(CONSOLE, "RegisterAs \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "RegisterAs \r\n");
+    #endif 
     int name_len = str_len(name);
     char msg[name_len+1];
     msg[0]='r';
@@ -24,7 +26,9 @@ int RegisterAs(const char *name){
 }
 
 int WhoIs(const char *name){
-    uart_dprintf(CONSOLE, "WhoIs \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "WhoIs \r\n");
+    #endif 
     int name_len = str_len(name);
     char msg[name_len+1];
     msg[0]='w';
@@ -54,7 +58,9 @@ int WhoIs(const char *name){
 
 // define messages to name server as r+name or w+name
 void nameserver(){
-    uart_dprintf(CONSOLE, "Running nameserver \r\n");
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Running nameserver \r\n");
+    #endif 
     char tid_to_name[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
     char blocked_whois[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
 

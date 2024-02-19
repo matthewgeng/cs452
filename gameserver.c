@@ -82,7 +82,9 @@ int gameserver_quit(int tid, int match) {
     if (response->code == OK) {
         return 0;
     } else {
-        uart_dprintf(CONSOLE, "received error: %s\r\n", response->body);
+        #if DEBUG
+            uart_dprintf(CONSOLE, "received error: %s\r\n", response->body);
+        #endif 
         return -1;
     }
 }
@@ -126,13 +128,17 @@ void gameserver() {
     for (;;) {
         int tid;
         char byte_msg[sizeof(GameMsg)];
-        uart_dprintf(CONSOLE, "gameserver tid %u receiving\r\n", gameserver_tid);
+        #if DEBUG
+            uart_dprintf(CONSOLE, "gameserver tid %u receiving\r\n", gameserver_tid);
+        #endif 
         int response = Receive(&tid, byte_msg, sizeof(GameMsg));
 
         GameMsg* msg = (GameMsg *) byte_msg;
         
         if (msg->code == SIGNUP) {
-            uart_dprintf(CONSOLE, "[SERVER] tid %u signing up\r\n", tid);
+            #if DEBUG
+                uart_dprintf(CONSOLE, "[SERVER] tid %u signing up\r\n", tid);
+            #endif 
 
             // check if game is full    
             if (games[game_idx].p1 != -1 && games[game_idx].p2 != -1) {
@@ -167,7 +173,9 @@ void gameserver() {
             }
 
         } else if (msg->code == PLAY) {
-            uart_dprintf(CONSOLE, "[SERVER] tid %u playing\r\n", tid);
+            #if DEBUG
+                uart_dprintf(CONSOLE, "[SERVER] tid %u playing\r\n", tid);
+            #endif 
             // TODO: assert body is right length
             int game = msg->body[0];
             int move = msg->body[1];
@@ -277,7 +285,9 @@ void gameserver() {
                 continue;
             }
         } else if (msg->code == QUIT) {
-            uart_dprintf(CONSOLE, "[SERVER] tid %u quitting\r\n", tid);
+            #if DEBUG
+                uart_dprintf(CONSOLE, "[SERVER] tid %u quitting\r\n", tid);
+            #endif 
             int game = msg->body[0];
             
             // check if game is ready and both players haven't quit already
