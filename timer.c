@@ -52,3 +52,11 @@ void timer_init() {
 
     // uart_printf(CONSOLE, "cs %d\r\n", *(uint32_t*)(ST_BASE));
 }
+
+void update_c1(){
+    *(uint32_t*)(ST_BASE+ST_C1) = *(uint32_t*)(ST_BASE+ST_C1) + INTERVAL;
+}
+
+void update_status_reg(){
+    *(uint32_t*)(ST_BASE) = *(uint32_t*)(ST_BASE) | 1 << 1;
+}

@@ -1,5 +1,5 @@
-#ifndef TASK_H
-#define TASK_H
+#ifndef TASKFRAME_H
+#define TASKFRAME_H
 
 #include <stdint.h>
 #include <stddef.h>
@@ -17,7 +17,7 @@
 
 typedef struct SendData {
   int tid;
-  const char *msg;
+  char *msg;
   int msglen;
   char *reply;
   int rplen;
@@ -26,7 +26,7 @@ typedef struct SendData {
 
 typedef struct ReceiveData {
   int *tid;
-  const char *msg;
+  char *msg;
   int msglen;
   struct ReceiveData *next;
 } ReceiveData;

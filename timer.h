@@ -8,5 +8,7 @@
 
 void timer_init();
 uint32_t sys_time();
+void update_c1();
+void update_status_reg();
 
 #endif
