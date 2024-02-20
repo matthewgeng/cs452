@@ -14,22 +14,6 @@ int delayed_task_cmp(const DelayedTask* df1, const DelayedTask* df2) {
     return 0;
 }
 
-// void time_to_char_arr(uint32_t time, char *buffer) {
-//     buffer[0] = (time >> 24) & 0xFF;
-//     buffer[1] = (time >> 16) & 0xFF;
-//     buffer[2] = (time >> 8) & 0xFF;
-//     buffer[3] = time & 0xFF;
-// }
-
-// uint32_t char_array_to_time(const char *buffer) {
-//     uint32_t time = ((uint32_t)(buffer[0]) << 24) |
-//            ((uint32_t)(buffer[1]) << 16) |
-//            ((uint32_t)(buffer[2]) << 8) |
-//            (uint32_t)(buffer[3]);
-//     return time;
-// }
-
-
 DelayedTask *dts_init(DelayedTask* dts, size_t size){
     for(size_t i = 0; i<size; i++){
         if(i<size-1){

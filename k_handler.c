@@ -27,7 +27,7 @@ void reschedule_task_with_return(Heap *heap, TaskFrame *tf, long long ret){
     heap_push(heap, tf);
 }
 
-void handle_create(Heap *heap, TaskFrame *nextFreeTaskFrame){
+void handle_create(Heap *heap, TaskFrame **nextFreeTaskFrame){
     int priority = (int)(currentTaskFrame->x[0]);
     void (*function)() = (void *)(currentTaskFrame->x[1]);
     if(priority<0){
@@ -35,7 +35,7 @@ void handle_create(Heap *heap, TaskFrame *nextFreeTaskFrame){
         reschedule_task_with_return(heap, currentTaskFrame, -1);
         return;
     }
-    TaskFrame* created_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    TaskFrame* created_task = getNextFreeTaskFrame(nextFreeTaskFrame);
     if(created_task==NULL){
         uart_printf(CONSOLE, "\x1b[31mKernel out of task descriptors\x1b[0m\r\n");
         reschedule_task_with_return(heap, currentTaskFrame, -2);
@@ -46,13 +46,13 @@ void handle_create(Heap *heap, TaskFrame *nextFreeTaskFrame){
     reschedule_task_with_return(heap, currentTaskFrame, created_task->tid);
 }
 
-void handle_exit(TaskFrame *nextFreeTaskFrame){
+void handle_exit(TaskFrame **nextFreeTaskFrame){
     int num_tasks_waiting_on_msg = currentTaskFrame->sender_queue.count;
     if (num_tasks_waiting_on_msg > 0) {
         uart_printf(CONSOLE, "\x1b[31mTask %u exiting with %u waiting tasks \x1b[0m\r\n", currentTaskFrame->tid, num_tasks_waiting_on_msg);
     }
 
-    reclaimTaskFrame(&nextFreeTaskFrame, currentTaskFrame);
+    reclaimTaskFrame(nextFreeTaskFrame, currentTaskFrame);
 }
 
 void handle_my_tid(Heap *heap){
@@ -70,7 +70,7 @@ void handle_yield(Heap *heap){
 
 }
 
-void handle_send(Heap *heap, TaskFrame user_tasks[], SendData *nextFreeSendData, ReceiveData *nextFreeReceiveData){
+void handle_send(Heap *heap, TaskFrame user_tasks[], SendData **nextFreeSendData, ReceiveData **nextFreeReceiveData){
 
     int tid = (int)(currentTaskFrame->x[0]);
     const char *msg = (const char *)(currentTaskFrame->x[1]);
@@ -97,7 +97,7 @@ void handle_send(Heap *heap, TaskFrame user_tasks[], SendData *nextFreeSendData,
         return;
     }
 
-    SendData *sd = getNextFreeSendData(&nextFreeSendData);
+    SendData *sd = getNextFreeSendData(nextFreeSendData);
     sd->tid = tid;
     sd->msg = msg;
     sd->msglen = msglen;
@@ -119,13 +119,13 @@ void handle_send(Heap *heap, TaskFrame user_tasks[], SendData *nextFreeSendData,
         copy_msg(msg, msglen, rd->msg, rd->msglen);
         currentTaskFrame->status = REPLY_WAIT;
         recipient->status = READY;
-        reclaimReceiveData(&nextFreeReceiveData, recipient->rd);
+        reclaimReceiveData(nextFreeReceiveData, recipient->rd);
         recipient->rd = NULL;
         reschedule_task_with_return(heap, recipient, msglen);
     }
 }
 
-void handle_receive(Heap *heap, TaskFrame user_tasks[], ReceiveData *nextFreeReceiveData){
+void handle_receive(Heap *heap, TaskFrame user_tasks[], ReceiveData **nextFreeReceiveData){
 
     int *tid = (int *)(currentTaskFrame->x[0]);
     char *msg = (const char *)(currentTaskFrame->x[1]);
@@ -144,7 +144,7 @@ void handle_receive(Heap *heap, TaskFrame user_tasks[], ReceiveData *nextFreeRec
             uart_printf(CONSOLE, "\x1b[31mOn receive task rd not null\x1b[0m\r\n");
             for(;;){}
         }
-        ReceiveData *rd = getNextFreeReceiveData(&nextFreeReceiveData);
+        ReceiveData *rd = getNextFreeReceiveData(nextFreeReceiveData);
         rd->msg = msg;
         rd->msglen = msglen;
         rd->tid = tid;
@@ -169,7 +169,7 @@ void handle_receive(Heap *heap, TaskFrame user_tasks[], ReceiveData *nextFreeRec
     }
 }
 
-void handle_reply(Heap *heap, TaskFrame user_tasks[], SendData *nextFreeSendData){
+void handle_reply(Heap *heap, TaskFrame user_tasks[], SendData **nextFreeSendData){
 
     // asm volatile("mov x30, x30\nmov x30, x30\nmov x30, x30\nmov x30, x30\n");
     int tid = (int)(currentTaskFrame->x[0]);
@@ -199,7 +199,7 @@ void handle_reply(Heap *heap, TaskFrame user_tasks[], SendData *nextFreeSendData
 
     sender->status = READY;
     SendData *sd = sender->sd;
-    reclaimSendData(&nextFreeSendData, sender->sd);
+    reclaimSendData(nextFreeSendData, sender->sd);
     sender->sd = NULL;
     int reslen = copy_msg(reply, rplen, sd->reply, sd->rplen);
     reschedule_task_with_return(heap, currentTaskFrame, reslen);
@@ -232,9 +232,9 @@ void handle_await_event(Heap *heap, TaskFrame* blocked_on_irq[]){
 
 void handle_irq(Heap *heap, TaskFrame* blocked_on_irq[]){
 
-    #if DEBUG
-        uart_dprintf(CONSOLE, "On irq\r\n");
-    #endif 
+    // #if DEBUG
+    //     uart_dprintf(CONSOLE, "On irq\r\n");
+    // #endif 
 
     uint32_t irq_ack = *(uint32_t*)(GICC_IAR);
     uint32_t irq_id_bit_mask = 0x1FF; // 9 bits

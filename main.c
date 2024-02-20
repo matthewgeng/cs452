@@ -112,9 +112,9 @@ int kmain() {
     timer_init();
 
     for(;;){
-        #if DEBUG
-            uart_dprintf(CONSOLE, "start of loop\r\n");
-        #endif 
+        // #if DEBUG
+        //     uart_dprintf(CONSOLE, "start of loop\r\n");
+        // #endif 
         currentTaskFrame = heap_pop(&heap);
 
         if (currentTaskFrame == NULL) {
@@ -137,9 +137,9 @@ int kmain() {
         }
 
         if(exception_code==CREATE){
-            handle_create(&heap, nextFreeTaskFrame);
+            handle_create(&heap, &nextFreeTaskFrame);
         } else if(exception_code==EXIT){
-            handle_exit(nextFreeTaskFrame);
+            handle_exit(&nextFreeTaskFrame);
         } else if(exception_code==MY_TID){
             handle_my_tid(&heap);
         } else if(exception_code==MY_PARENT_TID){
@@ -147,11 +147,11 @@ int kmain() {
         } else if(exception_code==YIELD){
             handle_yield(&heap);
         } else if(exception_code==SEND){
-            handle_send(&heap, user_tasks, nextFreeSendData, nextFreeReceiveData);
+            handle_send(&heap, user_tasks, &nextFreeSendData, &nextFreeReceiveData);
         } else if(exception_code==RECEIVE){
-            handle_receive(&heap, user_tasks, nextFreeReceiveData);
+            handle_receive(&heap, user_tasks, &nextFreeReceiveData);
         } else if(exception_code==REPLY){
-            handle_reply(&heap, user_tasks, nextFreeSendData);
+            handle_reply(&heap, user_tasks, &nextFreeSendData);
         } else if (exception_code == AWAIT_EVENT) {
             handle_await_event(&heap, blocked_on_irq);
         } else if (exception_code == IRQ) {
