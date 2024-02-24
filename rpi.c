@@ -46,6 +46,8 @@ static void setup_gpio(uint32_t pin, uint32_t setting, uint32_t resistor) {
 
 /*********** UART CONTROL ************************ ************/
 
+static char* const PACTL_CS = (char*)(MMIO_BASE + 0x204E00);
+// static char* const PACTL_CS = (char*)(0xfe204e00);
 static char* const UART0_BASE = (char*)(MMIO_BASE + 0x201000);
 static char* const UART3_BASE = (char*)(MMIO_BASE + 0x201600);
 
@@ -63,6 +65,10 @@ static const uint32_t UART_IBRD = 0x24;
 static const uint32_t UART_FBRD = 0x28;
 static const uint32_t UART_LCRH = 0x2c;
 static const uint32_t UART_CR =   0x30;
+// static const uint32_t UART_IFLS = 0x34;
+static const uint32_t UART_IMSC = 0x38;
+static const uint32_t UART_MIS = 0x40;
+static const uint32_t UART_ICR = 0x44;
 
 #define UART_REG(line, offset) (*(volatile uint32_t*)(line_uarts[line] + offset))
 
@@ -71,6 +77,7 @@ static const uint32_t UART_FR_RXFE = 0x10;
 static const uint32_t UART_FR_TXFF = 0x20;
 static const uint32_t UART_FR_RXFF = 0x40;
 static const uint32_t UART_FR_TXFE = 0x80;
+static const uint32_t UART_FR_CTS = 0x0;
 
 static const uint32_t UART_CR_UARTEN = 0x01;
 static const uint32_t UART_CR_LBE = 0x80;
@@ -86,6 +93,15 @@ static const uint32_t UART_LCRH_STP2 = 0x8;
 static const uint32_t UART_LCRH_FEN = 0x10;
 static const uint32_t UART_LCRH_WLEN_LOW = 0x20;
 static const uint32_t UART_LCRH_WLEN_HIGH = 0x40;
+
+static const uint32_t UART_MIS_TXMIS = 0x20;
+static const uint32_t UART_MIS_RXMIS = 0x10;
+
+static const uint32_t UART_IMSC_TXIM = 0x20;
+static const uint32_t UART_IMSC_RXIM = 0x10;
+
+static const uint32_t UART_ICR_TXIC = 0x20;
+static const uint32_t UART_ICR_RXIC = 0x10;
 
 // GPIO initialization, to be called before UART functions.
 // GPIO pins 14 & 15 already configured by boot loader, but redo for clarity.
@@ -124,15 +140,72 @@ void uart_config_and_enable(size_t line) {
   // set the baud rate
   UART_REG(line, UART_IBRD) = baud_ival;
   UART_REG(line, UART_FBRD) = baud_fval;
-  // set the line control registers: 8 bit, no parity, 1 stop bit, FIFOs enabled
+  // set the line control registers: 8 bit, no parity, 1 stop bit, FIFO enabled for CONSOLE
     switch(line){
     case CONSOLE: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_FEN; break;
-    case MARKLIN: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_FEN | UART_LCRH_STP2; break;
+    case MARKLIN: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_STP2; break;
     default: return;
     }
 
   // re-enable the UART; enable both transmit and receive regardless of previous state
   UART_REG(line, UART_CR) = cr_state | UART_CR_UARTEN | UART_CR_TXE | UART_CR_RXE;
+}
+
+uint32_t uart_get_interrupt_lines() {
+    return (uint32_t) *PACTL_CS;
+}
+
+// BCM2711 page 88
+uint32_t uart_irq_id(size_t line) {
+    switch(line){
+        case CONSOLE:
+            // (1 << 20)
+            return 0x100000;
+        case MARKLIN:
+            // (1 << 18)
+            return 0x40000;
+        default: return;
+    }
+}
+
+uint32_t uart_mis(size_t line) {
+    return UART_REG(line, UART_MIS);
+}
+
+uint32_t uart_mis_tx(size_t line) {
+    return (uint32_t)(UART_REG(line, UART_MIS) & UART_MIS_TXMIS);
+}
+
+uint32_t uart_mis_rx(size_t line) {
+    return (uint32_t)(UART_REG(line, UART_MIS) & UART_MIS_RXMIS);
+}
+
+uint32_t uart_cts(size_t line) {
+    return (uint32_t)(UART_REG(line, UART_FR) & UART_FR_CTS);
+}
+
+void uart_enable_tx(size_t line) {
+    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) | UART_IMSC_TXIM;
+}
+
+void uart_disable_tx(size_t line) {
+    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) & ~(UART_IMSC_TXIM);
+}
+
+void uart_enable_rx(size_t line) {
+    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) | UART_IMSC_RXIM;
+}
+
+void uart_disable_rx(size_t line) {
+    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) & ~(UART_IMSC_RXIM);
+}
+
+void uart_clear_tx(size_t line) {
+    UART_REG(line, UART_ICR) = UART_REG(line, UART_ICR) | UART_ICR_TXIC;
+}
+
+void uart_clear_rx(size_t line) {
+    UART_REG(line, UART_ICR) = UART_REG(line, UART_ICR) | UART_ICR_RXIC;
 }
 
 // register checks

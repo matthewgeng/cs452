@@ -15,13 +15,17 @@
 
 // K3
 #define AWAIT_EVENT 9
-#define NUM_IRQ_EVENTS 2
+#define NUM_IRQ_EVENTS 5 // note this is 1 less than in the enum due to the TODO
 #define IRQ 10
 
 #define SYSCALL 0
 
 typedef enum {
     CLOCK,
+    CONSOLE_TX,
+    CONSOLE_RX,
+    MARKLIN_TX,
+    MARKLIN_RX,
     TODO
 } IRQ_TYPE;
 

@@ -14,7 +14,7 @@ TaskFrame *tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_si
         task_frames[i].status = INACTIVE;
         task_frames[i].sd = NULL;
         task_frames[i].rd = NULL;
-        initialize(&(task_frames[i].sender_queue));
+        initialize_intcb(&(task_frames[i].sender_queue), task_frames[i].sender_queue_data, MAX_NUM_TASKS);
     }
     return task_frames;
 }

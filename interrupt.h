@@ -19,6 +19,9 @@
 #define SYSTEM_TIMER_IRQ_2 0x62 //98, used by GPU
 #define SYSTEM_TIMER_IRQ_3 0x63 //99
 
+// UART
+#define UART_IRQ 153
+
 void enable_irq(int irq);
 void disable_irq(int irq);
 void enable_irqs();

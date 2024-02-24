@@ -53,8 +53,12 @@ void enable_irqs() {
     );
     route_irq(SYSTEM_TIMER_IRQ_1, 0);
     enable_irq(SYSTEM_TIMER_IRQ_1);
+
+    route_irq(UART_IRQ, 0);
+    enable_irq(UART_IRQ);
 }
 
 void disable_irqs() {
     disable_irq(SYSTEM_TIMER_IRQ_1);
+    disable_irq(UART_IRQ);
 }

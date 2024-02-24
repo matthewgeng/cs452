@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "cb.h"
+#include "int_cb.h"
 
 #define INACTIVE 0
 #define READY 1
@@ -44,6 +44,7 @@ typedef struct TaskFrame {
   struct SendData *sd;
   struct ReceiveData *rd;
   IntCB sender_queue;
+  int sender_queue_data[MAX_NUM_TASKS];
   struct TaskFrame *next;
 } TaskFrame;
 

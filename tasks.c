@@ -5,6 +5,7 @@
 #include "syscall.h"
 #include "taskframe.h"
 #include "timer.h"
+#include "io.h"
 
 void idle_task(){
     #if DEBUG
@@ -13,7 +14,7 @@ void idle_task(){
     for(;;){
         uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
         uart_printf(CONSOLE, "\0337\033[3;1HIdle percentage: %u%% \0338", idle_time_percent);
-        // uart_printf(CONSOLE, "\033[2;1HIdle percentage: %u%%", idle_time_percent);
+        // uart_printf(CONSOLE, "Idle percentage: %u%%\r\n", idle_time_percent);
         asm volatile("wfi");
     }
 }
@@ -34,15 +35,7 @@ void time_user() {
     }
 }
 
-void rootTask(){
-    #if DEBUG
-        uart_dprintf(CONSOLE, "Root Task\r\n");
-    #endif 
-    // order or nameserver and idle_task matters since their tid values are assumed in implementation
-    Create(2, &nameserver);
-    Create(1000, &idle_task);
-    Create(0, &notifier);
-    Create(1, &clock);
+void k3(){
     int user1 = Create(3, &time_user);
     int user2 = Create(4, &time_user);
     int user3 = Create(5, &time_user);
@@ -63,6 +56,35 @@ void rootTask(){
     Receive(NULL, NULL, 0);
     char user4_data[2] = {71, 3};
     Reply(user4, user4_data, sizeof(user4_data));
+}
+
+void k4(){
+    uart_printf(CONSOLE, "Awaiting tx interrupt\r\n");
+    AwaitEvent(CONSOLE_TX);
+    uart_putc(CONSOLE, 'h');
+}
+
+
+void rootTask(){
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Root Task\r\n");
+    #endif 
+    // order or nameserver and idle_task matters since their tid values are assumed in implementation
+    Create(2, &nameserver);
+    Create(1000, &idle_task);
+    Create(0, &notifier);
+    Create(1, &clock);
+
+    Create(3, &console_out_notifier);
+    Create(3, &console_in_notifier);
+    Create(3, &console_out);
+    Create(3, &console_in);
+
+    Create(3, &marklin_out_notifier);
+    Create(3, &marklin_in_notifier);
+    Create(3, &marklin_io);
+    
+    // Create(3, &k4);
     
     uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
