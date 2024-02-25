@@ -191,3 +191,17 @@ int AwaitEvent(int eventType) {
     asm volatile("mov %0, x0" : "=r"(ret));
     return ret;
 }
+
+void Quit() {
+    #if DEBUG
+        uart_dprintf(CONSOLE, "Quit \r\n");
+    #endif 
+
+    asm volatile(
+        "svc %[SYS_CODE]"
+        :
+        : 
+        [SYS_CODE] "i"(QUIT_SYSCALL) 
+    );    
+    
+}

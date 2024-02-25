@@ -156,7 +156,10 @@ int kmain() {
             handle_await_event(&heap, blocked_on_irq);
         } else if (exception_code == IRQ) {
             handle_irq(&heap, blocked_on_irq);
-        } else {
+        } else if (exception_code = QUIT) {
+            return 0;
+        }
+        else {
             uart_printf(CONSOLE, "\x1b[31mUnrecognized exception code %u\x1b[0m\r\n", exception_code);
             for(;;){}
         }
