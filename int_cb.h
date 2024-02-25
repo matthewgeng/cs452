@@ -15,6 +15,6 @@ typedef struct IntCB{
 void initialize_intcb(IntCB *cb, int* queue, size_t capacity);
 void push_intcb(IntCB *cb, int v);
 int pop_intcb(IntCB *cb);
-int is_empty_intcb(IntCB cb);
+int is_empty_intcb(IntCB* cb);
 
 #endif

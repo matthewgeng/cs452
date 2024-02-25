@@ -139,7 +139,7 @@ void handle_receive(Heap *heap, TaskFrame user_tasks[], ReceiveData **nextFreeRe
         uart_printf(CONSOLE, "\x1b[31mOn receive task status not ready %u\x1b[0m\r\n", currentTaskFrame->status);
         for(;;){}
     }
-    if(is_empty_intcb(currentTaskFrame->sender_queue)){
+    if(is_empty_intcb(&currentTaskFrame->sender_queue)){
         if(currentTaskFrame->rd!=NULL){
             uart_printf(CONSOLE, "\x1b[31mOn receive task rd not null\x1b[0m\r\n");
             for(;;){}
@@ -222,10 +222,8 @@ void handle_await_event(Heap *heap, TaskFrame* blocked_on_irq[]){
     // re-enable interrupt for specific i/o irq, since this is turned off during actual
     // irq handling 
     if (type == CONSOLE_TX) {
-        uart_printf(CONSOLE, "Waiting for console_tx\r\n");
         uart_enable_tx(CONSOLE);
     } else if (type == CONSOLE_RX) {
-        uart_printf(CONSOLE, "Waiting for console_rx\r\n");
         uart_enable_rx(CONSOLE);
     } else if (type == MARKLIN_TX) {
         uart_enable_tx(MARKLIN);
@@ -251,7 +249,7 @@ void handle_irq(Heap *heap, TaskFrame* blocked_on_irq[]){
     #endif 
 
     uint32_t irq_ack = *(uint32_t*)(GICC_IAR);
-    uint32_t irq_id_bit_mask = 0x1FF; // 9 bits
+    uint32_t irq_id_bit_mask = 0x3FF; // 10 bits
     uint32_t irq = (irq_ack & irq_id_bit_mask);
 
     if (irq == SYSTEM_TIMER_IRQ_1) {
@@ -268,53 +266,55 @@ void handle_irq(Heap *heap, TaskFrame* blocked_on_irq[]){
         // tx irq
         if (uart_mis_tx(CONSOLE)) {
             uart_disable_tx(CONSOLE);
-            uart_printf(CONSOLE, "uart console tx irq\r\n");
+            // uart_printf(CONSOLE, "uart console tx irq\r\n");
 
             if (blocked_on_irq[CONSOLE_TX] != NULL) {
                 reschedule_task_with_return(heap, blocked_on_irq[CONSOLE_TX], 0);
                 blocked_on_irq[CONSOLE_TX] = NULL;
             }
             uart_clear_tx(CONSOLE);
-        } 
-        
+
         // rx irq
-        if (uart_mis_rx(CONSOLE)) {
+        } else if (uart_mis_rx(CONSOLE)) {
             uart_disable_rx(CONSOLE);
-            uart_printf(CONSOLE, "uart console rx irq\r\n");
+            // uart_printf(CONSOLE, "uart console rx irq\r\n");
             if (blocked_on_irq[CONSOLE_RX] != NULL) {
                 reschedule_task_with_return(heap, blocked_on_irq[CONSOLE_RX], 0);
                 blocked_on_irq[CONSOLE_RX] = NULL;
             }
             uart_clear_rx(CONSOLE);
-        }
-        
+
         // marklin irq
         // tx irq
-        if (uart_mis_tx(MARKLIN)) {
+        } else if (uart_mis_tx(MARKLIN)) {
             uart_disable_tx(MARKLIN);
             if (blocked_on_irq[MARKLIN_TX] != NULL) {
                 reschedule_task_with_return(heap, blocked_on_irq[MARKLIN_TX], 0);
                 blocked_on_irq[MARKLIN_TX] = NULL;
             }
             uart_clear_tx(MARKLIN);
-        } 
-        
+
         // rx irq
-        if (uart_mis_rx(MARKLIN)) {
+        } else if (uart_mis_rx(MARKLIN)) {
             uart_disable_rx(MARKLIN);
             if (blocked_on_irq[MARKLIN_RX] != NULL) {
                 reschedule_task_with_return(heap, blocked_on_irq[MARKLIN_RX], 0);
                 blocked_on_irq[MARKLIN_RX] = NULL;
             }
             uart_clear_rx(MARKLIN);
-        } 
+        } else {
+            // invalid irq event
+            uart_printf(CONSOLE, "Invalid/Unsupported UART IRQ mis register not valid %u\r\n");
+            // for(;;){}
+        }
+
 
     } else {
         // invalid event
-        uart_printf(CONSOLE, "Invalid/Unsupported IRQ \r\n");
-        for(;;){}
+        uart_printf(CONSOLE, "Invalid/Unsupported IRQ %u\r\n", irq);
+        // for(;;){}
     }
-
+    
     // finish irq processing
     *(uint32_t*)(GICC_EOIR) = irq_ack;
 

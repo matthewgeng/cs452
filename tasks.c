@@ -59,9 +59,16 @@ void k3(){
 }
 
 void k4(){
-    uart_printf(CONSOLE, "Awaiting tx interrupt\r\n");
-    AwaitEvent(CONSOLE_TX);
-    uart_putc(CONSOLE, 'h');
+    int cout = WhoIs("cout");
+    int clock = WhoIs("clock"); // TODO: make every server have a function to get name
+    // Puts(cout, 0, "running k4\r\n");
+
+    // Putc(cout, 0, 'h');
+    // Puts(cout, 0, "afafafafaf\r\n");
+    // Delay(clock, 5900);
+    // Puts(cout, 0, "after 59 seconds\r\n");
+    // Delay(clock, 100);
+    // Puts(cout, 0, "after 60 seconds\r\n");
 }
 
 
@@ -76,15 +83,15 @@ void rootTask(){
     Create(1, &clock);
 
     Create(3, &console_out_notifier);
-    Create(3, &console_in_notifier);
+    // Create(3, &console_in_notifier);
     Create(3, &console_out);
-    Create(3, &console_in);
+    // Create(3, &console_in);
 
-    Create(3, &marklin_out_notifier);
-    Create(3, &marklin_in_notifier);
-    Create(3, &marklin_io);
+    // Create(3, &marklin_out_notifier);
+    // Create(3, &marklin_in_notifier);
+    // Create(3, &marklin_io);
     
-    // Create(3, &k4);
+    Create(4, &k4);
     
-    uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
+    // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }

@@ -29,12 +29,12 @@ void push_intcb(IntCB *cb, int v){
     cb->count++;
 }
 
-int is_empty_intcb(IntCB cb){
-    return cb.start==cb.end;
+int is_empty_intcb(IntCB* cb){
+    return cb->start==cb->end;
 }
 
 int pop_intcb(IntCB *cb){
-    if(is_empty_intcb(*cb)){
+    if(is_empty_intcb(cb)){
         #if DEBUG
             uart_dprintf(CONSOLE, "\x1b[31mAttempted to pop empty sender queue\x1b[0m\r\n");
         #endif 

@@ -15,6 +15,7 @@ void uart_enable_tx(size_t line);
 void uart_disable_tx(size_t line);
 void uart_enable_rx(size_t line);
 void uart_disable_rx(size_t line);
+uint32_t uart_ifls(size_t line);
 uint32_t uart_get_interrupt_lines();
 uint32_t uart_irq_id(size_t line);
 uint32_t uart_mis(size_t line);

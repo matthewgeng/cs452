@@ -65,7 +65,7 @@ static const uint32_t UART_IBRD = 0x24;
 static const uint32_t UART_FBRD = 0x28;
 static const uint32_t UART_LCRH = 0x2c;
 static const uint32_t UART_CR =   0x30;
-// static const uint32_t UART_IFLS = 0x34;
+static const uint32_t UART_IFLS = 0x34;
 static const uint32_t UART_IMSC = 0x38;
 static const uint32_t UART_MIS = 0x40;
 static const uint32_t UART_ICR = 0x44;
@@ -143,6 +143,7 @@ void uart_config_and_enable(size_t line) {
   // set the line control registers: 8 bit, no parity, 1 stop bit, FIFO enabled for CONSOLE
     switch(line){
     case CONSOLE: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_FEN; break;
+    // case CONSOLE: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW; break;
     case MARKLIN: UART_REG(line, UART_LCRH) = UART_LCRH_WLEN_HIGH | UART_LCRH_WLEN_LOW | UART_LCRH_STP2; break;
     default: return;
     }
@@ -166,6 +167,10 @@ uint32_t uart_irq_id(size_t line) {
             return 0x40000;
         default: return;
     }
+}
+
+uint32_t uart_ifls(size_t line) {
+    return UART_REG(line, UART_IFLS);
 }
 
 uint32_t uart_mis(size_t line) {

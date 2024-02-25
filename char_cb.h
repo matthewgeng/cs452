@@ -15,6 +15,6 @@ typedef struct CharCB{
 void initialize_charcb(CharCB *cb, char* queue, size_t capacity);
 void push_charcb(CharCB *cb, char v);
 char pop_charcb(CharCB *cb);
-int is_empty_charcb(CharCB cb);
+int is_empty_charcb(CharCB* cb);
 
 #endif

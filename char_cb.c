@@ -29,12 +29,12 @@ void push_charcb(CharCB *cb, char v){
     cb->count++;
 }
 
-int is_empty_charcb(CharCB cb){
-    return cb.start==cb.end;
+int is_empty_charcb(CharCB* cb){
+    return cb->start==cb->end;
 }
 
 char pop_charcb(CharCB *cb){
-    if(is_empty_charcb(*cb)){
+    if(is_empty_charcb(cb)){
         #if DEBUG
             uart_dprintf(CONSOLE, "\x1b[31mAttempted to pop empty sender queue\x1b[0m\r\n");
         #endif 
