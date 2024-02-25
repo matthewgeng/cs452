@@ -112,9 +112,13 @@ void idle_task(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Idle Task\r\n");
     #endif 
+    int console_tid = WhoIs("cout");
     for(;;){
         uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
-        uart_printf(CONSOLE, "\0337\033[3;1HIdle percentage: %u%% \0338", idle_time_percent);
+        char str[] = "\0337\033[3;1HIdle percentage: 00% \0338";
+        ui2a( idle_time_percent, 10, str+25 );
+        Puts(console_tid, CONSOLE, str);
+        // uart_printf(CONSOLE, "\0337\033[3;1HIdle percentage: %u%% \0338", idle_time_percent);
         // uart_printf(CONSOLE, "Idle percentage: %u%%\r\n", idle_time_percent);
         asm volatile("wfi");
     }
