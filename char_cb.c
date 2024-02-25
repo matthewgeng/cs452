@@ -43,6 +43,16 @@ int is_empty_charcb(CharCB* cb){
     return cb->start==cb->end;
 }
 
+char peek_charcb(CharCB *cb){
+    if(is_empty_charcb(cb)){
+        #if DEBUG
+            uart_dprintf(CONSOLE, "\x1b[31mAttempted to peek empty sender queue\x1b[0m\r\n");
+        #endif 
+        return -1;
+    }
+    return cb->queue[cb->start];
+}
+
 char pop_charcb(CharCB *cb){
     if(is_empty_charcb(cb)){
         #if DEBUG

@@ -204,17 +204,116 @@ void console_in() {
 void marklin_out_notifier() {
     RegisterAs("mout_notifier");
 
+    int mio = WhoIs("mio");
+
+    for(;;){
+        int res = AwaitEvent(MARKLIN_TX);
+        if (res < 0) {
+            // TODO: make more robust
+            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+        }
+
+        res = Send(mio, NULL, 0, NULL, 0);
+        if (res < 0) {
+            // TODO: make more robust
+            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+        }
+    }
+
 }
 
 // notifier needed to still allow function calls to server with buffering
 void marklin_in_notifier() {
     RegisterAs("min_notifier");
-    
+
+    int mio = WhoIs("mio");
+
+    for(;;){
+        int res = AwaitEvent(MARKLIN_RX);
+        if (res < 0) {
+            // TODO: make more robust
+            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+        }
+
+        res = Send(mio, NULL, 0, NULL, 0);
+        if (res < 0) {
+            // TODO: make more robust
+            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+        }
+    }
 }
 
 void marklin_io() {
     RegisterAs("mio");
+
+    int mout = WhoIs("mout_notifier");
+    int min = WhoIs("min_notifier");
+
+    int tid;
+    // circular buffer 
+    // TODO: make constant a variable
+    char raw_buffer[512];
+    CharCB buffer;
+    initialize_charcb(&buffer, raw_buffer, 200, 0);
+    // message struct
+    MessageStr m;
+
     // implement delay
+    int clock_tid = WhoIs("clock");
+    int time = Time(clock_tid);
+
+    for(;;) {
+        Receive(&tid, (char*)&m, sizeof(MessageStr));
+
+        // print
+        if (tid == mout) {
+            // uart_printf(CONSOLE, "notifier recieved\r\n");
+            // try to flush buffer 
+            // uart_printf(CONSOLE, "message length from noti %u\r\n", m.len);
+
+            while (uart_can_write(MARKLIN) && !is_empty_charcb(&buffer)) {
+                uart_writec(MARKLIN, pop_charcb(&buffer));
+            }
+
+            // reply to notifier
+            Reply(tid, NULL, 0);
+        // store data in buffer
+        } else if (tid == min) {
+            char c;
+            while (uart_can_read(MARKLIN) && !is_empty_charcb(&buffer)) {
+                c = uart_readc(MARKLIN);
+                push_charcb(&buffer, c);
+            }
+
+            // reply to notifier
+            Reply(tid, NULL, 0);
+        // store data in buffer
+        } else {
+            // uart_printf(CONSOLE, "message length from user %u\r\n", m.len);
+
+            // store data in buffer
+            for (uint32_t i = 0; i < m.len; i++) {
+                push_charcb(&buffer, m.str[i]);
+            }
+
+            if((int)(peek_charcb(&buffer)) == 255){
+                DelayUntil(clock_tid, time+150000);
+            }else if((int)(peek_charcb(&buffer)) == 254){
+                // TODO: maybe need to do smth to pause sensor queries here
+                DelayUntil(clock_tid, time+2500000);
+            }
+
+            // try to flush buffer 
+            while (uart_can_write(MARKLIN) && !is_empty_charcb(&buffer)) {
+                uart_writec(MARKLIN, pop_charcb(&buffer));
+                time = Time(clock_tid);
+            }
+
+            // reply to sender
+            Reply(tid, NULL, 0);
+        }
+    }
+
 }
 
 
