@@ -13,6 +13,7 @@
 #include "clock.h"
 #include "k_handler.h"
 #include "tasks.h"
+#include "io.h"
 
 TaskFrame* kf = 0;
 TaskFrame* currentTaskFrame = 0;
@@ -62,14 +63,6 @@ int kmain() {
 
     // INTERRUPTS
     enable_irqs();
-
-    // clear
-    uart_printf(CONSOLE, "\033[2J");
-    // reset cursor to top left
-    uart_printf(CONSOLE, "\033[H");
-    // program start
-    uart_printf(CONSOLE, "Program starting: \r\n\r\n");
-    uart_printf(CONSOLE, "Idle percentage:   \r\n");
 
     // IDLE TASK MEASUREMENT SET UP
     uint64_t idle_task_total = 0, idle_task_start = 0, program_start = 0;

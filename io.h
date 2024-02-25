@@ -26,6 +26,4 @@ void marklin_in_notifier();
 // only 1 marklin io task because it's half-duplex
 void marklin_io();
 
-void printf(int tid, int channel, char *fmt, ... );
-
 #endif

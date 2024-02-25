@@ -1,12 +1,13 @@
 #include "char_cb.h"
 #include "rpi.h"
 
-void initialize_charcb(CharCB *cb, char* data, size_t capacity){
+void initialize_charcb(CharCB *cb, char* data, size_t capacity, int override){
     cb->end = 0;
     cb->start = 0;
     cb->count = 0;
     cb->capacity = capacity;
     cb->queue = data;
+    cb->override = override;
 }
 
 size_t increment_charcb(size_t capacity, size_t v){
@@ -17,16 +18,25 @@ size_t increment_charcb(size_t capacity, size_t v){
 }
 
 void push_charcb(CharCB *cb, char v){
-    size_t next = increment_charcb(cb->capacity, cb->end);
-    if(next==cb->start){
-        #if DEBUG
-            uart_dprintf(CONSOLE, "\x1b[31msender queue out of bound\x1b[0m\r\n");
-        #endif 
-        return;
+    if(cb->count==cb->capacity){
+        if(!(cb->override)){
+            #if DEBUG
+                uart_dprintf(CONSOLE, "\x1b[31msender queue out of bound\x1b[0m\r\n");
+            #endif 
+            return;
+        }else{
+            size_t next = increment_charcb(cb->capacity, cb->end);
+            cb->queue[cb->end] = v;
+            cb->end = next;
+            cb->start = next;
+        }
+    }else{
+        size_t next = increment_charcb(cb->capacity, cb->end);
+        cb->queue[cb->end] = v;
+        cb->end = next;
+        cb->count++;
     }
-    cb->queue[cb->end] = v;
-    cb->end = next;
-    cb->count++;
+    
 }
 
 int is_empty_charcb(CharCB* cb){

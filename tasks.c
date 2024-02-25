@@ -86,15 +86,25 @@ void k3(){
 
 void k4(){
     int cout = WhoIs("cout");
+    int cin = WhoIs("cin");
     int clock = WhoIs("clock"); // TODO: make every server have a function to get name
-    // Puts(cout, 0, "running k4\r\n");
 
-    // Putc(cout, 0, 'h');
-    // Puts(cout, 0, "afafafafaf\r\n");
-    // Delay(clock, 5900);
-    // Puts(cout, 0, "after 59 seconds\r\n");
-    // Delay(clock, 100);
-    // Puts(cout, 0, "after 60 seconds\r\n");
+    // clear screen
+    Puts(cout, 0, "\033[2J");
+    // reset cursor to top left
+    Puts(cout, 0, "\033[H");
+    // program start
+    Puts(cout, 0, "Program starting: \r\n\r\n");
+    Puts(cout, 0, "Idle percentage:   \r\n");
+
+    Puts(cout, 0, "running k4\r\n");
+
+    for(;;) {
+        char c = Getc(cin, 0);
+        Puts(cout, 0, "got data: ");
+        Putc(cout, 0, c);
+        Puts(cout, 0, "\r\n");
+    }
 }
 
 void idle_task(){
@@ -108,6 +118,7 @@ void idle_task(){
         asm volatile("wfi");
     }
 }
+
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainSpeed);
   // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
@@ -480,16 +491,16 @@ void rootTask(){
     Create(1, &clock);
 
     Create(3, &console_out_notifier);
-    // Create(3, &console_in_notifier);
+    Create(3, &console_in_notifier);
     Create(3, &console_out);
-    // Create(3, &console_in);
+    Create(3, &console_in);
 
     // Create(3, &marklin_out_notifier);
     // Create(3, &marklin_in_notifier);
     // Create(3, &marklin_io);
     
-    // Create(3, &k4);
-    Create(3, &setup);
+    Create(3, &k4);
+    // Create(3, &setup);
     
     // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }

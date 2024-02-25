@@ -4,6 +4,7 @@
 #include "nameserver.h"
 #include "util.h"
 #include "char_cb.h"
+#include "int_cb.h"
 #include "clock.h"
 #include <stdarg.h>
 
@@ -56,13 +57,14 @@ void console_out() {
     RegisterAs("cout");
 
     int cout_notifier = WhoIs("cout_notifier");
+    int notifier_parked = 0;
 
     int tid;
     // circular buffer 
     // TODO: make constant a variable
     char raw_buffer[512];
     CharCB buffer;
-    initialize_charcb(&buffer, raw_buffer, 200);
+    initialize_charcb(&buffer, raw_buffer, sizeof(raw_buffer), 1);
     // message struct
     MessageStr m;
     // uart_printf(CONSOLE, "cout initialized\r\n");
@@ -80,8 +82,19 @@ void console_out() {
                 uart_writec(CONSOLE, pop_charcb(&buffer));
             }
 
-            // reply to notifier
-            Reply(tid, NULL, 0);
+
+            // if we have data still, we should wait for the notifier to let us flush
+            if (!is_empty_charcb(&buffer)) {
+                // reply to notifier
+                Reply(tid, NULL, 0);
+                notifier_parked = 0;
+
+            // if we don't have data, we shouldn't respond to the notifier
+            } else {
+                notifier_parked = 1;
+                
+            }
+
         // store data in buffer
         } else {
             // uart_printf(CONSOLE, "message length from user %u\r\n", m.len);
@@ -90,14 +103,21 @@ void console_out() {
             for (uint32_t i = 0; i < m.len; i++) {
                 push_charcb(&buffer, m.str[i]);
             }
+            
+            // reply to sender
+            Reply(tid, NULL, 0);
 
             // try to flush buffer 
             while (uart_can_write(CONSOLE) && !is_empty_charcb(&buffer)) {
                 uart_writec(CONSOLE, pop_charcb(&buffer));
             }
 
-            // reply to sender
-            Reply(tid, NULL, 0);
+            // if we have data still, we should wait for the notifier to let us flush
+            if (!is_empty_charcb(&buffer) && notifier_parked) {
+                notifier_parked = 0;
+                // reply to notifier
+                Reply(cout_notifier, NULL, 0);
+            }
         }
     }
 }
@@ -108,8 +128,14 @@ void console_in() {
     int cin_notifier = WhoIs("cin_notifier");
 
     int tid;
+    int notifier_parked = 0;
     // circular buffer 
-    // message struct
+    int task_buffer[32];
+    IntCB task_cb;
+    initialize_intcb(&task_cb, task_buffer, sizeof(task_buffer)/sizeof(task_buffer[0]), 1);
+    char data_buffer[32];
+    CharCB data_cb;
+    initialize_charcb(&data_cb, data_buffer, sizeof(data_buffer), 1);
     
     char c;
 
@@ -118,16 +144,58 @@ void console_in() {
 
         // print
         if (tid == cin_notifier) {
-            // try to flush buffer 
+            // get data
             if (uart_can_read(CONSOLE)) {
-                // data = uart_readc(CONSOLE);
-                // reply to notifier
+                char data = uart_readc(CONSOLE);
+                push_charcb(&data_cb, data);
+            }
 
+            // try to flush buffer 
+            while (!is_empty_charcb(&data_cb) && !is_empty_intcb(&task_cb)) {
+                int task = pop_intcb(&task_cb);
+                char data = pop_charcb(&data_cb);
+                Reply(task, &data, 1);
+            }
+
+            /*
+            no data && no people --> park
+            no data && people --> reply 
+
+            data && no people --> park
+            data && people --> park
+            
+            */
+            if (is_empty_charcb(&data_cb) && !is_empty_intcb(&task_cb)) {
+                Reply(tid, NULL, 0);
+                notifier_parked = 0;
+            } else {
+                notifier_parked = 1;
             }
 
         } else {
+            push_intcb(&task_cb, tid);
+
+            while (!is_empty_charcb(&data_cb) && !is_empty_intcb(&task_cb)) {
+                int task = pop_intcb(&task_cb);
+                char data = pop_charcb(&data_cb);
+                Reply(task, &data, 1);
+            }
 
 
+            /*
+            no data && no people --> park
+            no data && people --> reply 
+
+            data && no people --> park
+            data && people --> park
+            */
+
+            if (is_empty_charcb(&data_cb) && !is_empty_intcb(&task_cb) && notifier_parked) {
+                Reply(cin_notifier, NULL, 0);
+                notifier_parked = 0;
+            } else {
+                notifier_parked = 1;
+            }
         }
     }
 }
