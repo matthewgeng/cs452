@@ -146,7 +146,7 @@ void marklin_in_notifier() {
 
 void marklin_io() {
     RegisterAs("mio");
-
+    // implement delay
 }
 
 
@@ -199,63 +199,39 @@ int Puts(int tid, int channel, unsigned char* ch) {
 static void format_print (int tid, int channel, char *fmt, va_list va ) {
 	char bf[12];
 	char ch;
-    int len;
 
-    char buffer[128];
-    int i = 0;
-
-    while ( ( ch = *(fmt++) ) && i < sizeof(buffer)) {
-		if ( ch != '%' ){
-            buffer[i] = ch;
-            i++;
-		} else {
+    while ( ( ch = *(fmt++) ) ) {
+		if ( ch != '%' )
+			Putc( tid, channel, ch );
+		else {
 			ch = *(fmt++);
 			switch( ch ) {
-                case 'u':
-                    len = ui2a( va_arg( va, unsigned int ), 10, bf );
-                    memcpy(buffer + i, bf, len);
-                    i+= len;
-                    break;
-                case 'd':
-                    len = i2a( va_arg( va, int ), bf );
-                    memcpy(buffer + i, bf, len);
-                    i+= len;
-                    break;
-                case 'x':
-                    len = ui2a( va_arg( va, unsigned int ), 16, bf );
-                    memcpy(buffer + i, bf, len);
-                    i+= len;
-                    break;
-                case 's':
-                    char* s = va_arg(va, char*);
-                    len = str_len(s);
-
-                    memcpy(buffer + i, s, len);
-                    i+= len;
-                    break;
-                case '%':
-                    buffer[i] = ch;
-                    i++;
-                    break;
-                case '\0':
-                    buffer[i] = ch;
-                    i++;
-                    uart_printf(CONSOLE, buffer);
-                    return;
-			}
-        }
-	}
-    if (i >= sizeof(buffer)) {
-        printf(tid, channel, "Printf was > 128 bytes\r\n");
+			case 'u':
+				ui2a( va_arg( va, unsigned int ), 10, bf );
+				Puts( tid, channel, bf );
+				break;
+			case 'd':
+				i2a( va_arg( va, int ), bf );
+				Puts( tid, channel, bf );
+				break;
+			case 'x':
+				ui2a( va_arg( va, unsigned int ), 16, bf );
+				Puts( tid, channel, bf );
+				break;
+			case 's':
+				Puts( tid, channel, va_arg( va, char* ) );
+				break;
+			case '%':
+				Puts( tid, channel, ch );
+				break;
+      case '\0':
         return;
-    } else {
-        buffer[i] = '\0';
-        uart_printf(CONSOLE, buffer);
-        // Puts(tid, channel, buffer);
-    }
+			}
+		}
+	}
 }
 
-void printf(int tid, int channel, char *fmt, ... ) {
+void Printf(int tid, int channel, char *fmt, ... ) {
 	va_list va;
 	va_start(va,fmt);
 	format_print( tid, channel, fmt, va );

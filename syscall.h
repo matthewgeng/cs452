@@ -18,6 +18,9 @@
 #define NUM_IRQ_EVENTS 5 // note this is 1 less than in the enum due to the TODO
 #define IRQ 10
 
+// K4
+#define QUIT_SYSCALL 11
+
 #define SYSCALL 0
 
 typedef enum {
@@ -44,5 +47,8 @@ int Reply(int tid, const char *reply, int rplen);
 // K3
 // blocks until the event identified by eventid occurs then returns with event-specific data, if any. -1 = invalid event
 int AwaitEvent(int eventType);
+
+// K4
+void Quit();
 
 #endif

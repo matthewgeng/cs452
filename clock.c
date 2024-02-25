@@ -115,7 +115,7 @@ int DelayUntil(int tid, int ticks){
     return tick;
 }
 
-void notifier(){
+void clock_notifier(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Running notifier server \r\n");
     #endif 

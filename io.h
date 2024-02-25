@@ -2,6 +2,7 @@
 #define IO_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 typedef struct MessageStr {
     char* str;
@@ -11,6 +12,7 @@ typedef struct MessageStr {
 int Getc(int tid, int channel);
 int Putc(int tid, int channel, unsigned char ch);
 int Puts(int tid, int channel, unsigned char* ch);
+// void Printf(int tid, int channel, char *fmt, ... );
 
 // notifier needed to still allow function calls to server with buffering
 void console_out_notifier();
