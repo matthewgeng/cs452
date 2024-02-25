@@ -40,7 +40,7 @@ void push_charcb(CharCB *cb, char v){
 }
 
 int is_empty_charcb(CharCB* cb){
-    return cb->start==cb->end;
+    return cb->count == 0;
 }
 
 char peek_charcb(CharCB *cb){

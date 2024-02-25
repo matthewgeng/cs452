@@ -113,11 +113,28 @@ void idle_task(){
         uart_dprintf(CONSOLE, "Idle Task\r\n");
     #endif 
     int console_tid = WhoIs("cout");
+    int clock = WhoIs("clock");
     for(;;){
         uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
-        char str[] = "\0337\033[3;1HIdle percentage: 00% \0338";
-        ui2a( idle_time_percent, 10, str+25 );
-        Puts(console_tid, CONSOLE, str);
+        // uart_printf(CONSOLE, "\0337\033[25;1Hidle ran %d percentage %u%%\0338", Time(clock), idle_time_percent);
+
+        // char str[] = "\0337\033[3;1HIdle percentage: 00%                   \0338";
+        // char bf[12];
+        // ui2a( idle_time_percent, 10, bf );
+        // // if(idle_time_percent<10){
+        // //     str[25] = bf[0];
+        // //     str[26] = '?';
+        // // }else{
+        // //     str[25] = bf[0];
+        // //     str[26] = bf[1];
+        // // }
+        // str[25] = bf[0];
+        // str[26] = bf[1];
+        // str[27] = bf[2];
+        // printf(console_tid, 0, str);
+        // Puts(console_tid, CONSOLE, str);
+
+        printf(console_tid, 0, "\0337\033[3;1HIdle percentage: %u%% %u\0338", idle_time_percent, Time(clock));
         // uart_printf(CONSOLE, "\0337\033[3;1HIdle percentage: %u%% \0338", idle_time_percent);
         // uart_printf(CONSOLE, "Idle percentage: %u%%\r\n", idle_time_percent);
         asm volatile("wfi");
@@ -240,8 +257,8 @@ void setup(){
     int marklin_tid = WhoIs("mio");
 
     Puts(console_tid, CONSOLE, "\033[2J");
-    Printf(console_tid, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
-    Printf(console_tid, CONSOLE, "\033[%u;3H", INPUT_ROW);
+    printf(console_tid, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
+    printf(console_tid, CONSOLE, "\033[%u;3H", INPUT_ROW);
 
     Putc(marklin_tid, MARKLIN, 96);
     Putc(marklin_tid, MARKLIN, 255);
@@ -253,13 +270,13 @@ void setup(){
     char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
     char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
     char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
-    Printf(marklin_tid, MARKLIN, "\033[%u;1H", SWITCHES_ROW);
+    printf(marklin_tid, MARKLIN, "\033[%u;1H", SWITCHES_ROW);
     Puts(marklin_tid, MARKLIN, s1);
     Puts(marklin_tid, MARKLIN, s2);
     Puts(marklin_tid, MARKLIN, s3);
     Puts(marklin_tid, MARKLIN, s4);
 
-    Printf(console_tid, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
+    printf(console_tid, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
     Puts(console_tid, CONSOLE, "Most recent sensors: ");
 
     Create(3, &console_time);

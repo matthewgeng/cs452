@@ -13,11 +13,9 @@ void console_out_notifier() {
     RegisterAs("cout_notifier");
 
     int cout = WhoIs("cout");
-
-    // int clock = WhoIs("clock");
+    int clock = WhoIs("clock");
     MessageStr m = {"", 0};
     for(;;){
-        // Delay(clock, 1000);
         int res = AwaitEvent(CONSOLE_TX);
         if (res < 0) {
             // TODO: make more robust
@@ -64,7 +62,7 @@ void console_out() {
     // TODO: make constant a variable
     char raw_buffer[512];
     CharCB buffer;
-    initialize_charcb(&buffer, raw_buffer, sizeof(raw_buffer), 1);
+    initialize_charcb(&buffer, raw_buffer, sizeof(raw_buffer), 0);
     // message struct
     MessageStr m;
     // uart_printf(CONSOLE, "cout initialized\r\n");
@@ -83,16 +81,15 @@ void console_out() {
             }
 
 
+            // uart_printf(CONSOLE, "\0337\033[30;1Hbuffer size %u\0338", buffer.count);
             // if we have data still, we should wait for the notifier to let us flush
             if (!is_empty_charcb(&buffer)) {
                 // reply to notifier
                 Reply(tid, NULL, 0);
                 notifier_parked = 0;
-
             // if we don't have data, we shouldn't respond to the notifier
             } else {
                 notifier_parked = 1;
-                
             }
 
         // store data in buffer
@@ -126,27 +123,34 @@ void console_in() {
     RegisterAs("cin");
 
     int cin_notifier = WhoIs("cin_notifier");
+    int time = WhoIs("clock");
 
     int tid;
     int notifier_parked = 0;
     // circular buffer 
     int task_buffer[32];
     IntCB task_cb;
-    initialize_intcb(&task_cb, task_buffer, sizeof(task_buffer)/sizeof(task_buffer[0]), 1);
+    initialize_intcb(&task_cb, task_buffer, sizeof(task_buffer)/sizeof(task_buffer[0]), 0);
     char data_buffer[32];
     CharCB data_cb;
-    initialize_charcb(&data_cb, data_buffer, sizeof(data_buffer), 1);
+    initialize_charcb(&data_cb, data_buffer, sizeof(data_buffer), 0);
     
     char c;
 
+    int cout = WhoIs("cout");
     for(;;) {
         Receive(&tid, &c, 1);
 
         // print
-        if (tid == cin_notifier) {
+        if (tid == cin_notifier) {        
+            // uart_printf(CONSOLE, "\0337\033[24;4H recieved cin event time %u\0338", Time(time));
+            printf(cout, 0, "\0337\033[24;4H recieved cin event time %u\0338", Time(time));
+
             // get data
-            if (uart_can_read(CONSOLE)) {
-                char data = uart_readc(CONSOLE);
+            while (uart_can_read(CONSOLE)) {
+                char data = uart_readc(CONSOLE);            
+                uart_printf(CONSOLE, "\0337\033[25;4H data %c\0338", data);
+
                 push_charcb(&data_cb, data);
             }
 
@@ -364,8 +368,10 @@ int Puts(int tid, int channel, unsigned char* ch) {
 }
 
 static void format_print (int tid, int channel, char *fmt, va_list va ) {
-	char bf[12];
+	char bf[12] = {0};
 	char ch;
+    char buffer[128] = {0};
+    int i = 0;
 
     while ( ( ch = *(fmt++) ) ) {
 		if ( ch != '%' )
@@ -389,7 +395,7 @@ static void format_print (int tid, int channel, char *fmt, va_list va ) {
 				Puts( tid, channel, va_arg( va, char* ) );
 				break;
 			case '%':
-				Puts( tid, channel, ch );
+				Putc( tid, channel, ch );
 				break;
       case '\0':
         return;
@@ -398,7 +404,67 @@ static void format_print (int tid, int channel, char *fmt, va_list va ) {
 	}
 }
 
-void Printf(int tid, int channel, char *fmt, ... ) {
+// static void format_print (int tid, int channel, char *fmt, va_list va ) {
+// 	char bf[12] = {0};
+// 	char ch;
+//     int len;
+//     const int buffer_size = 128;
+//     char buffer[128] = {0};
+//     int i = 0;
+
+//     while ( ( ch = *(fmt++) )  && i < buffer_size) {
+// 		if ( ch != '%' ){ 
+//             buffer[i] = ch;
+//             i++;
+// 		} else {
+// 			ch = *(fmt++);
+// 			switch( ch ) {
+//                 case 'u':
+//                     len = ui2a( va_arg( va, unsigned int ), 10, bf );
+//                     // Puts( tid, channel, bf );
+//                     memcpy(buffer + i, bf, len);
+//                     i += len;
+//                     break;
+//                 case 'd':
+//                     len = i2a( va_arg( va, int ), bf );
+//                     // Puts( tid, channel, bf );
+//                     memcpy(buffer + i, bf, len);
+//                     i += len;
+//                     break;
+//                 case 'x':
+//                     len = ui2a( va_arg( va, unsigned int ), 16, bf );
+//                     // Puts( tid, channel, bf );
+//                     memcpy(buffer + i, bf, len);
+//                     i += len;
+//                     break;
+//                 case 's':
+//                     char* s = va_arg( va, char* );
+//                     len = str_len(s);
+//                     // Puts( tid, channel, va_arg( va, char* ) );
+//                     memcpy(buffer + i, s, len);
+//                     i += len;
+//                     break;
+//                 case '%':
+//                     // Putc( tid, channel, ch );
+//                     buffer[i] = ch;
+//                     i++;
+//                     break;
+//                 case '\0':
+//                     Puts(tid, channel, buffer);
+//                     return;
+//             }
+//         }
+// 	}
+
+//     if (i < buffer_size) {
+//         Puts(tid, channel, buffer);
+//     } else {
+//         uart_printf(CONSOLE, "print >= 128 bytes");
+//         for(;;){}
+//     }
+// }
+
+void printf(int tid, int channel, char *fmt, ... ) {
 	va_list va;
 	va_start(va,fmt);
 	format_print( tid, channel, fmt, va );
