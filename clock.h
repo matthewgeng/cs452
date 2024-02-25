@@ -20,6 +20,6 @@ int Delay(int tid, int ticks);
 int DelayUntil(int tid, int ticks);
 
 void clock();
-void notifier();
+void clock_notifier();
 
 #endif

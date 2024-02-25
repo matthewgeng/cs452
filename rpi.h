@@ -9,6 +9,8 @@
 #define CONSOLE 1
 #define MARKLIN 2
 
+#define COUNTER_PER_TENTH_SECOND 100000
+
 void gpio_init();
 void uart_config_and_enable(size_t line);
 void uart_enable_tx(size_t line);

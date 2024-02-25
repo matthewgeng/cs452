@@ -10,5 +10,6 @@ extern uint64_t* p_program_start;
 void idle_task();
 void time_user();
 void rootTask();
+void oldRootTask();
 
 #endif

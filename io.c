@@ -4,6 +4,7 @@
 #include "nameserver.h"
 #include "util.h"
 #include "char_cb.h"
+#include <stdarg.h>
 
 // notifier needed to still allow function calls to server with buffering
 void console_out_notifier() {
@@ -146,7 +147,7 @@ void marklin_in_notifier() {
 
 void marklin_io() {
     RegisterAs("mio");
-
+    // implement delay
 }
 
 
@@ -194,4 +195,46 @@ int Puts(int tid, int channel, unsigned char* ch) {
     // TODO: do something with reply
 
     return 0;
+}
+
+static void format_print (int tid, int channel, char *fmt, va_list va ) {
+	char bf[12];
+	char ch;
+
+    while ( ( ch = *(fmt++) ) ) {
+		if ( ch != '%' )
+			Putc( tid, channel, ch );
+		else {
+			ch = *(fmt++);
+			switch( ch ) {
+			case 'u':
+				ui2a( va_arg( va, unsigned int ), 10, bf );
+				Puts( tid, channel, bf );
+				break;
+			case 'd':
+				i2a( va_arg( va, int ), bf );
+				Puts( tid, channel, bf );
+				break;
+			case 'x':
+				ui2a( va_arg( va, unsigned int ), 16, bf );
+				Puts( tid, channel, bf );
+				break;
+			case 's':
+				Puts( tid, channel, va_arg( va, char* ) );
+				break;
+			case '%':
+				Puts( tid, channel, ch );
+				break;
+      case '\0':
+        return;
+			}
+		}
+	}
+}
+
+void Printf(int tid, int channel, char *fmt, ... ) {
+	va_list va;
+	va_start(va,fmt);
+	format_print( tid, channel, fmt, va );
+	va_end(va);
 }
