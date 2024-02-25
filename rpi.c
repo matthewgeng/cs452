@@ -1,5 +1,6 @@
 #include "rpi.h"
 #include "util.h"
+#include "interrupt.h"
 #include <stdarg.h>
 
 static char* const  MMIO_BASE = (char*)0xFE000000;
@@ -306,10 +307,12 @@ static void uart_format_print (size_t line, char *fmt, va_list va ) {
 }
 
 void uart_printf( size_t line, char *fmt, ... ) {
+  disable_irq(UART_IRQ);
 	va_list va;
 	va_start(va,fmt);
 	uart_format_print( line, fmt, va );
 	va_end(va);
+  enable_irq(UART_IRQ);
 }
 
 void uart_dprintf( size_t line, char *fmt, ... ) {

@@ -1,6 +1,5 @@
 #include "interrupt.h"
 #include "assert.h"
-#include "rpi.h"
 
 // GICD_ITARGETSR0 to GICD_ITARGETSR7 are read-only, and each field returns a value that corresponds only to the processor reading the register.
 void route_irq(int irq, int cpu) {

@@ -1,6 +1,8 @@
 #ifndef INTERRUPT_H
 #define INTERRUPT_H
 
+#include <stdint.h>
+
 #define GIC_BASE 0xFF840000
 #define GICD_BASE (GIC_BASE+0x00001000)
 #define GICC_BASE (GIC_BASE+0x00002000)

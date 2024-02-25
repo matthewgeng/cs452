@@ -301,10 +301,10 @@ void marklin_io() {
             }
 
             if((int)(peek_charcb(&buffer)) == 255){
-                DelayUntil(clock_tid, time+150000);
+                DelayUntil(clock_tid, time+15);
             }else if((int)(peek_charcb(&buffer)) == 254){
                 // TODO: maybe need to do smth to pause sensor queries here
-                DelayUntil(clock_tid, time+2500000);
+                DelayUntil(clock_tid, time+250);
             }
 
             // try to flush buffer 
