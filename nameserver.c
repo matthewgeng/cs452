@@ -36,7 +36,7 @@ int WhoIs(const char *name){
 
     char tid[1];
     tid[0] = 160;
-    asm volatile("mov x30, x30");
+    // asm volatile("mov x30, x30");
     int intended_reply_len = Send(1, msg, name_len+1, tid, 1);
     if(intended_reply_len < 0 ){
         return -1;

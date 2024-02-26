@@ -34,6 +34,8 @@ void console_in_notifier() {
     RegisterAs("cin_notifier");
 
     int cin = WhoIs("cin");
+    int console_tid = WhoIs("cout");
+    int clock = WhoIs("clock");
 
     for(;;){
         int res = AwaitEvent(CONSOLE_RX);
@@ -41,8 +43,11 @@ void console_in_notifier() {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR console in notifier\r\n");
         }
+        // printf(console_tid, 0, "\0337\033[28;4H cin notifier before send %u\0338", Time(clock));
 
-        res = Send(cin, NULL, 0, NULL, 0);
+        res = Send(cin, NULL, 0, NULL, 0);            
+        // printf(console_tid, 0, "\0337\033[29;4H cin notifier after send %u\0338", Time(clock));
+
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR console in notifier\r\n");
@@ -123,7 +128,8 @@ void console_in() {
     RegisterAs("cin");
 
     int cin_notifier = WhoIs("cin_notifier");
-    int time = WhoIs("clock");
+    int cout = WhoIs("cout");
+    int clock = WhoIs("clock");
 
     int tid;
     int notifier_parked = 0;
@@ -137,19 +143,17 @@ void console_in() {
     
     char c;
 
-    int cout = WhoIs("cout");
     for(;;) {
         Receive(&tid, &c, 1);
 
         // print
         if (tid == cin_notifier) {        
             // uart_printf(CONSOLE, "\0337\033[24;4H recieved cin event time %u\0338", Time(time));
-            printf(cout, 0, "\0337\033[24;4H recieved cin event time %u\0338", Time(time));
+            // printf(cout, 0, "\0337\033[24;4H recieved cin event time %u\0338", Time(clock));
 
             // get data
             while (uart_can_read(CONSOLE)) {
                 char data = uart_readc(CONSOLE);            
-                uart_printf(CONSOLE, "\0337\033[25;4H data %c\0338", data);
 
                 push_charcb(&data_cb, data);
             }
@@ -173,15 +177,18 @@ void console_in() {
                 Reply(tid, NULL, 0);
                 notifier_parked = 0;
             } else {
-                notifier_parked = 1;
+                notifier_parked = 1;        
             }
 
         } else {
+            // printf(cout, 0, "\0337\033[31;4H getc received %u\0338", Time(clock));
             push_intcb(&task_cb, tid);
 
             while (!is_empty_charcb(&data_cb) && !is_empty_intcb(&task_cb)) {
                 int task = pop_intcb(&task_cb);
                 char data = pop_charcb(&data_cb);
+
+                // printf(cout, 0, "\0337\033[40;4H getc before replying data %c %u\0338", data, Time(clock));
                 Reply(task, &data, 1);
             }
 
@@ -325,7 +332,10 @@ void marklin_io() {
 
 int Getc(int tid, int channel) {
     char r;
+
+    int console_tid = WhoIs("cout");
     int res = Send(tid, NULL, 0, &r, 1);
+    // for(;;){}
     if (res < 0) {
         return -1;
     }

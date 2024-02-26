@@ -114,35 +114,20 @@ void idle_task(){
     #endif 
     int console_tid = WhoIs("cout");
     int clock = WhoIs("clock");
+    int time = Time(clock);
+    uint32_t count = 0;
     for(;;){
-        uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
-        // char str[] = "\0337\033[3;1HIdle percentage: 00% \0338";
-        // char bf[3];
-        // ui2a( idle_time_percent, 10, buf );
-        // str[25] = bf[0];
-        // str[26] = bf[1];
-        // Puts(console_tid, CONSOLE, str);
-        // uart_printf(CONSOLE, "\0337\033[25;1Hidle ran %d percentage %u%%\0338", Time(clock), idle_time_percent);
-
-        // char str[] = "\0337\033[3;1HIdle percentage: 00%                   \0338";
-        // char bf[12];
-        // ui2a( idle_time_percent, 10, bf );
-        // // if(idle_time_percent<10){
-        // //     str[25] = bf[0];
-        // //     str[26] = '?';
-        // // }else{
-        // //     str[25] = bf[0];
-        // //     str[26] = bf[1];
-        // // }
-        // str[25] = bf[0];
-        // str[26] = bf[1];
-        // str[27] = bf[2];
-        // printf(console_tid, 0, str);
-        // Puts(console_tid, CONSOLE, str);
-
-        printf(console_tid, 0, "\0337\033[3;1HIdle percentage: %u%% %u\0338", idle_time_percent, Time(clock));
-        // uart_printf(CONSOLE, "\0337\033[3;1HIdle percentage: %u%% \0338", idle_time_percent);
-        // uart_printf(CONSOLE, "Idle percentage: %u%%\r\n", idle_time_percent);
+        //TODO: maybe make this better somehow
+        // int cur_time = Time(clock);
+        if(count%30==0){
+            uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
+            char str[] = "\0337\033[14;1HIdle:   % \0338";
+            ui2a_no0(idle_time_percent, 10, str+15);
+            // ui2a_no0(cur_time, 10, str+19);
+            Puts(console_tid, CONSOLE, str);
+            // time = cur_time;
+        }
+        count += 1;
         asm volatile("wfi");
     }
 }
@@ -161,7 +146,7 @@ void i2str(int i, char *str){
 void console_time(){
     int clock_tid = WhoIs("clock");
     int console_tid = WhoIs("cout");
-    char time_str[] = "\033[1;1H\033[K00:00. ";
+    char time_str[] = "\0337\033[1;1H\033[K00:00. \0338";
     char bf[3];
     int time = Time(clock_tid);
         // char tmp_bf[20];
@@ -172,10 +157,10 @@ void console_time(){
         unsigned int minutes = time/100/60;
         unsigned int seconds = (time/100)%60;
         unsigned int tenthOfSecond = (time/10)%10;
-        i2str(minutes, time_str+9);
-        i2str(seconds, time_str+12);
+        i2str(minutes, time_str+11);
+        i2str(seconds, time_str+14);
         ui2a( tenthOfSecond, 10, bf );
-        time_str[15] = bf[0];
+        time_str[17] = bf[0];
         Puts(console_tid, CONSOLE, time_str);
         time += 10;
         DelayUntil(clock_tid, time);        
@@ -223,17 +208,19 @@ void sensor_update(){
 }
 
 void user_input(){
-    int console_tid = WhoIs("cout");
+    int cout = WhoIs("cout");
+    int cin = WhoIs("cin");
     int marklin_tid = WhoIs("mio");
+    int clock = WhoIs("clock");
     char input[20];
     int input_index = 0;
     int input_col = 3;
 
-    char new_line_str[] = "\033[0;1H\033[K> ";
-    new_line_str[2] = INPUT_ROW;
+    char new_line_str[] = "\033[10;1H\033[K> ";
+    // new_line_str[2] = INPUT_ROW;
 
-    char next_char_str[] = "\033[0;0H ";
-    next_char_str[2] = INPUT_ROW;
+    char next_char_str[] = "\033[10;0H  ";
+    // next_char_str[2] = INPUT_ROW;
 
     uint32_t last_speed[100];
     for(int i = 0; i<100; i++){
@@ -241,29 +228,48 @@ void user_input(){
     }
 
     for(;;){
-        char c = Getc(console_tid, CONSOLE);
-        uart_printf()
+
+        // printf(cout, 0, "\0337\033[33;4Huser_input before getc %u\0338", Time(clock));
+        char c = Getc(cin, CONSOLE);
+        // uart_printf()
         if (c == '\r') {
             input[input_index] = '\0';
             if(input[0] == 'q' && input[1]=='\0') {
                 Quit();
             }
-            executeFunction(console_tid, marklin_tid, input, last_speed);
+            executeFunction(cout, marklin_tid, input, last_speed);
 
             input_index = 0;
             // clear input line and add >
-            Puts(console_tid, CONSOLE, new_line_str);
+            Puts(cout, CONSOLE, new_line_str);
             input_col = 3;
         }else{
             //add char to input buffer
-            input[input_index] = c;
-            input_index += 1;
+            if(input_index>=18){
+                input_index = 0;
+                input_col = 3;
+                Puts(cout, CONSOLE, new_line_str);
+                char err[] = "\033[12;1H\033[Kinput exceeded maximum number of characters";
+                Puts(cout, CONSOLE, err);
+            }else{
+                input[input_index] = c;
+                input[input_index+1] = '\0';
+                input_index += 1;
 
-            //put char on screen
-            next_char_str[4] = input_col;
-            next_char_str[6] = c;
-            Puts(console_tid, CONSOLE, next_char_str);
-            input_col += 1;
+                //put char on screen
+                ui2a_no0(input_col, 10, next_char_str+5);
+                if(input_col<10){
+                    next_char_str[6] = 'H';
+                    next_char_str[7] = c;
+                    next_char_str[8] = '\0';
+                }else{
+                    next_char_str[7] = 'H';
+                    next_char_str[8] = c;
+                }
+                // next_char_str[5] = input_col;
+                Puts(cout, CONSOLE, next_char_str);
+                input_col += 1;
+            }
         } 
     }
 }
@@ -271,42 +277,42 @@ void user_input(){
 
 void setup(){
 
-    int console_tid = WhoIs("cout");
-    // int marklin_tid = WhoIs("mio");
+    int cout = WhoIs("cout");
+    int marklin_tid = WhoIs("mio");
     
     // clear screen
-    Puts(console_tid, 0, "\033[2J");
+    Puts(cout, 0, "\033[2J");
     // reset cursor to top left
-    Puts(console_tid, 0, "\033[H");
+    Puts(cout, 0, "\033[H");
 
     // Puts(console_tid, CONSOLE, "setup start\r\n");
 
-    Puts(console_tid, CONSOLE, "\033[2J");
-    Printf(console_tid, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
-    Printf(console_tid, CONSOLE, "\033[%u;3H", INPUT_ROW);
+    Puts(cout, CONSOLE, "\033[2J");
+    printf(cout, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
+    printf(cout, CONSOLE, "\033[%u;3H", INPUT_ROW);
 
-    // Putc(marklin_tid, MARKLIN, 96);
-    // Putc(marklin_tid, MARKLIN, 255);
-    // Putc(marklin_tid, MARKLIN, 0xC0);
-    // Putc(marklin_tid, MARKLIN, 255);
+    Putc(marklin_tid, MARKLIN, 96);
+    Putc(marklin_tid, MARKLIN, 255);
+    Putc(marklin_tid, MARKLIN, 0xC0);
+    Putc(marklin_tid, MARKLIN, 255);
 
-    // switchesSetup(console_tid, marklin_tid);
-    // char *s1 = "Switches\r\n";
-    // char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
-    // char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
-    // char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
-    // Printf(marklin_tid, MARKLIN, "\033[%u;1H", SWITCHES_ROW);
-    // Puts(marklin_tid, MARKLIN, s1);
-    // Puts(marklin_tid, MARKLIN, s2);
-    // Puts(marklin_tid, MARKLIN, s3);
-    // Puts(marklin_tid, MARKLIN, s4);
+    // switchesSetup(cout, marklin_tid);
+    char *s1 = "Switches\r\n";
+    char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
+    char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
+    char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
+    printf(cout, CONSOLE, "\033[3;1H");
+    Puts(cout, CONSOLE, s1);
+    Puts(cout, CONSOLE, s2);
+    Puts(cout, CONSOLE, s3);
+    Puts(cout, CONSOLE, s4);
 
-    Printf(console_tid, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
-    Puts(console_tid, CONSOLE, "Most recent sensors: ");
+    printf(cout, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
+    Puts(cout, CONSOLE, "Most recent sensors: ");
 
     Create(3, &console_time);
     // Create(3, &sensor_update);
-    Create(3, &user_input);
+    Create(5, &user_input);
 }
 
 
@@ -325,9 +331,9 @@ void rootTask(){
     Create(3, &console_out);
     Create(3, &console_in);
 
-    // Create(3, &marklin_out_notifier);
-    // Create(3, &marklin_in_notifier);
-    // Create(3, &marklin_io);
+    Create(3, &marklin_out_notifier);
+    Create(3, &marklin_in_notifier);
+    Create(3, &marklin_io);
     
     // Create(3, &k4);
     Create(3, &setup);

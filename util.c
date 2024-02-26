@@ -31,6 +31,27 @@ unsigned int ui2a( unsigned int num, unsigned int base, char *bf ) {
 	return digits;
 }
 
+unsigned int ui2a_no0( unsigned int num, unsigned int base, char *bf ) {
+	int n = 0;
+	int dgt;
+	unsigned int d = 1;
+	unsigned int digits = 1;
+	while( (num / d) >= base ){ 
+		d *= base;
+		digits += 1;
+	}
+	while( d != 0 ) {
+		dgt = num / d;
+		num %= d;
+		d /= base;
+		if( n || dgt > 0 || d == 0 ) {
+			*bf++ = dgt + ( dgt < 10 ? '0' : 'a' - 10 );
+			++n;
+		}
+	}
+	return digits;
+}
+
 // signed int to ascii string
 unsigned int i2a( int num, char *bf ) {
 	if( num < 0 ) {
@@ -65,6 +86,15 @@ void str_cpy(char* dest, char* src){
 		*(dest++) = *(src++);
 	}
 }
+
+void str_cpy_w0(char* dest, char* src){
+	int index = 0;
+	while(src[index]!='\0'){
+		*(dest++) = *(src++);
+	}
+	*(dest++) = 0;
+}
+
 
 int str_len(const char *str){
     int len = 0;
