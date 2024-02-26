@@ -229,6 +229,8 @@ void handle_await_event(Heap *heap, TaskFrame* blocked_on_irq[]){
         uart_enable_tx(MARKLIN);
     } else if (type == MARKLIN_RX) {
         uart_enable_rx(MARKLIN);
+    } else if (type == MARKLIN_CTS) {
+        uart_enable_cts(MARKLIN);
     }
 
     // TODO: not sure if we should buffer the tasks and what to return when we reach that
@@ -302,13 +304,18 @@ void handle_irq(Heap *heap, TaskFrame* blocked_on_irq[]){
                 blocked_on_irq[MARKLIN_RX] = NULL;
             }
             uart_clear_rx(MARKLIN);
+        } else if (uart_mis_cts(MARKLIN)) {
+            uart_disable_cts(MARKLIN);
+            if (blocked_on_irq[MARKLIN_CTS] != NULL) {
+                reschedule_task_with_return(heap, blocked_on_irq[MARKLIN_CTS], 0);
+                blocked_on_irq[MARKLIN_CTS] = NULL;
+            }
+            uart_clear_cts(MARKLIN);
         } else {
             // invalid irq event
             uart_printf(CONSOLE, "Invalid/Unsupported UART IRQ mis register not valid %u\r\n");
             // for(;;){}
         }
-
-
     } else {
         // invalid event
         uart_printf(CONSOLE, "Invalid/Unsupported IRQ %u\r\n", irq);

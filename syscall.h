@@ -15,7 +15,7 @@
 
 // K3
 #define AWAIT_EVENT 9
-#define NUM_IRQ_EVENTS 5 // note this is 1 less than in the enum due to the TODO
+#define NUM_IRQ_EVENTS 6 // note this is 1 less than in the enum due to the TODO
 #define IRQ 10
 
 // K4
@@ -29,6 +29,7 @@ typedef enum {
     CONSOLE_RX,
     MARKLIN_TX,
     MARKLIN_RX,
+    MARKLIN_CTS,
     TODO
 } IRQ_TYPE;
 

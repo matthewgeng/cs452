@@ -212,8 +212,8 @@ void console_in() {
 }
 
 // notifier needed to still allow function calls to server with buffering
-void marklin_out_notifier() {
-    RegisterAs("mout_notifier");
+void marklin_out_tx_notifier() {
+    RegisterAs("mout_tx_notifier");
 
     int mio = WhoIs("mio");
 
@@ -221,13 +221,34 @@ void marklin_out_notifier() {
         int res = AwaitEvent(MARKLIN_TX);
         if (res < 0) {
             // TODO: make more robust
-            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+            uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
         }
 
         res = Send(mio, NULL, 0, NULL, 0);
         if (res < 0) {
             // TODO: make more robust
-            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+            uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
+        }
+    }
+
+}
+
+void marklin_out_cst_notifier() {
+    RegisterAs("mout_cts_notifier");
+
+    int mio = WhoIs("mio");
+
+    for(;;){
+        int res = AwaitEvent(MARKLIN_CTS);
+        if (res < 0) {
+            // TODO: make more robust
+            uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
+        }
+
+        res = Send(mio, NULL, 0, NULL, 0);
+        if (res < 0) {
+            // TODO: make more robust
+            uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
         }
     }
 
@@ -243,13 +264,13 @@ void marklin_in_notifier() {
         int res = AwaitEvent(MARKLIN_RX);
         if (res < 0) {
             // TODO: make more robust
-            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+            uart_printf(CONSOLE, "ERROR marklin in notifier\r\n");
         }
 
         res = Send(mio, NULL, 0, NULL, 0);
         if (res < 0) {
             // TODO: make more robust
-            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+            uart_printf(CONSOLE, "ERROR marklin in notifier\r\n");
         }
     }
 }
@@ -257,8 +278,9 @@ void marklin_in_notifier() {
 void marklin_io() {
     RegisterAs("mio");
 
-    int mout = WhoIs("mout_notifier");
-    int min = WhoIs("min_notifier");
+    int mout_tx_notifier = WhoIs("mout_tx_notifier");
+    int mout_cts_notifier = WhoIs("mout_cts_notifier");
+    int min_notifier = WhoIs("min_notifier");
 
     int tid;
     // circular buffer 
@@ -273,23 +295,46 @@ void marklin_io() {
     int clock_tid = WhoIs("clock");
     int time = Time(clock_tid);
 
+    int prev_cts = 1;
+    int cts_transition = 1;
+
     for(;;) {
         Receive(&tid, (char*)&m, sizeof(MessageStr));
 
         // print
-        if (tid == mout) {
+        if (tid == mout_tx_notifier) {
             // uart_printf(CONSOLE, "notifier recieved\r\n");
             // try to flush buffer 
             // uart_printf(CONSOLE, "message length from noti %u\r\n", m.len);
+            
 
-            while (uart_can_write(MARKLIN) && !is_empty_charcb(&buffer)) {
+            if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&buffer)) {
+                char c = peek_charcb(&buffer);
+                // if (c == 255) {
+                //     DelayUntil(clock_tid, time+x);
+                // } else if (c == 254) {
+                //     DelayUntil(clock_tid, time+x);
+                // }
                 uart_writec(MARKLIN, pop_charcb(&buffer));
             }
 
             // reply to notifier
             Reply(tid, NULL, 0);
+        } else if (tid == mout_cts_notifier) {
+            // cts turning off
+            if (prev_cts == 1) {
+                prev_cts = 0;
+            
+            // cts turning on
+            } else {
+                prev_cts = 1;
+                cts_transition = 1;
+            }
+            // reply to notifier
+            Reply(tid, NULL, 0);
+
         // store data in buffer
-        } else if (tid == min) {
+        } else if (tid == min_notifier) {
             char c;
             while (uart_can_read(MARKLIN) && !is_empty_charcb(&buffer)) {
                 c = uart_readc(MARKLIN);

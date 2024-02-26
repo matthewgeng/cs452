@@ -97,12 +97,15 @@ static const uint32_t UART_LCRH_WLEN_HIGH = 0x40;
 
 static const uint32_t UART_MIS_TXMIS = 0x20;
 static const uint32_t UART_MIS_RXMIS = 0x10;
+static const uint32_t UART_MIS_CTS = 0x2;
 
 static const uint32_t UART_IMSC_TXIM = 0x20;
 static const uint32_t UART_IMSC_RXIM = 0x10;
+static const uint32_t UART_IMSC_CTS = 0x2;
 
 static const uint32_t UART_ICR_TXIC = 0x20;
 static const uint32_t UART_ICR_RXIC = 0x10;
+static const uint32_t UART_ICR_CTS = 0x2;
 
 // GPIO initialization, to be called before UART functions.
 // GPIO pins 14 & 15 already configured by boot loader, but redo for clarity.
@@ -194,16 +197,25 @@ void uart_enable_tx(size_t line) {
     UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) | UART_IMSC_TXIM;
 }
 
-void uart_disable_tx(size_t line) {
-    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) & ~(UART_IMSC_TXIM);
-}
-
 void uart_enable_rx(size_t line) {
     UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) | UART_IMSC_RXIM;
 }
 
+
+void uart_enable_cts(size_t line){
+    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) | UART_IMSC_CTS;
+}
+
+void uart_disable_tx(size_t line) {
+    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) & ~(UART_IMSC_TXIM);
+}
+
 void uart_disable_rx(size_t line) {
     UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) & ~(UART_IMSC_RXIM);
+}
+
+void uart_disable_cts(size_t line) {
+    UART_REG(line, UART_IMSC) = UART_REG(line, UART_IMSC) & ~(UART_IMSC_CTS);
 }
 
 void uart_clear_tx(size_t line) {
@@ -212,6 +224,10 @@ void uart_clear_tx(size_t line) {
 
 void uart_clear_rx(size_t line) {
     UART_REG(line, UART_ICR) = UART_REG(line, UART_ICR) | UART_ICR_RXIC;
+}
+
+void uart_clear_rx(size_t line) {
+    UART_REG(line, UART_ICR) = UART_REG(line, UART_ICR) | UART_ICR_CTS;
 }
 
 // register checks
