@@ -78,7 +78,7 @@ static const uint32_t UART_FR_RXFE = 0x10;
 static const uint32_t UART_FR_TXFF = 0x20;
 static const uint32_t UART_FR_RXFF = 0x40;
 static const uint32_t UART_FR_TXFE = 0x80;
-static const uint32_t UART_FR_CTS = 0x0;
+static const uint32_t UART_FR_CTS = 0x1;
 
 static const uint32_t UART_CR_UARTEN = 0x01;
 static const uint32_t UART_CR_LBE = 0x80;
