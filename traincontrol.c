@@ -88,7 +88,7 @@ void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switch
 void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_speed[]){
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
-  str_cpy(last_fun+10, str);
+  str_cpy_w0(last_fun+10, str);
   Puts(console_tid, CONSOLE, last_fun);
 
   char func_res[30];
@@ -101,7 +101,7 @@ void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_
     trainNumber = getArgumentTwoDigitNumber(str+3);
     if(trainNumber==1000){
 
-      str_cpy(func_res+10, "Invalid train number\0");
+      str_cpy_w0(func_res+10, "Invalid train number");
       Puts(console_tid, CONSOLE, func_res);
       // displayFuncMessage("Invalid train number");
       return;
@@ -114,13 +114,13 @@ void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_
     }
     trainSpeed = getArgumentTwoDigitNumber(str+trainSpeedStartIndex);
     if(trainSpeed>30){
-      str_cpy(func_res+10, "Invalid train speed\0");
+      str_cpy_w0(func_res+10, "Invalid train speed\0");
       Puts(console_tid, CONSOLE, func_res);
       // displayFuncMessage("Invalid train speed");
       return;
     }
     tr(marklin_tid, trainNumber, trainSpeed, last_speed);
-    str_cpy(func_res+10, "Train speed changed\0");
+    str_cpy(func_res+10, "Train speed changed");
     Puts(console_tid, CONSOLE, func_res);
     // displayFuncMessage("Train speed changed");
 
@@ -129,13 +129,13 @@ void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_
 
     trainNumber = getArgumentTwoDigitNumber(str+3);
     if(trainNumber==1000){
-      str_cpy(func_res+10, "Invalid train number");
+      str_cpy_w0(func_res+10, "Invalid train number");
       Puts(console_tid, CONSOLE, func_res);
       // displayFuncMessage("Invalid train number");
       return;
     }
     rv(marklin_tid, trainNumber, last_speed);
-    str_cpy(func_res+10, "Train reversed");
+    str_cpy_w0(func_res+10, "Train reversed");
     Puts(console_tid, CONSOLE, func_res);
     // displayFuncMessage("Train reversed");
 
@@ -145,7 +145,7 @@ void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_
 
     switchNumber = getArgumentThreeDigitNumber(str+3);
     if(switchNumber==1000){
-      str_cpy(func_res+10, "Invalid switch number");
+      str_cpy_w0(func_res+10, "Invalid switch number");
       Puts(console_tid, CONSOLE, func_res);
       // displayFuncMessage("Invalid switch number");
       return;
@@ -161,19 +161,19 @@ void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_
     if(str[switchDirectionIndex]=='S' || str[switchDirectionIndex]=='C'){
       switchDirection = str[switchDirectionIndex];
     }else{
-      str_cpy(func_res+10, "Invalid switch direction");
+      str_cpy_w0(func_res+10, "Invalid switch direction");
       Puts(console_tid, CONSOLE, func_res);
       // displayFuncMessage("Invalid switch direction");
       return;
     }
     sw(console_tid, marklin_tid, switchNumber, switchDirection);
-    str_cpy(func_res+10, "Switch direction changed");
+    str_cpy_w0(func_res+10, "Switch direction changed");
     Puts(console_tid, CONSOLE, func_res);
     // displayFuncMessage("Switch direction changed");
 
   }
   else{
-    str_cpy(func_res+10, "Unknown function");
+    str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);
     // displayFuncMessage("Unknown function");
     return;

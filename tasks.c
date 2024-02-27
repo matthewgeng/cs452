@@ -212,7 +212,8 @@ void user_input(){
     int cin = WhoIs("cin");
     int marklin_tid = WhoIs("mio");
     int clock = WhoIs("clock");
-    char input[20];
+    int max_input_len = 20;
+    char input[max_input_len+2];
     int input_index = 0;
     int input_col = 3;
 
@@ -226,7 +227,6 @@ void user_input(){
     for(int i = 0; i<100; i++){
       last_speed[i] = 0;
     }
-
     for(;;){
 
         // printf(cout, 0, "\0337\033[33;4Huser_input before getc %u\0338", Time(clock));
@@ -245,7 +245,7 @@ void user_input(){
             input_col = 3;
         }else{
             //add char to input buffer
-            if(input_index>=18){
+            if(input_index>=max_input_len){
                 input_index = 0;
                 input_col = 3;
                 Puts(cout, CONSOLE, new_line_str);
@@ -310,9 +310,9 @@ void setup(){
     printf(cout, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
     Puts(cout, CONSOLE, "Most recent sensors: ");
 
-    Create(3, &console_time);
+    // Create(3, &console_time);
     // Create(3, &sensor_update);
-    Create(5, &user_input);
+    // Create(5, &user_input);
 }
 
 

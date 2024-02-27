@@ -41,16 +41,14 @@ void console_in_notifier() {
         int res = AwaitEvent(CONSOLE_RX);
         if (res < 0) {
             // TODO: make more robust
-            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+            uart_printf(CONSOLE, "AWAITEVENT ERROR console in notifier\r\n");
         }
-        // printf(console_tid, 0, "\0337\033[28;4H cin notifier before send %u\0338", Time(clock));
 
         res = Send(cin, NULL, 0, NULL, 0);            
-        // printf(console_tid, 0, "\0337\033[29;4H cin notifier after send %u\0338", Time(clock));
 
         if (res < 0) {
             // TODO: make more robust
-            uart_printf(CONSOLE, "ERROR console in notifier\r\n");
+            uart_printf(CONSOLE, "SEND ERROR console in notifier\r\n");
         }
     }
 }
@@ -378,9 +376,7 @@ void marklin_io() {
 int Getc(int tid, int channel) {
     char r;
 
-    int console_tid = WhoIs("cout");
     int res = Send(tid, NULL, 0, &r, 1);
-    // for(;;){}
     if (res < 0) {
         return -1;
     }
