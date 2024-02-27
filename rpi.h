@@ -31,6 +31,7 @@ uint32_t uart_irq_id(size_t line);
 uint32_t uart_mis(size_t line);
 uint32_t uart_mis_tx(size_t line);
 uint32_t uart_mis_rx(size_t line);
+uint32_t uart_mis_cts(size_t line);
 uint32_t uart_cts(size_t line);
 
 int uart_can_read(size_t line);

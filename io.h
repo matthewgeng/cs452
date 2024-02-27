@@ -4,10 +4,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
-typedef struct MessageStr {
+
+typedef enum IOType {
+    GETC = 1,
+    PUTC,
+    PUTS
+} IOType;
+
+typedef struct IOMessage {
+    IOType type;
     char* str;
     uint32_t len;
-} MessageStr;
+} IOMessage;
 
 int Getc(int tid, int channel);
 int Putc(int tid, int channel, unsigned char ch);
@@ -21,7 +29,8 @@ void console_out();
 void console_in();
 
 // notifier needed to still allow function calls to server with buffering
-void marklin_out_notifier();
+void marklin_out_tx_notifier();
+void marklin_out_cts_notifier();
 void marklin_in_notifier();
 // only 1 marklin io task because it's half-duplex
 void marklin_io();

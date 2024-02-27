@@ -14,14 +14,15 @@ void console_out_notifier() {
 
     int cout = WhoIs("cout");
     int clock = WhoIs("clock");
-    MessageStr m = {"", 0};
+    // TODO: maybe we can send none?
+    IOMessage m = {0, "", 0};
     for(;;){
         int res = AwaitEvent(CONSOLE_TX);
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR console out notifier\r\n");
         }
-        res = Send(cout, (char*)&m, sizeof(MessageStr), NULL, 0);
+        res = Send(cout, (char*)&m, sizeof(IOMessage), NULL, 0);
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR console out notifier\r\n");
@@ -37,6 +38,8 @@ void console_in_notifier() {
     int console_tid = WhoIs("cout");
     int clock = WhoIs("clock");
 
+    // TODO: maybe we can send none?
+    IOMessage m = {0, "", 0};
     for(;;){
         int res = AwaitEvent(CONSOLE_RX);
         if (res < 0) {
@@ -44,7 +47,8 @@ void console_in_notifier() {
             uart_printf(CONSOLE, "AWAITEVENT ERROR console in notifier\r\n");
         }
 
-        res = Send(cin, NULL, 0, NULL, 0);            
+        res = Send(cin, &m, sizeof(IOMessage), NULL, 0);            
+        // printf(console_tid, 0, "\0337\033[29;4H cin notifier after send %u\0338", Time(clock));
 
         if (res < 0) {
             // TODO: make more robust
@@ -67,11 +71,11 @@ void console_out() {
     CharCB buffer;
     initialize_charcb(&buffer, raw_buffer, sizeof(raw_buffer), 0);
     // message struct
-    MessageStr m;
+    IOMessage m;
     // uart_printf(CONSOLE, "cout initialized\r\n");
 
     for(;;) {
-        Receive(&tid, (char*)&m, sizeof(MessageStr));
+        Receive(&tid, (char*)&m, sizeof(IOMessage));
 
         // print
         if (tid == cout_notifier) {
@@ -128,21 +132,23 @@ void console_in() {
     int cin_notifier = WhoIs("cin_notifier");
     int cout = WhoIs("cout");
     int clock = WhoIs("clock");
-
     int tid;
     int notifier_parked = 0;
-    // circular buffer 
+    
+    // waiting tasks
     int task_buffer[32];
     IntCB task_cb;
     initialize_intcb(&task_cb, task_buffer, sizeof(task_buffer)/sizeof(task_buffer[0]), 0);
+
+    // data
     char data_buffer[32];
     CharCB data_cb;
     initialize_charcb(&data_cb, data_buffer, sizeof(data_buffer), 0);
     
-    char c;
+    IOMessage m;
 
     for(;;) {
-        Receive(&tid, &c, 1);
+        Receive(&tid, (char*)&m, sizeof(IOMessage));
 
         // print
         if (tid == cin_notifier) {        
@@ -152,7 +158,6 @@ void console_in() {
             // get data
             while (uart_can_read(CONSOLE)) {
                 char data = uart_readc(CONSOLE);            
-
                 push_charcb(&data_cb, data);
             }
 
@@ -215,6 +220,7 @@ void marklin_out_tx_notifier() {
 
     int mio = WhoIs("mio");
 
+    IOMessage m = {0, "", 0};
     for(;;){
         int res = AwaitEvent(MARKLIN_TX);
         if (res < 0) {
@@ -222,7 +228,7 @@ void marklin_out_tx_notifier() {
             uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
         }
 
-        res = Send(mio, NULL, 0, NULL, 0);
+        res = Send(mio, (char*)&m, sizeof(IOMessage), NULL, 0);
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
@@ -231,11 +237,12 @@ void marklin_out_tx_notifier() {
 
 }
 
-void marklin_out_cst_notifier() {
+void marklin_out_cts_notifier() {
     RegisterAs("mout_cts_notifier");
 
     int mio = WhoIs("mio");
 
+    IOMessage m = {0, "", 0};
     for(;;){
         int res = AwaitEvent(MARKLIN_CTS);
         if (res < 0) {
@@ -243,7 +250,7 @@ void marklin_out_cst_notifier() {
             uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
         }
 
-        res = Send(mio, NULL, 0, NULL, 0);
+        res = Send(mio, (char*)&m, sizeof(IOMessage), NULL, 0);
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
@@ -258,6 +265,7 @@ void marklin_in_notifier() {
 
     int mio = WhoIs("mio");
 
+    IOMessage m = {0, "", 0};
     for(;;){
         int res = AwaitEvent(MARKLIN_RX);
         if (res < 0) {
@@ -265,7 +273,7 @@ void marklin_in_notifier() {
             uart_printf(CONSOLE, "ERROR marklin in notifier\r\n");
         }
 
-        res = Send(mio, NULL, 0, NULL, 0);
+        res = Send(mio, (char*)&m, sizeof(IOMessage), NULL, 0);
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR marklin in notifier\r\n");
@@ -279,25 +287,31 @@ void marklin_io() {
     int mout_tx_notifier = WhoIs("mout_tx_notifier");
     int mout_cts_notifier = WhoIs("mout_cts_notifier");
     int min_notifier = WhoIs("min_notifier");
-
-    int tid;
-    // circular buffer 
-    // TODO: make constant a variable
-    char raw_buffer[512];
-    CharCB buffer;
-    initialize_charcb(&buffer, raw_buffer, 200, 0);
-    // message struct
-    MessageStr m;
-
-    // implement delay
     int clock_tid = WhoIs("clock");
     int time = Time(clock_tid);
 
+    int tid;
+    // OUTPUT
+    char raw_out_buffer[128];
+    CharCB out_buffer;
+    initialize_charcb(&out_buffer, raw_out_buffer, 128, 0);
     int prev_cts = 1;
     int cts_transition = 1;
+    // TODO: parking for output notifiers
 
+
+    // INPUT
+    int raw_in_tasks_buffer[32];
+    IntCB task_buffer;
+    initialize_intcb(&task_buffer, raw_in_tasks_buffer, 32, 0);
+    char raw_in_buffer[32];
+    CharCB in_buffer;
+    initialize_charcb(&in_buffer, raw_in_buffer, 32, 0);
+    int in_notifier_parked = 0;
+
+    IOMessage m;
     for(;;) {
-        Receive(&tid, (char*)&m, sizeof(MessageStr));
+        Receive(&tid, (char*)&m, sizeof(IOMessage));
 
         // print
         if (tid == mout_tx_notifier) {
@@ -306,14 +320,14 @@ void marklin_io() {
             // uart_printf(CONSOLE, "message length from noti %u\r\n", m.len);
             
 
-            if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&buffer)) {
-                char c = peek_charcb(&buffer);
+            if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&out_buffer)) {
+                char c = peek_charcb(&out_buffer);
                 // if (c == 255) {
                 //     DelayUntil(clock_tid, time+x);
                 // } else if (c == 254) {
                 //     DelayUntil(clock_tid, time+x);
                 // }
-                uart_writec(MARKLIN, pop_charcb(&buffer));
+                uart_writec(MARKLIN, pop_charcb(&out_buffer));
             }
 
             // reply to notifier
@@ -334,33 +348,67 @@ void marklin_io() {
         // store data in buffer
         } else if (tid == min_notifier) {
             char c;
-            while (uart_can_read(MARKLIN) && !is_empty_charcb(&buffer)) {
+            while (uart_can_read(MARKLIN) && !is_empty_charcb(&in_buffer)) {
                 c = uart_readc(MARKLIN);
-                push_charcb(&buffer, c);
+                push_charcb(&in_buffer, c);
+            }
+
+
+            while (!is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer)) {
+                int task = pop_intcb(&task_buffer);
+                char data = pop_charcb(&in_buffer);
+                Reply(task, &data, 1);
+            }
+
+            if (is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer)) {
+                Reply(tid, NULL, 0);
+                in_notifier_parked = 0;
+            } else {
+                in_notifier_parked = 1;        
             }
 
             // reply to notifier
             Reply(tid, NULL, 0);
         // store data in buffer
         } else {
-            // uart_printf(CONSOLE, "message length from user %u\r\n", m.len);
 
-            // store data in buffer
-            for (uint32_t i = 0; i < m.len; i++) {
-                push_charcb(&buffer, m.str[i]);
-            }
+            if (m.type == GETC) {
+                push_intcb(&task_buffer, tid);
 
-            if((int)(peek_charcb(&buffer)) == 255){
-                DelayUntil(clock_tid, time+15);
-            }else if((int)(peek_charcb(&buffer)) == 254){
-                // TODO: maybe need to do smth to pause sensor queries here
-                DelayUntil(clock_tid, time+250);
-            }
+                while (!is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer)) {
+                    int task = pop_intcb(&task_buffer);
+                    char data = pop_charcb(&in_buffer);
 
-            // try to flush buffer 
-            while (uart_can_write(MARKLIN) && !is_empty_charcb(&buffer)) {
-                uart_writec(MARKLIN, pop_charcb(&buffer));
-                time = Time(clock_tid);
+                    // printf(cout, 0, "\0337\033[40;4H getc before replying data %c %u\0338", data, Time(clock));
+                    Reply(task, &data, 1);
+                }
+
+                if (is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer) && in_notifier_parked) {
+                    Reply(min_notifier, NULL, 0);
+                    in_notifier_parked = 0;
+                } else {
+                    in_notifier_parked = 1;
+                }
+
+            } else if (m.type == PUTC || m.type == PUTS) {
+                // store data in buffer
+                for (uint32_t i = 0; i < m.len; i++) {
+                    push_charcb(&out_buffer, m.str[i]);
+                }
+
+
+                if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&out_buffer)) {
+                    char c = peek_charcb(&out_buffer);
+                    // if (c == 255) {
+                    //     DelayUntil(clock_tid, time+x);
+                    // } else if (c == 254) {
+                    //     DelayUntil(clock_tid, time+x);
+                    // }
+                    uart_writec(MARKLIN, pop_charcb(&out_buffer));
+                }
+
+            } else {
+
             }
 
             // reply to sender
@@ -375,8 +423,9 @@ void marklin_io() {
 
 int Getc(int tid, int channel) {
     char r;
+    IOMessage m = {GETC, NULL, 0};
 
-    int res = Send(tid, NULL, 0, &r, 1);
+    int res = Send(tid, &m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
         return -1;
     }
@@ -386,12 +435,13 @@ int Getc(int tid, int channel) {
 int Putc(int tid, int channel, unsigned char ch) {
 
     char r;
-    MessageStr m = {
+    IOMessage m = {
+        PUTC,
         &ch,
         1
     };
 
-    int res = Send(tid, (char*)&m, sizeof(MessageStr), &r, 1);
+    int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
         return -1;
     }
@@ -404,12 +454,13 @@ int Putc(int tid, int channel, unsigned char ch) {
 int Puts(int tid, int channel, unsigned char* ch) {
 
     char r;
-    MessageStr m = {
+    IOMessage m = {
+        PUTS,
         ch,
         str_len(ch)
     };
 
-    int res = Send(tid, (char*)&m, sizeof(MessageStr), &r, 1);
+    int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
         return -1;
     }

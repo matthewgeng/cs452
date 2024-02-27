@@ -331,7 +331,8 @@ void rootTask(){
     Create(3, &console_out);
     Create(3, &console_in);
 
-    Create(3, &marklin_out_notifier);
+    Create(3, &marklin_out_tx_notifier);
+    Create(3, &marklin_out_cts_notifier);
     Create(3, &marklin_in_notifier);
     Create(3, &marklin_io);
     

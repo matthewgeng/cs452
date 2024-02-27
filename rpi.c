@@ -189,6 +189,10 @@ uint32_t uart_mis_rx(size_t line) {
     return (uint32_t)(UART_REG(line, UART_MIS) & UART_MIS_RXMIS);
 }
 
+uint32_t uart_mis_cts(size_t line) {
+    return (uint32_t)(UART_REG(line, UART_MIS) & UART_MIS_CTS);
+}
+
 uint32_t uart_cts(size_t line) {
     return (uint32_t)(UART_REG(line, UART_FR) & UART_FR_CTS);
 }
@@ -226,7 +230,7 @@ void uart_clear_rx(size_t line) {
     UART_REG(line, UART_ICR) = UART_REG(line, UART_ICR) | UART_ICR_RXIC;
 }
 
-void uart_clear_rx(size_t line) {
+void uart_clear_cts(size_t line) {
     UART_REG(line, UART_ICR) = UART_REG(line, UART_ICR) | UART_ICR_CTS;
 }
 
