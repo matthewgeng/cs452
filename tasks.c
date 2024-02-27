@@ -310,9 +310,9 @@ void setup(){
     printf(cout, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
     Puts(cout, CONSOLE, "Most recent sensors: ");
 
-    // Create(3, &console_time);
+    Create(3, &console_time);
     // Create(3, &sensor_update);
-    // Create(5, &user_input);
+    Create(5, &user_input);
 }
 
 

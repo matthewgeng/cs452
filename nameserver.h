@@ -1,7 +1,7 @@
 #ifndef NAMESERVER_H
 #define NAMESERVER_H
 
-#define MAX_TASK_NAME_CHAR 20
+#define MAX_TASK_NAME_CHAR 30
 
 #include "constants.h"
 

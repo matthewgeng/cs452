@@ -12,23 +12,23 @@ void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint
   char cmd[3];
   cmd[0] = trainSpeed;
   cmd[1] = trainNumber;
-  cmd[2] = 255;
+  cmd[2] = 0;
   Puts(marklin_tid, MARKLIN, cmd);
 
   last_speed[trainNumber] = trainSpeed;
 }
 void rv(int marklin_tid, unsigned int trainNumber, uint32_t last_speed[]){
 
-  char cmd[9];
+  char cmd[8];
+  // TODO: can't send 0 rn
   cmd[0] = 0;
   cmd[1] = trainNumber;
   cmd[2] = 254;
   cmd[3] = 15;
   cmd[4] = trainNumber;
-  cmd[5] = 255;
-  cmd[6] = last_speed[trainNumber];
-  cmd[7] = trainNumber;
-  cmd[8] = 255;
+  cmd[5] = last_speed[trainNumber];
+  cmd[6] = trainNumber;
+  cmd[7] = 0;
   Puts(marklin_tid, MARKLIN, cmd);
 
   // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0);
@@ -47,20 +47,20 @@ void rv(int marklin_tid, unsigned int trainNumber, uint32_t last_speed[]){
 }
 
 void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switchDirection){
+  char cmd[4];
   if(switchDirection=='S'){
-    Putc(marklin_tid, MARKLIN, 33);
+    cmd[0] = 33;
     // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 33);
   }else if(switchDirection=='C'){
+    cmd[0] = 34;
     Putc(marklin_tid, MARKLIN, 34);
     // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 34);
   }else{
     return;
   }
-  char cmd[4];
-  cmd[0] = switchNumber;
-  cmd[1] = 255;
+  cmd[1] = switchNumber;
   cmd[2] = 32;
-  cmd[3] = 255;
+  cmd[3] = 0;
   Puts(marklin_tid, MARKLIN, cmd);
 //   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, switchNumber);
 //   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
@@ -70,16 +70,29 @@ void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switch
   uint32_t r,c;
   
   if(switchNumber<153){
-    r = SWITCHES_ROW + 1 + switchNumber/8;
-    c = (switchNumber%8-1)*9+6;
+    r = SWITCHES_ROW + 1 + (switchNumber-1)/8;
+    c = ((switchNumber-1)%8)*9+6;
   }else{
     r = SWITCHES_ROW + 1 + (switchNumber-134)/8;
     c = ((switchNumber-134)%8-1)*9+6;
   }
-  char str[] = "\033[0;0H ";
-  str[2] = r;
-  str[4] = c;
-  str[6] = switchDirection;
+  char str[] = "\0337\033[ ;       ";
+  ui2a_no0(r, 10, str+4);
+  if(c<10){
+    ui2a_no0(c, 10, str+6);
+    str[7] = 'H';
+    str[8] = switchDirection;
+    str[9] = '\033';
+    str[10] = '8';
+    str[11] = '\0';
+  }else{
+    ui2a_no0(c, 10, str+6);
+    str[8] = 'H';
+    str[9] = switchDirection;
+    str[10] = '\033';
+    str[11] = '8';
+    str[12] = '\0';
+  }
   Puts(console_tid, CONSOLE, str);
 //   outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", r, c);
 //   outputBufEnd = charToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, switchDirection);
@@ -120,7 +133,7 @@ void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_
       return;
     }
     tr(marklin_tid, trainNumber, trainSpeed, last_speed);
-    str_cpy(func_res+10, "Train speed changed");
+    str_cpy_w0(func_res+10, "Train speed changed");
     Puts(console_tid, CONSOLE, func_res);
     // displayFuncMessage("Train speed changed");
 
