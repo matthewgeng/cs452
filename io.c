@@ -322,10 +322,7 @@ void marklin_io() {
 
             if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&out_buffer)) {
                 char c = peek_charcb(&out_buffer);
-                // if (c == 255) {
-                //     DelayUntil(clock_tid, time+x);
                 uart_writec(MARKLIN, pop_charcb(&out_buffer));
-                
             }
 
             // reply to notifier
@@ -366,7 +363,7 @@ void marklin_io() {
             }
 
             // reply to notifier
-            Reply(tid, NULL, 0);
+            // Reply(tid, NULL, 0);
         // store data in buffer
         } else {
 
@@ -404,13 +401,13 @@ void marklin_io() {
                     // }
                     uart_writec(MARKLIN, pop_charcb(&out_buffer));
                 }
-
+                Reply(tid, NULL, 0);
             } else {
 
             }
 
             // reply to sender
-            Reply(tid, NULL, 0);
+            // Reply(tid, NULL, 0);
         }
     }
 

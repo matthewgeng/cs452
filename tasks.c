@@ -184,7 +184,6 @@ void sensor_update(){
   int sensors_str_index;
   for(;;){
     Putc(marklin_tid, MARKLIN, 0x85);
-    // Putc(marklin_tid, MARKLIN, 255);
     for(int i = 0; i<10; i++){
       sensor_byte = Getc(marklin_tid, MARKLIN);
       for (int u = 0; u < 8; u++) {
@@ -243,6 +242,30 @@ void user_input(){
             // clear input line and add >
             Puts(cout, CONSOLE, new_line_str);
             input_col = 3;
+        }else if (c == '\b'){
+            input_index -= 1;
+            input[input_index] = ' ';
+            input[input_index+1] = '\0';
+
+            input_col -= 1;
+            ui2a_no0(input_col, 10, next_char_str+5);
+            if(input_col<10){
+                next_char_str[6] = 'H';
+                next_char_str[7] = ' ';
+                next_char_str[8] = '\0';
+            }else{
+                next_char_str[7] = 'H';
+                next_char_str[8] = ' ';
+            }
+            Puts(cout, CONSOLE, next_char_str);
+            if(input_col<10){
+                next_char_str[6] = 'H';
+                next_char_str[7] = '\0';
+            }else{
+                next_char_str[7] = 'H';
+                next_char_str[8] = '\0';
+            }
+            Puts(cout, CONSOLE, next_char_str);
         }else{
             //add char to input buffer
             if(input_index>=max_input_len){

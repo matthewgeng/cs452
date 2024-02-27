@@ -28,9 +28,11 @@ void rv(int marklin_tid, int clock, unsigned int trainNumber, uint32_t last_spee
   // cmd[2] = 254;
   cmd[0] = 15;
   cmd[1] = trainNumber;
-  cmd[2] = last_speed[trainNumber];
-  cmd[3] = trainNumber;
-  Puts_len(marklin_tid, MARKLIN, cmd, 4);
+  Delay(clock, 15);
+  Puts_len(marklin_tid, MARKLIN, cmd, 2);
+  cmd[0] = last_speed[trainNumber];
+  cmd[1] = trainNumber;
+  Puts_len(marklin_tid, MARKLIN, cmd, 2);
 
   // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0);
   // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);

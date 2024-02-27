@@ -89,7 +89,7 @@ void nameserver(){
     for(;;){
         int msglen = Receive(&tid, msg, MAX_TASK_NAME_CHAR+1);
         if(msglen>MAX_TASK_NAME_CHAR+1){
-            uart_printf(CONSOLE, "Supplied name exceeded maximum task name length %s\r\n", msg);
+            uart_printf(CONSOLE, "Supplied name exceeded maximum task name length %s %d\r\n", msg, tid);
             msglen = MAX_TASK_NAME_CHAR+1;
         }
         msg[msglen] = '\0';
