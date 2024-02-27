@@ -184,7 +184,7 @@ void sensor_update(){
   int sensors_str_index;
   for(;;){
     Putc(marklin_tid, MARKLIN, 0x85);
-    Putc(marklin_tid, MARKLIN, 255);
+    // Putc(marklin_tid, MARKLIN, 255);
     for(int i = 0; i<10; i++){
       sensor_byte = Getc(marklin_tid, MARKLIN);
       for (int u = 0; u < 8; u++) {
@@ -237,7 +237,7 @@ void user_input(){
             if(input[0] == 'q' && input[1]=='\0') {
                 Quit();
             }
-            executeFunction(cout, marklin_tid, input, last_speed);
+            executeFunction(cout, marklin_tid, clock, input, last_speed);
 
             input_index = 0;
             // clear input line and add >
@@ -296,7 +296,7 @@ void setup(){
     Putc(marklin_tid, MARKLIN, 0xC0);
     Putc(marklin_tid, MARKLIN, 255);
 
-    // switchesSetup(cout, marklin_tid);
+    switchesSetup(cout, marklin_tid);
     char *s1 = "Switches\r\n";
     char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
     char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
@@ -311,7 +311,7 @@ void setup(){
     Puts(cout, CONSOLE, "Most recent sensors: ");
 
     Create(3, &console_time);
-    // Create(3, &sensor_update);
+    Create(3, &sensor_update);
     Create(5, &user_input);
 }
 

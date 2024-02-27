@@ -13,23 +13,24 @@ void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint
   cmd[0] = trainSpeed;
   cmd[1] = trainNumber;
   cmd[2] = 0;
-  Puts(marklin_tid, MARKLIN, cmd);
+  Puts_len(marklin_tid, MARKLIN, cmd, 2);
 
   last_speed[trainNumber] = trainSpeed;
 }
-void rv(int marklin_tid, unsigned int trainNumber, uint32_t last_speed[]){
+void rv(int marklin_tid, int clock, unsigned int trainNumber, uint32_t last_speed[]){
 
-  char cmd[8];
+  char cmd[4];
   // TODO: can't send 0 rn
   cmd[0] = 0;
   cmd[1] = trainNumber;
-  cmd[2] = 254;
-  cmd[3] = 15;
-  cmd[4] = trainNumber;
-  cmd[5] = last_speed[trainNumber];
-  cmd[6] = trainNumber;
-  cmd[7] = 0;
-  Puts(marklin_tid, MARKLIN, cmd);
+  Puts_len(marklin_tid, MARKLIN, cmd, 2);
+  Delay(clock, 250);
+  // cmd[2] = 254;
+  cmd[0] = 15;
+  cmd[1] = trainNumber;
+  cmd[2] = last_speed[trainNumber];
+  cmd[3] = trainNumber;
+  Puts_len(marklin_tid, MARKLIN, cmd, 4);
 
   // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0);
   // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, trainNumber);
@@ -61,7 +62,7 @@ void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switch
   cmd[1] = switchNumber;
   cmd[2] = 32;
   cmd[3] = 0;
-  Puts(marklin_tid, MARKLIN, cmd);
+  Puts_len(marklin_tid, MARKLIN, cmd, 2);
 //   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, switchNumber);
 //   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
 //   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 32);
@@ -98,7 +99,7 @@ void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switch
 //   outputBufEnd = charToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, switchDirection);
 }
 
-void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_speed[]){
+void executeFunction(int console_tid, int marklin_tid, int clock, char *str, uint32_t last_speed[]){
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
   str_cpy_w0(last_fun+10, str);
@@ -147,7 +148,7 @@ void executeFunction(int console_tid, int marklin_tid, char *str, uint32_t last_
       // displayFuncMessage("Invalid train number");
       return;
     }
-    rv(marklin_tid, trainNumber, last_speed);
+    rv(marklin_tid, clock, trainNumber, last_speed);
     str_cpy_w0(func_res+10, "Train reversed");
     Puts(console_tid, CONSOLE, func_res);
     // displayFuncMessage("Train reversed");

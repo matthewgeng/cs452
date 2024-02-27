@@ -324,10 +324,8 @@ void marklin_io() {
                 char c = peek_charcb(&out_buffer);
                 // if (c == 255) {
                 //     DelayUntil(clock_tid, time+x);
-                // } else if (c == 254) {
-                //     DelayUntil(clock_tid, time+x);
-                // }
                 uart_writec(MARKLIN, pop_charcb(&out_buffer));
+                
             }
 
             // reply to notifier
@@ -458,6 +456,24 @@ int Puts(int tid, int channel, unsigned char* ch) {
         PUTS,
         ch,
         str_len(ch)
+    };
+
+    int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
+    if (res < 0) {
+        return -1;
+    }
+    // TODO: do something with reply
+
+    return 0;
+}
+
+int Puts_len(int tid, int channel, unsigned char* ch, int len) {
+
+    char r;
+    IOMessage m = {
+        PUTS,
+        ch,
+        len
     };
 
     int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);

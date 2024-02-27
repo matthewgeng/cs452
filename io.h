@@ -20,6 +20,7 @@ typedef struct IOMessage {
 int Getc(int tid, int channel);
 int Putc(int tid, int channel, unsigned char ch);
 int Puts(int tid, int channel, unsigned char* ch);
+int Puts_len(int tid, int channel, unsigned char* ch, int len);
 void printf(int tid, int channel, char *fmt, ... );
 
 // notifier needed to still allow function calls to server with buffering
