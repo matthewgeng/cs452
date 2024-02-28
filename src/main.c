@@ -149,7 +149,7 @@ int kmain() {
             handle_await_event(&heap, blocked_on_irq);
         } else if (exception_code == IRQ) {
             handle_irq(&heap, blocked_on_irq);
-        } else if (exception_code = QUIT) {
+        } else if (exception_code = QUIT_SYSCALL) {
             return 0;
         }
         else {
