@@ -56,7 +56,6 @@ void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switch
     // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 33);
   }else if(switchDirection=='C'){
     cmd[0] = 34;
-    Putc(marklin_tid, MARKLIN, 34);
     // trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 34);
   }else{
     return;
@@ -214,25 +213,25 @@ void build_sensor_str(int i, char *sensors_str, int *sensors_str_index){
 
 void switchesSetup(int console_tid, int marklin_tid){
   // 18 switches + 4 centre ones
-  sw(1, 'C', console_tid, marklin_tid);
-  sw(2, 'C', console_tid, marklin_tid);
-  sw(3, 'C', console_tid, marklin_tid);
-  sw(4, 'C', console_tid, marklin_tid);
-  sw(5, 'C', console_tid, marklin_tid);
-  sw(6, 'S', console_tid, marklin_tid);
-  sw(7, 'S', console_tid, marklin_tid);
-  sw(8, 'C', console_tid, marklin_tid);
-  sw(9, 'C', console_tid, marklin_tid);
-  sw(10, 'C', console_tid, marklin_tid);
-  sw(11, 'C', console_tid, marklin_tid);
-  sw(12, 'C', console_tid, marklin_tid);
-  sw(13, 'C', console_tid, marklin_tid);
-  sw(14, 'C', console_tid, marklin_tid);
-  sw(15, 'C', console_tid, marklin_tid);
-  sw(16, 'C', console_tid, marklin_tid);
-  sw(153, 'C', console_tid, marklin_tid);
-  sw(154, 'S', console_tid, marklin_tid);
-  sw(155, 'S', console_tid, marklin_tid);
-  sw(156, 'C', console_tid, marklin_tid);
+  sw(console_tid, marklin_tid, 1, 'C');
+  sw(console_tid, marklin_tid, 2, 'C');
+  sw(console_tid, marklin_tid, 3, 'C');
+  sw(console_tid, marklin_tid, 4, 'C');
+  sw(console_tid, marklin_tid, 5, 'C');
+  sw(console_tid, marklin_tid, 6, 'S');
+  sw(console_tid, marklin_tid, 7, 'S');
+  sw(console_tid, marklin_tid, 8, 'C');
+  sw(console_tid, marklin_tid, 9, 'C');
+  sw(console_tid, marklin_tid, 10, 'C');
+  sw(console_tid, marklin_tid, 11, 'C');
+  sw(console_tid, marklin_tid, 12, 'C');
+  sw(console_tid, marklin_tid, 13, 'C');
+  sw(console_tid, marklin_tid, 14, 'C');
+  sw(console_tid, marklin_tid, 15, 'C');
+  sw(console_tid, marklin_tid, 16, 'C');
+  sw(console_tid, marklin_tid, 153, 'C');
+  sw(console_tid, marklin_tid, 154, 'S');
+  sw(console_tid, marklin_tid, 155, 'S');
+  sw(console_tid, marklin_tid, 156, 'C');
 
 }

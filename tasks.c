@@ -314,8 +314,8 @@ void setup(){
     printf(cout, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
     printf(cout, CONSOLE, "\033[%u;3H", INPUT_ROW);
 
-    // Putc(marklin_tid, MARKLIN, 96);
-    // Putc(marklin_tid, MARKLIN, 0xC0);
+    Putc(marklin_tid, MARKLIN, 96);
+    Putc(marklin_tid, MARKLIN, 0xC0);
 
     // switchesSetup(cout, marklin_tid);
     char *s1 = "Switches\r\n";
