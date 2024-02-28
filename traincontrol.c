@@ -196,23 +196,6 @@ void executeFunction(int console_tid, int marklin_tid, int clock, char *str, uin
 }
 
 
-void build_sensor_str(int i, char *sensors_str, int *sensors_str_index){
-    char sensorBand = i/16 + 'A';
-    int sensorNum = i%16 + 1;
-    sensors_str[*sensors_str_index] = sensorBand;
-    i2a( sensorNum, sensors_str[*sensors_str_index+1] );
-    if(sensorNum<10){
-        sensors_str[*sensors_str_index+2] = ' ';
-        sensors_str[*sensors_str_index+3] = 0;
-        *sensors_str_index = *sensors_str_index+3;
-    }else{
-        sensors_str[*sensors_str_index+3] = ' ';
-        sensors_str[*sensors_str_index+4] = 0;
-        *sensors_str_index = *sensors_str_index+4;
-    }
-}
-
-
 void switchesSetup(int console_tid, int marklin_tid){
   // 18 switches + 4 centre ones
   sw(console_tid, marklin_tid, 1, 'C');

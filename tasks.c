@@ -169,8 +169,8 @@ void console_time(){
 
 void sensor_update(){
   int clock_tid = WhoIs("clock");
-  int console_tid = WhoIs("cout");
-  int marklin_tid = WhoIs("mio");
+  int cout = WhoIs("cout");
+  int mio = WhoIs("mio");
   int time = Time(clock_tid);;
   int last_sensor_triggered = 1000;
   char sensor_byte;
@@ -180,19 +180,19 @@ void sensor_update(){
   initialize_intcb(&sensor_cb, sensors, 12, 1);
 
   int sensors_changed = 0;
-  char sensors_str[48];
+  char sensors_str[] = "\033[8;1H\033[KMost recent sensors:                                                           ";
   int sensors_str_index;
   for(;;){
-    Putc(marklin_tid, MARKLIN, 0x85);
-    uart_printf(CONSOLE, "\033[36;1Hput sensor character, %d \r\n", Time(clock_tid));
+    Putc(mio, MARKLIN, 0x85);
+    // uart_printf(CONSOLE, "\033[36;1Hput sensor character, %d \r\n", Time(clock_tid));
     // TODO: change number
     for(int i = 0; i<6; i++){
-      sensor_byte = Getc(marklin_tid, MARKLIN);
-      uart_printf(CONSOLE, "\033[37;1Hgot sensor character, %d, %d, time:%d \r\n", i, (int)sensor_byte, Time(clock_tid));
+      sensor_byte = Getc(mio, MARKLIN);
+    //   uart_printf(CONSOLE, "\033[37;1Hgot sensor character, %d, %d, time:%d \r\n", i, (int)sensor_byte, Time(clock_tid));
       for (int u = 0; u < 8; u++) {
         if (sensor_byte & (1 << u)) {
           int sensorNum = i*8+7-u;
-          uart_printf(CONSOLE, "\033[38;1Hsensor triggered, %d, %d \r\n", sensorNum, Time(clock_tid));
+        //   uart_printf(CONSOLE, "\033[38;1Hsensor triggered, %d, %d \r\n", sensorNum, Time(clock_tid));
           if(sensorNum!=last_sensor_triggered){
             push_intcb(&sensor_cb, sensorNum);
             last_sensor_triggered = sensorNum;
@@ -202,18 +202,35 @@ void sensor_update(){
       }
     }
     if(sensors_changed){
-        sensors_str_index = 0;
-        // int cb_count = 0;
-        // int cb_index = sensor_cb.start;
-        // while(cb_count<sensor_cb.count){
-
-        //     cb_count += 1;
-        //     intcb
-        // }
-        iter_elements_backwards(&sensor_cb, build_sensor_str, sensors_str, &sensors_str_index);
-        Puts(console_tid, CONSOLE, sensors_str);
+        // Puts(cout, CONSOLE, sensors_str);
+        // uart_printf(CONSOLE, "\033[39;1Hsensor changed, %d \r\n", Time(clock_tid));
+        sensors_str_index = 31;
+        int cb_count = 0;
+        int cb_index = decrement_intcb(sensor_cb.capacity, sensor_cb.end);
+        int i;
+        char sensor_band;
+        int sensor_num;
+        while(cb_count < sensor_cb.count){
+            i = sensor_cb.queue[cb_index];
+            sensor_band = i/16 + 'A';
+            sensors_str[sensors_str_index] = sensor_band;
+            sensor_num = i%16 + 1;
+            ui2a( sensor_num, 10, sensors_str+sensors_str_index+1 );
+            if(sensor_num<10){
+                sensors_str[sensors_str_index+2] = ' ';
+                sensors_str_index = sensors_str_index+3;
+            }else{
+                sensors_str[sensors_str_index+3] = ' ';
+                sensors_str_index = sensors_str_index+4;
+            }
+            cb_index = decrement_intcb(sensor_cb.capacity, cb_index);
+            cb_count += 1;
+        }
+        sensors_str[sensors_str_index] = '\0';
+        Puts(cout, CONSOLE, sensors_str);
+        sensors_changed = 0;
     }
-    time += 50;
+    time += 10;
     DelayUntil(clock_tid, time);
   }
 }
@@ -229,6 +246,7 @@ void user_input(){
     int input_col = 3;
 
     char new_line_str[] = "\033[10;1H\033[K> ";
+    Puts(cout, CONSOLE, new_line_str);
     // new_line_str[2] = INPUT_ROW;
 
     char next_char_str[] = "\033[10;0H  ";
@@ -323,8 +341,8 @@ void setup(){
     // Puts(console_tid, CONSOLE, "setup start\r\n");
 
     Puts(cout, CONSOLE, "\033[2J");
-    printf(cout, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
-    printf(cout, CONSOLE, "\033[%u;3H", INPUT_ROW);
+    // printf(cout, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
+    // printf(cout, CONSOLE, "\033[%u;3H", INPUT_ROW);
 
     Putc(marklin_tid, MARKLIN, 96);
     Putc(marklin_tid, MARKLIN, 0xC0);
@@ -340,8 +358,8 @@ void setup(){
     Puts(cout, CONSOLE, s3);
     Puts(cout, CONSOLE, s4);
 
-    printf(cout, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
-    Puts(cout, CONSOLE, "Most recent sensors: ");
+    // printf(cout, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
+    // Puts(cout, CONSOLE, "Most recent sensors: ");
 
     Create(3, &console_time);
     Create(3, &sensor_update);

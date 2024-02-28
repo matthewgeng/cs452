@@ -323,7 +323,7 @@ void marklin_io() {
 
         // print
         if (tid == mout_tx_notifier) {
-            uart_printf(CONSOLE, "tx notifier recieved, %d\r\n", Time(clock_tid));
+            // uart_printf(CONSOLE, "tx notifier recieved, %d\r\n", Time(clock_tid));
             // try to flush buffer 
             // uart_printf(CONSOLE, "message length from noti %u\r\n", m.len);
             
@@ -350,14 +350,14 @@ void marklin_io() {
             if (cur_cts == 0 && cts_transition==0) {
                 prev_cts = cur_cts;
                 cts_transition = 1;
-                uart_printf(CONSOLE, "\033[30;1Hcts interrupt 0, %d\r\n", Time(clock_tid));
+                // uart_printf(CONSOLE, "\033[30;1Hcts interrupt 0, %d\r\n", Time(clock_tid));
             
                 // uart_printf(CONSOLE, "\n prev cts 1 cur cts %u should be 0\r\n", uart_cts(MARKLIN));
             // cts turning on
             } else if (cur_cts == 1 && cts_transition==1){
                 prev_cts = cur_cts;
                 cts_transition = 2;
-                uart_printf(CONSOLE, "\033[31;1Hcts interrupt 1, %d\r\n", Time(clock_tid));
+                // uart_printf(CONSOLE, "\033[31;1Hcts interrupt 1, %d\r\n", Time(clock_tid));
                 // uart_printf(CONSOLE, "\n prev cts 0 cur cts %u should be 1, transition should be true\r\n", uart_cts(MARKLIN));
             }
 
@@ -378,7 +378,7 @@ void marklin_io() {
         } else if (tid == min_notifier) {
             char c;
             while (uart_can_read(MARKLIN)) {
-                uart_printf(CONSOLE, "\033[35;1Hmin notifier recieved, count:%d, %d\r\n", min_counter, Time(clock_tid));
+                // uart_printf(CONSOLE, "\033[35;1Hmin notifier recieved, count:%d, %d\r\n", min_counter, Time(clock_tid));
                 min_counter += 1;
                 c = uart_readc(MARKLIN);
                 push_charcb(&in_buffer, c);
@@ -428,7 +428,7 @@ void marklin_io() {
                 // try write
                 if (uart_can_write(MARKLIN) && cts_transition==2 && !is_empty_charcb(&out_buffer)) {
                     // char c = peek_charcb(&out_buffer);
-                    uart_printf(CONSOLE, "\033[29;1Hprinted, %d \r\n", Time(clock_tid));
+                    // uart_printf(CONSOLE, "\033[29;1Hprinted, %d \r\n", Time(clock_tid));
                     uart_writec(MARKLIN, pop_charcb(&out_buffer));
                     // uart_printf(CONSOLE, "WRITING immediately and replying to %u\r\n", tid);
                     cts_transition = 0;
