@@ -314,12 +314,10 @@ void setup(){
     printf(cout, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
     printf(cout, CONSOLE, "\033[%u;3H", INPUT_ROW);
 
-    Putc(marklin_tid, MARKLIN, 96);
-    Putc(marklin_tid, MARKLIN, 255);
-    Putc(marklin_tid, MARKLIN, 0xC0);
-    Putc(marklin_tid, MARKLIN, 255);
+    // Putc(marklin_tid, MARKLIN, 96);
+    // Putc(marklin_tid, MARKLIN, 0xC0);
 
-    switchesSetup(cout, marklin_tid);
+    // switchesSetup(cout, marklin_tid);
     char *s1 = "Switches\r\n";
     char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
     char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
@@ -334,7 +332,7 @@ void setup(){
     Puts(cout, CONSOLE, "Most recent sensors: ");
 
     Create(3, &console_time);
-    Create(3, &sensor_update);
+    // Create(3, &sensor_update);
     Create(5, &user_input);
 }
 

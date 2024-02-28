@@ -222,6 +222,7 @@ void marklin_out_tx_notifier() {
 
     IOMessage m = {0, "", 0};
     for(;;){
+        // uart_printf(CONSOLE, "\r\n before await tx cur cts %u\r\n", uart_cts(MARKLIN));
         int res = AwaitEvent(MARKLIN_TX);
         if (res < 0) {
             // TODO: make more robust
@@ -244,17 +245,20 @@ void marklin_out_cts_notifier() {
 
     IOMessage m = {0, "", 0};
     for(;;){
+        uart_printf(CONSOLE, "\r\n before await cts cur cts %u\r\n", uart_cts(MARKLIN));
         int res = AwaitEvent(MARKLIN_CTS);
         if (res < 0) {
             // TODO: make more robust
-            uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
+            // uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
         }
 
+        // uart_printf(CONSOLE, "\n after await cur cts %u\r\n", uart_cts(MARKLIN));
         res = Send(mio, (char*)&m, sizeof(IOMessage), NULL, 0);
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR marklin out notifier\r\n");
         }
+        // uart_printf(CONSOLE, "\r\n after send and io server reply cur cts %u\r\n", uart_cts(MARKLIN));
     }
 
 }
@@ -295,7 +299,7 @@ void marklin_io() {
     char raw_out_buffer[128];
     CharCB out_buffer;
     initialize_charcb(&out_buffer, raw_out_buffer, 128, 0);
-    int prev_cts = 1;
+    int prev_cts = 1; // 0 --> high able to send, 1 --> down should not send
     int cts_transition = 1;
     // TODO: parking for output notifiers
 
@@ -312,6 +316,7 @@ void marklin_io() {
     IOMessage m;
     for(;;) {
         Receive(&tid, (char*)&m, sizeof(IOMessage));
+        // uart_printf(CONSOLE, "message receivied prev_cts %u, cur_cts %u, transition %u\r\n", prev_cts, uart_cts(MARKLIN), cts_transition);
 
         // print
         if (tid == mout_tx_notifier) {
@@ -323,23 +328,45 @@ void marklin_io() {
             if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&out_buffer)) {
                 char c = peek_charcb(&out_buffer);
                 uart_writec(MARKLIN, pop_charcb(&out_buffer));
+                // uart_printf(CONSOLE, "\n after writing %u prev cts = %u, cur cts %u\r\n", c, prev_cts, uart_cts(MARKLIN));
+                cts_transition = 0;
+            } else {
+                // uart_printf(CONSOLE, "\n couldn't write prev cts %u, cur cts %u\r\n", prev_cts, uart_cts(MARKLIN));
             }
+
+            // uart_printf(CONSOLE, "\n after writing prev cts = %u, cur cts %u\r\n", prev_cts, uart_cts(MARKLIN));
 
             // reply to notifier
             Reply(tid, NULL, 0);
+            // trywrite()
         } else if (tid == mout_cts_notifier) {
             // cts turning off
-            if (prev_cts == 1) {
-                prev_cts = 0;
+            int cur_cts = uart_cts(MARKLIN);
+
+            if (cur_cts == 0) {
+                prev_cts = cur_cts;
+                cts_transition = 0;
             
+                // uart_printf(CONSOLE, "\n prev cts 1 cur cts %u should be 0\r\n", uart_cts(MARKLIN));
             // cts turning on
             } else {
-                prev_cts = 1;
+                prev_cts = cur_cts;
                 cts_transition = 1;
+                // uart_printf(CONSOLE, "\n prev cts 0 cur cts %u should be 1, transition should be true\r\n", uart_cts(MARKLIN));
             }
+
+            if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&out_buffer)) {
+                // char c = peek_charcb(&out_buffer);
+                uart_writec(MARKLIN, pop_charcb(&out_buffer));
+                // uart_printf(CONSOLE, "WRITING cts and replying to %u\r\n", tid);
+                cts_transition = 0;
+            } else {
+                // uart_printf(CONSOLE, "can't write cts and replying to %u\r\n", tid);
+            }
+            //trywrite()
+
             // reply to notifier
             Reply(tid, NULL, 0);
-
         // store data in buffer
         } else if (tid == min_notifier) {
             char c;
@@ -362,10 +389,9 @@ void marklin_io() {
                 in_notifier_parked = 1;        
             }
 
-            // reply to notifier
-            // Reply(tid, NULL, 0);
         // store data in buffer
         } else {
+            // uart_printf(CONSOLE, "user message from tid %u\r\n", tid);
 
             if (m.type == GETC) {
                 push_intcb(&task_buffer, tid);
@@ -391,23 +417,20 @@ void marklin_io() {
                     push_charcb(&out_buffer, m.str[i]);
                 }
 
-
+                // try write
                 if (uart_can_write(MARKLIN) && cts_transition && !is_empty_charcb(&out_buffer)) {
-                    char c = peek_charcb(&out_buffer);
-                    // if (c == 255) {
-                    //     DelayUntil(clock_tid, time+x);
-                    // } else if (c == 254) {
-                    //     DelayUntil(clock_tid, time+x);
-                    // }
+                    // char c = peek_charcb(&out_buffer);
                     uart_writec(MARKLIN, pop_charcb(&out_buffer));
+                    // uart_printf(CONSOLE, "WRITING immediately and replying to %u\r\n", tid);
+                    cts_transition = 0;
+                } else {
+                    // uart_printf(CONSOLE, "can't write immediately cur cts = %u, cts_transition = %u, and replying to %u\r\n", uart_cts(MARKLIN), cts_transition,tid);
                 }
                 Reply(tid, NULL, 0);
             } else {
-
+                uart_printf(CONSOLE, "io message type not supported\r\n");
+                for(;;){}
             }
-
-            // reply to sender
-            // Reply(tid, NULL, 0);
         }
     }
 
@@ -472,6 +495,7 @@ int Puts_len(int tid, int channel, unsigned char* ch, int len) {
         ch,
         len
     };
+    uart_printf(CONSOLE, "sending to markling tid %u\r\n", tid);
 
     int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
