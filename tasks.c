@@ -186,7 +186,7 @@ void sensor_update(){
     Putc(mio, MARKLIN, 0x85);
     // uart_printf(CONSOLE, "\033[36;1Hput sensor character, %d \r\n", Time(clock_tid));
     // TODO: change number
-    for(int i = 0; i<6; i++){
+    for(int i = 0; i<10; i++){
       sensor_byte = Getc(mio, MARKLIN);
     //   uart_printf(CONSOLE, "\033[37;1Hgot sensor character, %d, %d, time:%d \r\n", i, (int)sensor_byte, Time(clock_tid));
       for (int u = 0; u < 8; u++) {
@@ -358,8 +358,7 @@ void setup(){
     Puts(cout, CONSOLE, s3);
     Puts(cout, CONSOLE, s4);
 
-    // printf(cout, CONSOLE, "\033[%u;1H\033[K", SENSORS_ROW);
-    // Puts(cout, CONSOLE, "Most recent sensors: ");
+    printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(3, &console_time);
     Create(3, &sensor_update);

@@ -65,21 +65,21 @@ int pop_intcb(IntCB *cb){
     return res;
 }
 
-void iter_elements_backwards(IntCB *cb, void (*function)(), ...){
+// void iter_elements_backwards(IntCB *cb, void (*function)(), ...){
 
-    va_list args;
+//     va_list args;
 
-    va_start(args, function);
+//     va_start(args, function);
 
-    int index = cb->end;
-    int c = 0;
-    int i;
-    while(c!=cb->count){
-        i = cb->queue[index];
-        function(i, args);
-        index = decrement_intcb(cb->capacity, index);
-        c += 1;
-    }
+//     int index = decrement_intcb(cb->capacity, cb->end);
+//     int c = 0;
+//     int i;
+//     while(c!=cb->count){
+//         i = cb->queue[index];
+//         function(i, args);
+//         index = decrement_intcb(cb->capacity, index);
+//         c += 1;
+//     }
 
-    va_end(args);
-}
+//     va_end(args);
+// }
