@@ -273,29 +273,31 @@ void user_input(){
             Puts(cout, CONSOLE, new_line_str);
             input_col = 3;
         }else if (c == '\b'){
-            input_index -= 1;
-            input[input_index] = ' ';
-            input[input_index+1] = '\0';
+            if(input_col>3){
+                input_index -= 1;
+                input[input_index] = ' ';
+                input[input_index+1] = '\0';
 
-            input_col -= 1;
-            ui2a_no0(input_col, 10, next_char_str+5);
-            if(input_col<10){
-                next_char_str[6] = 'H';
-                next_char_str[7] = ' ';
-                next_char_str[8] = '\0';
-            }else{
-                next_char_str[7] = 'H';
-                next_char_str[8] = ' ';
+                input_col -= 1;
+                ui2a_no0(input_col, 10, next_char_str+5);
+                if(input_col<10){
+                    next_char_str[6] = 'H';
+                    next_char_str[7] = ' ';
+                    next_char_str[8] = '\0';
+                }else{
+                    next_char_str[7] = 'H';
+                    next_char_str[8] = ' ';
+                }
+                Puts(cout, CONSOLE, next_char_str);
+                if(input_col<10){
+                    next_char_str[6] = 'H';
+                    next_char_str[7] = '\0';
+                }else{
+                    next_char_str[7] = 'H';
+                    next_char_str[8] = '\0';
+                }
+                Puts(cout, CONSOLE, next_char_str);
             }
-            Puts(cout, CONSOLE, next_char_str);
-            if(input_col<10){
-                next_char_str[6] = 'H';
-                next_char_str[7] = '\0';
-            }else{
-                next_char_str[7] = 'H';
-                next_char_str[8] = '\0';
-            }
-            Puts(cout, CONSOLE, next_char_str);
         }else{
             //add char to input buffer
             if(input_index>=max_input_len){
