@@ -203,9 +203,11 @@ void build_sensor_str(int i, char *sensors_str, int *sensors_str_index){
     i2a( sensorNum, sensors_str[*sensors_str_index+1] );
     if(sensorNum<10){
         sensors_str[*sensors_str_index+2] = ' ';
+        sensors_str[*sensors_str_index+3] = 0;
         *sensors_str_index = *sensors_str_index+3;
     }else{
         sensors_str[*sensors_str_index+3] = ' ';
+        sensors_str[*sensors_str_index+4] = 0;
         *sensors_str_index = *sensors_str_index+4;
     }
 }

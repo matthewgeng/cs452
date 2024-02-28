@@ -124,7 +124,7 @@ void idle_task(){
             char str[] = "\0337\033[14;1HIdle:   % \0338";
             ui2a_no0(idle_time_percent, 10, str+15);
             // ui2a_no0(cur_time, 10, str+19);
-            Puts(console_tid, CONSOLE, str);
+            // Puts(console_tid, CONSOLE, str);
             // time = cur_time;
         }
         count += 1;
@@ -184,11 +184,15 @@ void sensor_update(){
   int sensors_str_index;
   for(;;){
     Putc(marklin_tid, MARKLIN, 0x85);
-    for(int i = 0; i<10; i++){
+    uart_printf(CONSOLE, "\033[36;1Hput sensor character, %d \r\n", Time(clock_tid));
+    // TODO: change number
+    for(int i = 0; i<6; i++){
       sensor_byte = Getc(marklin_tid, MARKLIN);
+      uart_printf(CONSOLE, "\033[37;1Hgot sensor character, %d, %d, time:%d \r\n", i, (int)sensor_byte, Time(clock_tid));
       for (int u = 0; u < 8; u++) {
         if (sensor_byte & (1 << u)) {
           int sensorNum = i*8+7-u;
+          uart_printf(CONSOLE, "\033[38;1Hsensor triggered, %d, %d \r\n", sensorNum, Time(clock_tid));
           if(sensorNum!=last_sensor_triggered){
             push_intcb(&sensor_cb, sensorNum);
             last_sensor_triggered = sensorNum;
@@ -199,7 +203,15 @@ void sensor_update(){
     }
     if(sensors_changed){
         sensors_str_index = 0;
+        // int cb_count = 0;
+        // int cb_index = sensor_cb.start;
+        // while(cb_count<sensor_cb.count){
+
+        //     cb_count += 1;
+        //     intcb
+        // }
         iter_elements_backwards(&sensor_cb, build_sensor_str, sensors_str, &sensors_str_index);
+        Puts(console_tid, CONSOLE, sensors_str);
     }
     time += 50;
     DelayUntil(clock_tid, time);
@@ -317,7 +329,7 @@ void setup(){
     Putc(marklin_tid, MARKLIN, 96);
     Putc(marklin_tid, MARKLIN, 0xC0);
 
-    // switchesSetup(cout, marklin_tid);
+    switchesSetup(cout, marklin_tid);
     char *s1 = "Switches\r\n";
     char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
     char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
@@ -332,7 +344,7 @@ void setup(){
     Puts(cout, CONSOLE, "Most recent sensors: ");
 
     Create(3, &console_time);
-    // Create(3, &sensor_update);
+    Create(3, &sensor_update);
     Create(5, &user_input);
 }
 

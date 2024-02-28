@@ -14,6 +14,8 @@ typedef struct IntCB{
 } IntCB;
 
 void initialize_intcb(IntCB *cb, int* queue, size_t capacity, int override);
+size_t increment_intcb(size_t capacity, size_t v);
+size_t decrement_intcb(size_t capacity, size_t v);
 void push_intcb(IntCB *cb, int v);
 int pop_intcb(IntCB *cb);
 int is_empty_intcb(IntCB *cb);
