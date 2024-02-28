@@ -113,8 +113,8 @@ void idle_task(){
         uart_dprintf(CONSOLE, "Idle Task\r\n");
     #endif 
     int console_tid = WhoIs("cout");
-    int clock = WhoIs("clock");
-    int time = Time(clock);
+    // int clock = WhoIs("clock");
+    // int time = Time(clock);
     uint32_t count = 0;
     for(;;){
         //TODO: maybe make this better somehow
@@ -124,7 +124,7 @@ void idle_task(){
             char str[] = "\0337\033[14;1HIdle:   % \0338";
             ui2a_no0(idle_time_percent, 10, str+15);
             // ui2a_no0(cur_time, 10, str+19);
-            // Puts(console_tid, CONSOLE, str);
+            Puts(console_tid, CONSOLE, str);
             // time = cur_time;
         }
         count += 1;
