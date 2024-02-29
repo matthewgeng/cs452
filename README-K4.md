@@ -11,5 +11,3 @@ Enter root directory and `make`
 This will create a binary image called `iotest.img`
 
 Upload the image to any pi and upon reboot, train control replicating a0 will be running.
-
-TODO
