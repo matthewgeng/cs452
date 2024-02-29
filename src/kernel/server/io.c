@@ -10,10 +10,10 @@
 
 // notifier needed to still allow function calls to server with buffering
 void console_out_notifier() {
-    RegisterAs("cout_notifier");
+    RegisterAs("cout_notifier\0");
 
-    int cout = WhoIs("cout");
-    int clock = WhoIs("clock");
+    int cout = WhoIs("cout\0");
+    int clock = WhoIs("clock\0");
     // TODO: maybe we can send none?
     IOMessage m = {0, "", 0};
     for(;;){
@@ -32,11 +32,11 @@ void console_out_notifier() {
 
 // notifier needed to still allow function calls to server with buffering
 void console_in_notifier() {
-    RegisterAs("cin_notifier");
+    RegisterAs("cin_notifier\0");
 
-    int cin = WhoIs("cin");
-    int console_tid = WhoIs("cout");
-    int clock = WhoIs("clock");
+    int cin = WhoIs("cin\0");
+    int console_tid = WhoIs("cout\0");
+    int clock = WhoIs("clock\0");
 
     // TODO: maybe we can send none?
     IOMessage m = {0, "", 0};
@@ -59,9 +59,9 @@ void console_in_notifier() {
 
 void console_out() {
 
-    RegisterAs("cout");
+    RegisterAs("cout\0");
 
-    int cout_notifier = WhoIs("cout_notifier");
+    int cout_notifier = WhoIs("cout_notifier\0");
     int notifier_parked = 0;
 
     int tid;
@@ -127,11 +127,11 @@ void console_out() {
 }
 
 void console_in() {
-    RegisterAs("cin");
+    RegisterAs("cin\0");
 
-    int cin_notifier = WhoIs("cin_notifier");
-    int cout = WhoIs("cout");
-    int clock = WhoIs("clock");
+    int cin_notifier = WhoIs("cin_notifier\0");
+    int cout = WhoIs("cout\0");
+    int clock = WhoIs("clock\0");
     int tid;
     int notifier_parked = 0;
     
@@ -216,9 +216,9 @@ void console_in() {
 
 // notifier needed to still allow function calls to server with buffering
 void marklin_out_tx_notifier() {
-    RegisterAs("mout_tx_notifier");
+    RegisterAs("mout_tx_notifier\0");
 
-    int mio = WhoIs("mio");
+    int mio = WhoIs("mio\0");
 
     IOMessage m = {0, "", 0};
     for(;;){
@@ -239,9 +239,9 @@ void marklin_out_tx_notifier() {
 }
 
 void marklin_out_cts_notifier() {
-    RegisterAs("mout_cts_notifier");
+    RegisterAs("mout_cts_notifier\0");
 
-    int mio = WhoIs("mio");
+    int mio = WhoIs("mio\0");
 
     IOMessage m = {0, "", 0};
     for(;;){
@@ -265,9 +265,9 @@ void marklin_out_cts_notifier() {
 
 // notifier needed to still allow function calls to server with buffering
 void marklin_in_notifier() {
-    RegisterAs("min_notifier");
+    RegisterAs("min_notifier\0");
 
-    int mio = WhoIs("mio");
+    int mio = WhoIs("mio\0");
 
     IOMessage m = {0, "", 0};
     for(;;){
@@ -286,12 +286,12 @@ void marklin_in_notifier() {
 }
 
 void marklin_io() {
-    RegisterAs("mio");
+    RegisterAs("mio\0");
 
-    int mout_tx_notifier = WhoIs("mout_tx_notifier");
-    int mout_cts_notifier = WhoIs("mout_cts_notifier");
-    int min_notifier = WhoIs("min_notifier");
-    int clock_tid = WhoIs("clock");
+    int mout_tx_notifier = WhoIs("mout_tx_notifier\0");
+    int mout_cts_notifier = WhoIs("mout_cts_notifier\0");
+    int min_notifier = WhoIs("min_notifier\0");
+    int clock_tid = WhoIs("clock\0");
     int time = Time(clock_tid);
 
     int tid;

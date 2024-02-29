@@ -119,8 +119,8 @@ void clock_notifier(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Running notifier server \r\n");
     #endif 
-    RegisterAs("notifier");
-    int clock_server_tid = WhoIs("clock");
+    RegisterAs("notifier\0");
+    int clock_server_tid = WhoIs("clock\0");
     for(;;){
         AwaitEvent(CLOCK);
         int intended_reply_len = Send(clock_server_tid, NULL, 0, NULL, 0);
@@ -135,8 +135,8 @@ void clock(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Running clock server \r\n");
     #endif 
-    RegisterAs("clock");
-    int notifier_tid = WhoIs("notifier");
+    RegisterAs("clock\0");
+    int notifier_tid = WhoIs("notifier\0");
     if(notifier_tid<0){
         uart_printf(CONSOLE, "\x1b[31mCannot get notifier tid\x1b[0m\r\n");
         for(;;){}

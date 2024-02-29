@@ -49,7 +49,7 @@ void k2(){
 void time_user() {
     int tid = MyTid();
     int parent = MyParentTid();
-    int clock = WhoIs("clock"); // TODO: make every server have a function to get name
+    int clock = WhoIs("clock\0"); // TODO: make every server have a function to get name
 
     char data[2];
     Send(parent, NULL, 0, data, sizeof(data));
@@ -86,9 +86,9 @@ void k3(){
 }
 
 void k4(){
-    int cout = WhoIs("cout");
-    int cin = WhoIs("cin");
-    int clock = WhoIs("clock"); // TODO: make every server have a function to get name
+    int cout = WhoIs("cout\0");
+    int cin = WhoIs("cin\0");
+    int clock = WhoIs("clock\0"); // TODO: make every server have a function to get name
 
     // clear screen
     Puts(cout, 0, "\033[2J");
@@ -112,7 +112,7 @@ void idle_task(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Idle Task\r\n");
     #endif 
-    int console_tid = WhoIs("cout");
+    int console_tid = WhoIs("cout\0");
     // int clock = WhoIs("clock");
     // int time = Time(clock);
     uint32_t count = 0;
@@ -144,8 +144,8 @@ void i2str(int i, char *str){
 }
 
 void console_time(){
-    int clock_tid = WhoIs("clock");
-    int console_tid = WhoIs("cout");
+    int clock_tid = WhoIs("clock\0");
+    int console_tid = WhoIs("cout\0");
     char time_str[] = "\0337\033[1;1H\033[K00:00. \0338";
     char bf[3];
     int time = Time(clock_tid);
@@ -168,9 +168,9 @@ void console_time(){
 }
 
 void sensor_update(){
-  int clock_tid = WhoIs("clock");
-  int cout = WhoIs("cout");
-  int mio = WhoIs("mio");
+  int clock_tid = WhoIs("clock\0");
+  int cout = WhoIs("cout\0");
+  int mio = WhoIs("mio\0");
   int time = Time(clock_tid);;
   int last_sensor_triggered = 1000;
   char sensor_byte;
@@ -236,10 +236,11 @@ void sensor_update(){
 }
 
 void user_input(){
-    int cout = WhoIs("cout");
-    int cin = WhoIs("cin");
-    int marklin_tid = WhoIs("mio");
-    int clock = WhoIs("clock");
+    int cout = WhoIs("cout\0");
+    int cin = WhoIs("cin\0");
+    int marklin_tid = WhoIs("mio\0");
+    int clock = WhoIs("clock\0");
+    int reverse_tid = WhoIs("reverse\0");
     int max_input_len = 20;
     char input[max_input_len+2];
     int input_index = 0;
@@ -266,7 +267,7 @@ void user_input(){
             if(input[0] == 'q' && input[1]=='\0') {
                 Quit();
             }
-            executeFunction(cout, marklin_tid, clock, input, last_speed);
+            executeFunction(cout, marklin_tid, reverse_tid, clock, input, last_speed);
 
             input_index = 0;
             // clear input line and add >
@@ -329,18 +330,53 @@ void user_input(){
     }
 }
 
+void reverse(){
+
+    RegisterAs("reverse\0");
+    int marklin_tid = WhoIs("mio\0");
+    int clock = WhoIs("clock\0");
+    int cout = WhoIs("cout\0");
+
+    int tid;
+    char msg[2];
+    int train_number, last_speed;
+    int msg_len;
+    char cmd[4];
+    for(;;){
+        msg_len = Receive(&tid, msg, 2);
+        Reply(tid, NULL, 0);
+        if(msg_len!=2){
+            // #if DEBUG
+                uart_dprintf(CONSOLE, "rv received incompatible msg %d\r\n", msg_len);
+            // #endif
+        }
+        train_number = (int)msg[0];
+        last_speed = (int)msg[1];
+
+        cmd[0] = 0;
+        cmd[1] = train_number;
+        Puts_len(marklin_tid, MARKLIN, cmd, 2);
+        Delay(clock, 500);
+        cmd[0] = 15;
+        cmd[1] = train_number;
+        Puts_len(marklin_tid, MARKLIN, cmd, 2);
+        cmd[0] = last_speed;
+        cmd[1] = train_number;
+        Puts_len(marklin_tid, MARKLIN, cmd, 2);
+    }
+
+}
+
 
 void setup(){
 
-    int cout = WhoIs("cout");
-    int marklin_tid = WhoIs("mio");
+    int cout = WhoIs("cout\0");
+    int marklin_tid = WhoIs("mio\0");
     
     // clear screen
     Puts(cout, 0, "\033[2J");
     // reset cursor to top left
     Puts(cout, 0, "\033[H");
-
-    // Puts(console_tid, CONSOLE, "setup start\r\n");
 
     Puts(cout, CONSOLE, "\033[2J");
     // printf(cout, CONSOLE, "\033[%u;1H> ", INPUT_ROW);
@@ -364,6 +400,7 @@ void setup(){
 
     Create(3, &console_time);
     Create(3, &sensor_update);
+    Create(4, &reverse);
     Create(5, &user_input);
 }
 
