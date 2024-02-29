@@ -259,7 +259,6 @@ void user_input(){
     }
     for(;;){
 
-        // printf(cout, 0, "\0337\033[33;4Huser_input before getc %u\0338", Time(clock));
         char c = Getc(cin, CONSOLE);
         // uart_printf()
         if (c == '\r') {
@@ -328,43 +327,6 @@ void user_input(){
             }
         } 
     }
-}
-
-void reverse(){
-
-    RegisterAs("reverse\0");
-    int marklin_tid = WhoIs("mio\0");
-    int clock = WhoIs("clock\0");
-    int cout = WhoIs("cout\0");
-
-    int tid;
-    char msg[2];
-    int train_number, last_speed;
-    int msg_len;
-    char cmd[4];
-    for(;;){
-        msg_len = Receive(&tid, msg, 2);
-        Reply(tid, NULL, 0);
-        if(msg_len!=2){
-            // #if DEBUG
-                uart_dprintf(CONSOLE, "rv received incompatible msg %d\r\n", msg_len);
-            // #endif
-        }
-        train_number = (int)msg[0];
-        last_speed = (int)msg[1];
-
-        cmd[0] = 0;
-        cmd[1] = train_number;
-        Puts_len(marklin_tid, MARKLIN, cmd, 2);
-        Delay(clock, 500);
-        cmd[0] = 15;
-        cmd[1] = train_number;
-        Puts_len(marklin_tid, MARKLIN, cmd, 2);
-        cmd[0] = last_speed;
-        cmd[1] = train_number;
-        Puts_len(marklin_tid, MARKLIN, cmd, 2);
-    }
-
 }
 
 

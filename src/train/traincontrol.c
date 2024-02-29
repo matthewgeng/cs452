@@ -13,22 +13,46 @@ void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint
 
   last_speed[trainNumber] = trainSpeed;
 }
-void rv(int marklin_tid, int clock, unsigned int trainNumber, uint32_t last_speed[]){
 
-  char cmd[4];
-  // TODO: can't send 0 rn
-  cmd[0] = 0;
-  cmd[1] = trainNumber;
-  Puts_len(marklin_tid, MARKLIN, cmd, 2);
-  Delay(clock, 250);
-  // cmd[2] = 254;
-  cmd[0] = 15;
-  cmd[1] = trainNumber;
-  Delay(clock, 15);
-  Puts_len(marklin_tid, MARKLIN, cmd, 2);
-  cmd[0] = last_speed[trainNumber];
-  cmd[1] = trainNumber;
-  Puts_len(marklin_tid, MARKLIN, cmd, 2);
+
+void reverse(){
+
+    RegisterAs("reverse\0");
+    int marklin_tid = WhoIs("mio\0");
+    int clock = WhoIs("clock\0");
+    int cout = WhoIs("cout\0");
+
+    int tid;
+    char msg[2];
+    int train_number, last_speed;
+    int msg_len;
+    char cmd[4];
+    for(;;){
+        msg_len = Receive(&tid, msg, 2);
+        Reply(tid, NULL, 0);
+        if(msg_len!=2){
+            #if DEBUG
+                uart_dprintf(CONSOLE, "rv received incompatible msg %d\r\n", msg_len);
+            #endif
+        }
+        train_number = (int)msg[0];
+        last_speed = (int)msg[1];
+
+        cmd[0] = 0;
+        cmd[1] = train_number;
+        Puts_len(marklin_tid, MARKLIN, cmd, 2);
+        if(last_speed<=10){
+          Delay(clock, 500);
+        }else{
+          Delay(clock, 600);
+        }
+        cmd[0] = 15;
+        cmd[1] = train_number;
+        Puts_len(marklin_tid, MARKLIN, cmd, 2);
+        cmd[0] = last_speed;
+        cmd[1] = train_number;
+        Puts_len(marklin_tid, MARKLIN, cmd, 2);
+    }
 
 }
 
