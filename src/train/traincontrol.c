@@ -4,6 +4,14 @@
 #include "io.h"
 #include "traincontrol.h"
 
+void tr_v_measure(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed){
+  char cmd[3];
+  cmd[0] = trainSpeed;
+  cmd[1] = trainNumber;
+  cmd[2] = 0;
+  Puts_len(marklin_tid, MARKLIN, cmd, 2);
+}
+
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   char cmd[3];
   cmd[0] = trainSpeed;
@@ -222,13 +230,15 @@ void switchesSetup(int console_tid, int marklin_tid){
   sw(console_tid, marklin_tid, 7, 'S');
   sw(console_tid, marklin_tid, 8, 'C');
   sw(console_tid, marklin_tid, 9, 'C');
-  sw(console_tid, marklin_tid, 10, 'C');
+  sw(console_tid, marklin_tid, 10, 'S');
   sw(console_tid, marklin_tid, 11, 'C');
   sw(console_tid, marklin_tid, 12, 'C');
-  sw(console_tid, marklin_tid, 13, 'C');
+  sw(console_tid, marklin_tid, 13, 'S');
   sw(console_tid, marklin_tid, 14, 'C');
   sw(console_tid, marklin_tid, 15, 'C');
-  sw(console_tid, marklin_tid, 16, 'C');
+  sw(console_tid, marklin_tid, 16, 'S');
+  sw(console_tid, marklin_tid, 17, 'S');
+  sw(console_tid, marklin_tid, 18, 'S');
   sw(console_tid, marklin_tid, 153, 'C');
   sw(console_tid, marklin_tid, 154, 'S');
   sw(console_tid, marklin_tid, 155, 'S');

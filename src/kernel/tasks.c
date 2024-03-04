@@ -329,6 +329,223 @@ void user_input(){
     }
 }
 
+void measure_velocity_loop(){
+    /*
+    distance:
+    R1(1) + R1(1) + 77.5 + RT + 94.2 + 77.5*4 + 94.2 + LT + 94.2 + R1(1) + R1(2) + R1(1) +
+    R1(2) + 77.5*2 + R1(2) + R1(1) + R1(2) + R1(1) + 94.2 + RT + 94.2 + 77.5*4 + 94.2 +
+    LT + 77.5 + R1(1) + R1(1) + R1(2) + R1(1) + R1(1) + 77.5*2 + R1(1) + R1(1) + R1(2)
+
+    R1(1)*12 + R1(2)*6 + RT*2 + LT*2 + 77.5*14 + 94.2*6
+
+    R1(1): 2pi*360 / 24 = 94.25
+    R1(2): 2pi*360 / 12 = 188.50
+    RT: 188.3
+    LT: 188.3
+    
+    94.25*12 + 188.5*6 + 188.3*4 + 77.5*14 + 94.2*6 = 4665.4mm
+    */
+
+    int clock_tid = WhoIs("clock\0");
+    int cout = WhoIs("cout\0");
+    int mio = WhoIs("mio\0");
+    int time;
+    char sensor_byte;
+
+    //TODO: Change
+    int train_to_measure = 2;
+    int sensor_to_measure = 17;
+
+    int speeds_to_measure[] = {12,14,4,6,8,10,12,14};
+    int num_loops = 2;
+    int loop_count;
+    int start_time;
+    int prev_sensor_trig = -100;
+
+    for(int i = 0; i<6; i++){
+        tr_v_measure(mio, train_to_measure, speeds_to_measure[i]);
+        uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d", i+30, speeds_to_measure[i]);
+        loop_count = -1;
+        time = Time(clock_tid);
+        Delay(clock_tid, 100);
+        while(loop_count!=num_loops){
+            Putc(mio, MARKLIN, 0x85);
+            // TODO: change number
+            for(int k = 0; k<10; k++){
+                sensor_byte = Getc(mio, MARKLIN);
+                for (int u = 0; u < 8; u++) {
+                    if (sensor_byte & (1 << u)) {
+                        int sensorNum = k*8+7-u;
+                        if(sensorNum == sensor_to_measure && time-prev_sensor_trig>100){
+                            loop_count += 1;
+                            if(loop_count==0){
+                                start_time = Time(clock_tid);
+                            }else if(loop_count==num_loops){
+                                int time_diff = (Time(clock_tid)-start_time)*10; // unit ms
+                                uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d, time: %d", i+30, speeds_to_measure[i], time_diff);
+                            }
+                            uart_printf(CONSOLE, "\033[19;1H\033[Ktime: %d, actual time: %d",time, Time(clock_tid));
+                            uart_printf(CONSOLE, "\033[20;1H\033[Knum loop: %d",loop_count);
+                            prev_sensor_trig = time;
+                        }
+                    }
+                }
+            }
+            time += 10;
+            DelayUntil(clock_tid, time);
+        }
+    }
+
+    /*
+    Results:
+    train 47
+    4: 52000
+    6: 32000
+    8: 23800
+    10: 19400
+    12: 16100
+    14: 15100
+
+    train 55
+    4: 164600
+    6: 103400
+    8: 53800
+    10: 34100
+    12: 24260
+    14: 18800
+
+    train 2
+    4: 54600
+    6: 34200
+    8: 24400
+    10: 19000
+    12: 15800
+    14: 14700
+
+    */
+}
+
+void measure_velocity_straight(){
+    /*
+    distance:
+    */
+
+    int clock_tid = WhoIs("clock\0");
+    int cout = WhoIs("cout\0");
+    int mio = WhoIs("mio\0");
+    int time = Time(clock_tid);;
+    char sensor_byte;
+
+    //TODO: Change
+    int train_to_measure = 2;
+    int start_sensor = 60;
+    int end_sensor = 17;
+
+    int speeds_to_measure[] = {12,14,4,6,8,10};
+    int num_loops = 2;
+    int loop_count;
+    int start_time;
+    int total_time;
+
+    int prev_trig_start = -100;
+    int prev_trig_end = -100;
+
+    for(int i = 0; i<6; i++){
+        tr_v_measure(mio, train_to_measure, speeds_to_measure[i]);
+        uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d", i+30, speeds_to_measure[i]);
+        loop_count = -1;
+        start_time = -1;
+        total_time = 0;
+        while(loop_count!=num_loops){
+            Putc(mio, MARKLIN, 0x85);
+            // TODO: change number
+            for(int k = 0; k<10; k++){
+                sensor_byte = Getc(mio, MARKLIN);
+                for (int u = 0; u < 8; u++) {
+                    if (sensor_byte & (1 << u)) {
+                        int sensorNum = k*8+7-u;
+                        if(sensorNum == start_sensor && time-prev_trig_start>100){
+                            start_time = Time(clock_tid);
+                            uart_printf(CONSOLE, "\033[18;1H\033[Kstart time: %d",start_time);
+                            prev_trig_start = start_time;
+                        }
+                        if(sensorNum == end_sensor && start_time != -1 && time-prev_trig_end>100){
+                            loop_count += 1;
+                            int end_time = Time(clock_tid);
+                            if(loop_count>0){
+                                total_time += (end_time - start_time);
+                                if(loop_count==num_loops){
+                                    uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d, time: %d", i+30, speeds_to_measure[i], total_time);
+                                }
+                            }
+                            uart_printf(CONSOLE, "\033[19;1H\033[Kend time: %d",end_time);
+                            uart_printf(CONSOLE, "\033[20;1H\033[Ktotal time: %d",total_time);
+                            uart_printf(CONSOLE, "\033[21;1H\033[Knum loop: %d",loop_count);
+                            prev_trig_end = end_time;
+                        }
+                    }
+                }
+            }
+            time += 10;
+            DelayUntil(clock_tid, time+2);
+        }
+    }
+
+    /*
+    Results:
+    train 2
+    4: 
+    6: 
+    8: 
+    10: 
+    12: 134
+    14: 114
+    */
+}
+
+void measure_stop_dist(){
+    /*
+    distance:
+    */
+
+    int clock_tid = WhoIs("clock\0");
+    int cout = WhoIs("cout\0");
+    int mio = WhoIs("mio\0");
+    int time = Time(clock_tid);;
+    char sensor_byte;
+
+    int train_to_measure = 47;
+    int stop_sensor = 0;
+
+    for(;;){
+        Putc(mio, MARKLIN, 0x85);
+        // TODO: change number
+        for(int k = 0; k<10; k++){
+            sensor_byte = Getc(mio, MARKLIN);
+            for (int u = 0; u < 8; u++) {
+                if (sensor_byte & (1 << u)) {
+                    int sensorNum = k*8+7-u;
+                    if(sensorNum == stop_sensor){
+                        tr_v_measure(mio, train_to_measure, 0);
+                    }
+                }
+            }
+        }
+        time += 10;
+        DelayUntil(clock_tid, time+2);
+    }
+
+    /*
+    Results:
+    train 47
+    4: 
+    6: 
+    8: 
+    10: 
+    12:
+    14:
+    */
+}
 
 void setup(){
 
@@ -349,9 +566,12 @@ void setup(){
 
     switchesSetup(cout, marklin_tid);
     char *s1 = "Switches\r\n";
-    char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
-    char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
-    char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
+    char *s2 = "001:     002:     003:     004:     005:     006:     007:     008:  \r\n";
+    char *s3 = "009:     010:     011:     012:     013:     014:     015:     016:  \r\n";
+    char *s4 = "017:     018:     153:     154:     155:     156:  ";
+    // char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
+    // char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
+    // char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
     printf(cout, CONSOLE, "\033[3;1H");
     Puts(cout, CONSOLE, s1);
     Puts(cout, CONSOLE, s2);
@@ -361,9 +581,10 @@ void setup(){
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(3, &console_time);
-    Create(3, &sensor_update);
-    Create(4, &reverse);
-    Create(5, &user_input);
+    // Create(3, &sensor_update);
+    // Create(4, &reverse);
+    // Create(5, &user_input);
+    Create(2, &measure_velocity_straight);
 }
 
 
