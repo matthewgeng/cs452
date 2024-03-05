@@ -437,7 +437,7 @@ void measure_velocity_straight(){
     char sensor_byte;
 
     //TODO: Change
-    int train_to_measure = 2;
+    int train_to_measure = 47;
     int start_sensor = 60;
     int end_sensor = 17;
 
@@ -494,10 +494,10 @@ void measure_velocity_straight(){
     /*
     Results:
     train 2
-    4: 
-    6: 
-    8: 
-    10: 
+    4: 474
+    6: 294
+    8: 204
+    10: 154
     12: 134
     14: 114
     */
