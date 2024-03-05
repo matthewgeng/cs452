@@ -493,6 +493,14 @@ void measure_velocity_straight(){
 
     /*
     Results:
+    train 47
+    4: 434
+    6: 274
+    8: 194
+    10: 174
+    12: 
+    14: 
+
     train 2
     4: 474
     6: 294
