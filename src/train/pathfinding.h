@@ -1,3 +1,8 @@
+#ifndef PATHFINDING_H
+#define PATHFINDING_H
+
+#include <stdint.h>
+
 typedef enum {
   NODE_NONE,
   NODE_SENSOR,
@@ -28,3 +33,11 @@ struct track_node {
   track_node *reverse;  /* same location, but opposite direction */
   track_edge edge[2];
 };
+
+
+typedef struct PathMessage{
+    uint8_t src;
+    uint8_t dest;
+} PathMessage;
+
+#endif
