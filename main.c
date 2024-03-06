@@ -81,7 +81,7 @@ void timeUpdate() {
     if (currentCounterValue>=matchValue){
       // clearOutputBuffer();
 
-      if(time>2000000 && time%500000==0 && !isWaiting){
+      if(time%100000==0){
         sensorByteBufEnd = 0;
         trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 0x85);
         trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
@@ -90,30 +90,29 @@ void timeUpdate() {
       }
 
       // lastTime = time;
-      time += COUNTER_PER_TENTH_SECOND;
-      unsigned int minutes = time/COUNTER_PER_TENTH_SECOND/600;
-      unsigned int seconds = (time/COUNTER_PER_TENTH_SECOND/10)%60;
-      unsigned int tenthOfSecond = (time/COUNTER_PER_TENTH_SECOND)%10;
+      time += COUNTER_PER_HUNDREDTH_SECOND;
+      // unsigned int minutes = time/COUNTER_PER_TENTH_SECOND/600;
+      // unsigned int seconds = (time/COUNTER_PER_TENTH_SECOND/10)%60;
+      // unsigned int tenthOfSecond = (time/COUNTER_PER_TENTH_SECOND)%10;
 
-      //put time on screen
-      outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[1;1H\033[K%u:%u.%u\r\n", minutes, seconds, tenthOfSecond);
+      // //put time on screen
+      // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[1;1H\033[K%u:%u.%u\r\n", minutes, seconds, tenthOfSecond);
       
-      //move cursor back to input
-      outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", INPUT_ROW, inputCol);
+      // //move cursor back to input
+      // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", INPUT_ROW, inputCol);
 
-      uint32_t nextMatchValue = currentCounterValue + COUNTER_PER_TENTH_SECOND;
+      uint32_t nextMatchValue = currentCounterValue + COUNTER_PER_HUNDREDTH_SECOND;
       matchValue = nextMatchValue;
-
 
     }
 }
 
 void printToConsole(){
-  if(outputBufUartNext!=outputBufEnd){
-    if(polling_uart_putc(CONSOLE, outputBuf[outputBufUartNext])){
-      outputBufUartNext = incrementBufEnd(outputBufUartNext, OUTPUT_BUFFER_SIZE);
-    }
-  }
+  // if(outputBufUartNext!=outputBufEnd){
+  //   if(polling_uart_putc(CONSOLE, outputBuf[outputBufUartNext])){
+  //     outputBufUartNext = incrementBufEnd(outputBufUartNext, OUTPUT_BUFFER_SIZE);
+  //   }
+  // }
   if(trainBufUartNext!=trainBufEnd){
     if ((int)trainBuf[trainBufUartNext]==255){
       nextMarklinCmdTime = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + 150000;
@@ -323,23 +322,149 @@ void onReceiveSensorByte(char sensorByte){
   }
 }
 
-static void mainloop() {
-  for (;;) {
 
+//TODO: Change
+
+static void measure_velocity_loop() {
+
+  int train_to_measure = 2;
+  int sensor_to_measure = 17;
+
+  int speeds_to_measure[] = {12,14,4,6,8,10,12,14};
+  int num_loops = 2;
+  int loop_count;
+  int start_time;
+  int prev_sensor_trig = -100;
+  int speeds_index = 0;
+
+  tr(train_to_measure, speeds_to_measure[0]);
+
+  for (;;) {
+    
     timeUpdate();
     printToConsole();
 
-    // if(lastTime!=time){
-    // if(readRegisterAsUInt32(TIMER_BASE, TIMER_CLO)%5000000==0){
+    char sensorByte = polling_uart_getc(MARKLIN);
+    if(sensorPollingStarted && sensorByte!=255){
+        char sensor_byte;
+        for (int u = 0; u < 8; u++) {
+          if (sensor_byte & (1 << u)) {
+              int sensorNum = sensorByteBufEnd*8+7-u;
+              if(sensorNum == sensor_to_measure && time-prev_sensor_trig>100){
+                  loop_count += 1;
+                  if(loop_count==0){
+                      start_time = time;
+                  }else if(loop_count==num_loops){
+                      int time_diff = (time-start_time)*10; // unit ms
+                      uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d, time: %d", speeds_index+30, speeds_to_measure[speeds_index], time_diff);
 
-    //   // uart_putc(MARKLIN, 0x85);
-    //   // for(int i = 0; i<10000; i++){}
-    //   lastTime=time;
-    // }
+                      speeds_index += 1;
+                      tr(train_to_measure, speeds_to_measure[speeds_index]);
+                      uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d", speeds_index+30, speeds_to_measure[speeds_index]);
+                      loop_count = -1;
+                  }
+                  uart_printf(CONSOLE, "\033[19;1H\033[Ktime: %d, actual time: %d",time, time);
+                  uart_printf(CONSOLE, "\033[20;1H\033[Knum loop: %d",loop_count);
+                  prev_sensor_trig = time;
+              }
+          }
+      }
+      sensorByteBufEnd+=1;
+    }
+
+  }
+}
+
+
+
+static void measure_velocity_straight() {
+
+  //TODO: Change
+  int train_to_measure = 47;
+  int start_sensor = 60;
+  int end_sensor = 17;
+
+  int speeds_to_measure[] = {12,14,4,6,8,10};
+  int speeds_index = 0;
+  int num_loops = 2;
+  int loop_count;
+  int start_time;
+  int total_time;
+
+  int prev_trig_start = -100;
+  int prev_trig_end = -100;
+
+  tr(train_to_measure, speeds_to_measure[0]);
+
+  for (;;) {
+    
+    timeUpdate();
+    printToConsole();
 
     char sensorByte = polling_uart_getc(MARKLIN);
     if(sensorPollingStarted && sensorByte!=255){
-      onReceiveSensorByte(sensorByte);
+        char sensor_byte;
+        for (int u = 0; u < 8; u++) {
+          if (sensor_byte & (1 << u)) {
+              int sensorNum = sensorByteBufEnd*8+7-u;
+              if(sensorNum == start_sensor && time-prev_trig_start>100){
+                  start_time = time;
+                  uart_printf(CONSOLE, "\033[18;1H\033[Kstart time: %d",start_time);
+                  prev_trig_start = start_time;
+              }
+              if(sensorNum == end_sensor && start_time != -1 && time-prev_trig_end>100){
+                  loop_count += 1;
+                  int end_time = time;
+                  if(loop_count>0){
+                      total_time += (end_time - start_time);
+                      if(loop_count==num_loops){
+                          uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d, time: %d", speeds_index+30, speeds_to_measure[speeds_index], total_time);
+                          speeds_index += 1;
+                          tr(train_to_measure, speeds_to_measure[speeds_index]);
+                          uart_printf(CONSOLE, "\033[%u;1H\033[Kspeed: %d", speeds_index+30, speeds_to_measure[speeds_index]);
+                          loop_count = -1;
+                          start_time = -1;
+                          total_time = 0;
+                      }
+                  }
+                  uart_printf(CONSOLE, "\033[19;1H\033[Kend time: %d",end_time);
+                  uart_printf(CONSOLE, "\033[20;1H\033[Ktotal time: %d",total_time);
+                  uart_printf(CONSOLE, "\033[21;1H\033[Knum loop: %d",loop_count);
+                  prev_trig_end = end_time;
+              }
+          }
+      }
+      sensorByteBufEnd+=1;
+    }
+
+  }
+}
+
+
+static void measure_stop_dist() {
+
+  //TODO: Change
+
+  int train_to_measure = 47;
+  int stop_sensor = 0;
+
+  for (;;) {
+    
+    timeUpdate();
+    printToConsole();
+
+    char sensorByte = polling_uart_getc(MARKLIN);
+    if(sensorPollingStarted && sensorByte!=255){
+        char sensor_byte;
+        for (int u = 0; u < 8; u++) {
+          if (sensor_byte & (1 << u)) {
+            int sensorNum = sensorByteBufEnd*8+7-u;
+            if(sensorNum == stop_sensor){
+                tr(train_to_measure, 0);
+            }
+          }
+      }
+      sensorByteBufEnd+=1;
     }
 
     char c = polling_uart_getc(CONSOLE);
@@ -362,7 +487,7 @@ static void mainloop() {
         outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", INPUT_ROW, inputCol);
         outputBufEnd = charToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, c);
         inputCol += 1;
-      } 
+      }
     }
   }
 }
@@ -378,13 +503,15 @@ void switchesSetup(){
   sw(7, 'S');
   sw(8, 'C');
   sw(9, 'C');
-  sw(10, 'C');
+  sw(10, 'S');
   sw(11, 'C');
   sw(12, 'C');
-  sw(13, 'C');
+  sw(13, 'S');
   sw(14, 'C');
   sw(15, 'C');
-  sw(16, 'C');
+  sw(16, 'S');
+  sw(17, 'S');
+  sw(18, 'S');
   sw(153, 'C');
   sw(154, 'S');
   sw(155, 'S');
@@ -457,11 +584,13 @@ int kmain() {
   sensorTimeMin = 1000000;
 
 
-  matchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_TENTH_SECOND;
+  matchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_HUNDREDTH_SECOND;
   time = 0;
   // lastTime = 0;
-  mainloop();
+  // mainloop();
+  measure_velocity_loop();
 
   // exit to boot loader
   return 0;
 }
+
