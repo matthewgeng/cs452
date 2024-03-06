@@ -34,6 +34,11 @@ struct track_node {
   track_edge edge[2];
 };
 
+typedef struct HeapNode {
+  uint8_t node_index;
+  uint32_t dist;
+  uint8_t switches[20];
+} HeapNode;
 
 typedef struct PathMessage{
     uint8_t src;
