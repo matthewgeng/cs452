@@ -241,6 +241,7 @@ void user_input(){
     int marklin_tid = WhoIs("mio\0");
     int clock = WhoIs("clock\0");
     int reverse_tid = WhoIs("reverse\0");
+    int pathfind_tid = WhoIs("pathfind\0");
     int max_input_len = 20;
     char input[max_input_len+2];
     int input_index = 0;
@@ -266,7 +267,7 @@ void user_input(){
             if(input[0] == 'q' && input[1]=='\0') {
                 Quit();
             }
-            executeFunction(cout, marklin_tid, reverse_tid, clock, input, last_speed);
+            executeFunction(cout, marklin_tid, reverse_tid, pathfind_tid, clock, input, last_speed);
 
             input_index = 0;
             // clear input line and add >
@@ -361,9 +362,9 @@ void setup(){
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(3, &console_time);
-    Create(3, &sensor_update);
-    Create(4, &reverse);
-    Create(5, &user_input);
+    // Create(3, &sensor_update);
+    // Create(4, &reverse);
+    // Create(5, &user_input);
 }
 
 
