@@ -536,10 +536,10 @@ int kmain() {
   inputBufEnd = 0;
 
 
-
-  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[2J");
-  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H> ", INPUT_ROW);
-  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;3H", INPUT_ROW);
+  uart_printf(CONSOLE, "\033[2J");
+  // outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[2J");
+  // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H> ", INPUT_ROW);
+  // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;3H", INPUT_ROW);
   inputCol = 3;
   nextMarklinCmdTime = 0;
   isWaiting = 0;
@@ -552,22 +552,22 @@ int kmain() {
   trainBufEnd = charToBuffer(trainBuf, trainBufEnd, TRAIN_BUFFER_SIZE, 255);
 
   switchesSetup();
-  char *s1 = "Switches\r\n";
-  char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
-  char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
-  char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
-  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H", SWITCHES_ROW);
-  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s1);
-  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s2);
-  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s3);
-  outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s4);
+  // char *s1 = "Switches\r\n";
+  // char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
+  // char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
+  // char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
+  // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H", SWITCHES_ROW);
+  // outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s1);
+  // outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s2);
+  // outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s3);
+  // outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, s4);
 
   for(int i = 0; i<SENSOR_BUFFER_SIZE; i++){
     sensorBuf[i]=-1;
   }
   sensorBufEnd = 0;
-  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[K", SENSORS_ROW);
-  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "Most recent sensors: ", SENSORS_ROW);
+  // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[K", SENSORS_ROW);
+  // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "Most recent sensors: ", SENSORS_ROW);
   sensorByteBufEnd = 0;
 
   lastSensorTriggered = 1000;
