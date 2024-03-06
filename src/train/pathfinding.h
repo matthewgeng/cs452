@@ -38,6 +38,7 @@ typedef struct HeapNode {
   uint8_t node_index;
   uint32_t dist;
   uint8_t switches[20];
+  uint8_t num_switches;
 } HeapNode;
 
 typedef struct PathMessage{

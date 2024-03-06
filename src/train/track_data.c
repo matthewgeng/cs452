@@ -1190,6 +1190,7 @@ void init_tracka(track_node *track) {
   track[143].name = "EX10";
   track[143].type = NODE_EXIT;
   track[143].reverse = &track[142];
+  return 144;
 }
 
 void init_trackb(track_node *track) {
@@ -2354,4 +2355,5 @@ void init_trackb(track_node *track) {
   track[139].name = "EX10";
   track[139].type = NODE_EXIT;
   track[139].reverse = &track[138];
+  return 140;
 }
