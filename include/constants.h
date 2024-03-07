@@ -4,6 +4,7 @@
 #define NUM_TASKS {20,2,2}
 #define MAX_NUM_TASKS 24
 #define NAME_SERVER_TID 20
+#define IDLE_TID 1
 
 #define USER_STACK_START 580000
 #define TASK_SIZES {1024,2048,20480}

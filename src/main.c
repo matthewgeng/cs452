@@ -117,14 +117,14 @@ int kmain() {
         }
 
         // idle task time calculation
-        if(currentTaskFrame->tid == 2){
+        if(currentTaskFrame->tid == IDLE_TID){
             idle_task_start = sys_time();
         }
 
         int exception_code = run_task();
 
         // idle task time calculation
-        if(currentTaskFrame->tid == 2){
+        if(currentTaskFrame->tid == IDLE_TID){
             idle_task_total += (sys_time()-idle_task_start);
         }
 
