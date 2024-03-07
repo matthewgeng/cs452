@@ -87,6 +87,7 @@ void k3(){
 }
 
 void k4(){
+    uart_printf(CONSOLE, "in k4\r\n");
     int cout = WhoIs("cout\0");
     int cin = WhoIs("cin\0");
     int clock = WhoIs("clock\0"); // TODO: make every server have a function to get name
@@ -374,24 +375,29 @@ void rootTask(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Root Task\r\n");
     #endif 
-    // order or nameserver and idle_task matters since their tid values are assumed in implementation
+    // uart_printf(CONSOLE, "in root task\r\n");
+    // order of nameserver and idle_task matters since their tid values are assumed in implementation
     Create_sp_size(2, &nameserver, 1);
+    // Create(2, &nameserver);
     Create(1000, &idle_task);
     Create(0, &clock_notifier);
     Create(1, &clock);
 
+    uart_printf(CONSOLE, "1\r\n");
     Create(3, &console_out_notifier);
     Create(3, &console_in_notifier);
     Create(3, &console_out);
     Create(3, &console_in);
 
+    uart_printf(CONSOLE, "2\r\n");
     Create(3, &marklin_out_tx_notifier);
     Create(3, &marklin_out_cts_notifier);
     Create(3, &marklin_in_notifier);
     Create(3, &marklin_io);
     
-    // Create(3, &k4);
-    Create(3, &setup);
+    uart_printf(CONSOLE, "3\r\n");
+    Create(3, &k3);
+    // Create(3, &setup);
     
     // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }

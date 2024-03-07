@@ -1,27 +1,29 @@
 #include "taskframe.h"
+#include "rpi.h"
 
 void tasks_init(TaskFrame* task_frames, TaskFrame **nextFreeTaskFrame) {
 
     size_t cur_stack = USER_STACK_START;
-    uint8_t *task_nums = NUM_TASKS;
-    uint32_t *task_sizes =  TASK_SIZES;
+    uint32_t task_nums[] = NUM_TASKS;
+    uint32_t task_sizes[] =  TASK_SIZES;
     uint8_t tf_index = 0;
     for(int k = 0; k<3; k++){
         for(size_t i = 0; i<task_nums[k]; i++){
+            int ind = i+tf_index;
             if(i<task_nums[k]-1){
-                task_frames[i].next = task_frames+i+1;
+                task_frames[ind].next = task_frames+i+1;
             }else{
-                task_frames[i].next = NULL;
+                task_frames[ind].next = NULL;
             }
             // stack initialization
-            task_frames[i].tid = i;
-            task_frames[i].status = INACTIVE;
-            task_frames[i].sd = NULL;
-            task_frames[i].rd = NULL;
-            task_frames[i].sp_size = k;
-            task_frames[i].sp = cur_stack;
+            task_frames[ind].tid = ind;
+            task_frames[ind].status = INACTIVE;
+            task_frames[ind].sd = NULL;
+            task_frames[ind].rd = NULL;
+            task_frames[ind].sp_size = k;
+            task_frames[ind].sp = cur_stack;
             cur_stack += task_sizes[k];
-            initialize_intcb(&(task_frames[i].sender_queue), task_frames[i].sender_queue_data, MAX_NUM_TASKS, 0);
+            initialize_intcb(&(task_frames[ind].sender_queue), task_frames[ind].sender_queue_data, MAX_NUM_TASKS, 0);
         }
         nextFreeTaskFrame[k] = task_frames + tf_index;
         tf_index += task_nums[k];

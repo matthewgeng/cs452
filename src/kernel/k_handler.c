@@ -45,6 +45,7 @@ void handle_create(Heap *heap, TaskFrame **nextFreeTaskFrame){
     task_init(created_task, priority, sys_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x60000240, READY);
     heap_push(heap, created_task);
     reschedule_task_with_return(heap, currentTaskFrame, created_task->tid);
+    uart_printf(CONSOLE, "handled create: priority: %d, sp_size: %d, tid: %d\r\n", priority, sp_size, created_task->tid);
 }
 
 void handle_exit(TaskFrame **nextFreeTaskFrame){

@@ -32,6 +32,7 @@ void console_out_notifier() {
 
 // notifier needed to still allow function calls to server with buffering
 void console_in_notifier() {
+    // uart_printf(CONSOLE, "cin notifier\r\n");
     RegisterAs("cin_notifier\0");
 
     int cin = WhoIs("cin\0");
@@ -41,6 +42,7 @@ void console_in_notifier() {
     // TODO: maybe we can send none?
     IOMessage m = {0, "", 0};
     for(;;){
+        // uart_printf(CONSOLE, "before awaitevent\r\n");
         int res = AwaitEvent(CONSOLE_RX);
         if (res < 0) {
             // TODO: make more robust

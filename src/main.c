@@ -96,6 +96,7 @@ int kmain() {
     ReceiveData receive_datas[MAX_NUM_TASKS];
     nextFreeReceiveData = rds_init(receive_datas, MAX_NUM_TASKS);
 
+    
     // FIRST TASKS INITIALIZATION
     TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame, 0);
     task_init(root_task, 100, sys_time(), &rootTask, 0, (uint64_t)&Exit, 0x60000240, READY); // 1001 bits for DAIF
@@ -122,6 +123,7 @@ int kmain() {
             idle_task_start = sys_time();
         }
 
+        uart_printf(CONSOLE, "before scheduling, tid: %d, spsize %d\r\n", currentTaskFrame->tid, currentTaskFrame->sp_size);
         int exception_code = run_task();
 
         // idle task time calculation
@@ -129,6 +131,7 @@ int kmain() {
             idle_task_total += (sys_time()-idle_task_start);
         }
 
+        // uart_printf(CONSOLE, "after scheduling, exception_code: %d\r\n", exception_code);
         if(exception_code==CREATE){
             handle_create(&heap, &nextFreeTaskFrame);
         } else if(exception_code==EXIT){
