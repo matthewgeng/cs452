@@ -99,7 +99,24 @@ void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switch
   Puts(console_tid, CONSOLE, str);
 }
 
-void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int clock, char *str, uint32_t last_speed[]){
+int get_sensor_num(char *str){
+  char sensor_letter;
+  int sensor_num;
+  int res;
+  sensor_letter = str[0];
+  if(sensor_letter<'A' || sensor_letter>'E'){
+    return -1;
+  }
+  res += (sensor_letter-'A')*16;
+  sensor_num = getArgumentTwoDigitNumber(str+1);
+  if(sensor_num<0 || sensor_num>16){
+    return -1;
+  }
+  res += sensor_num-1;
+  return res;
+}
+
+void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int clock, char *str, uint32_t last_speed[]){  
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
   str_cpy_w0(last_fun+10, str);
@@ -186,8 +203,7 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int cloc
     str_cpy_w0(func_res+10, "Switch direction changed");
     Puts(console_tid, CONSOLE, func_res);
 
-  }
-  else{
+  }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);
     return;

@@ -11,6 +11,7 @@
 #include "gameserver.h"
 #include "util.h"
 #include "traincontrol.h"
+#include "pathfinding.h"
 
 
 void k2test() {
@@ -218,6 +219,7 @@ void user_input(){
     int marklin_tid = WhoIs("mio\0");
     int clock = WhoIs("clock\0");
     int reverse_tid = WhoIs("reverse\0");
+    // int pathfind_tid = WhoIs("pathfind\0");
     int max_input_len = 20;
     char input[max_input_len+2];
     int input_index = 0;
@@ -340,7 +342,8 @@ void k4(){
     Create(3, &console_time);
     Create(3, &sensor_update);
     Create(4, &reverse);
-    Create(5, &user_input);
+    Create(5, &user_input);    
+    // Create_sp_size(1, &path_finding, 2);
 }
 
 
