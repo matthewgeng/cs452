@@ -35,6 +35,7 @@ typedef enum {
 
 // K1
 int Create(int priority, void (*function)());
+int Create_sp_size(int priority, void (*function)(), int sp_size);
 int MyTid();
 int MyParentTid();
 void Yield();

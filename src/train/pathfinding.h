@@ -47,4 +47,6 @@ typedef struct PathMessage{
     uint8_t dest;
 } PathMessage;
 
+void path_finding();
+
 #endif

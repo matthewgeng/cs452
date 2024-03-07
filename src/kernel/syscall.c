@@ -9,12 +9,44 @@ int Create(int priority, void (*function)()){
     int tid;
 
     asm volatile(
-        "mov x0, %[priority]\n"
-        "mov x1, %[function]\n"
+        "mov x9, %[priority]\n"
+        "mov x10, %[function]\n"
+        "mov x11, %[sp_size]\n"
+        "mov x0, x9\n"
+        "mov x1, x10\n"
+        "mov x2, x11\n"
         "svc %[SYS_CODE]"
         :
         : [priority] "r" (priority),
         [function] "r" (function),
+        [sp_size] "r" (0),
+        [SYS_CODE] "i"(CREATE) 
+        : "x9", "x10"
+    );
+
+    asm volatile("mov %0, x0" : "=r"(tid));
+    return tid;
+}
+
+int Create_sp_size(int priority, void (*function)(), int sp_size){
+    #if DEBUG
+        uart_dprintf(CONSOLE, "creating task: %d %x \r\n", priority, function);
+    #endif 
+    
+    int tid;
+
+    asm volatile(
+        "mov x9, %[priority]\n"
+        "mov x10, %[function]\n"
+        "mov x11, %[sp_size]\n"
+        "mov x0, x9\n"
+        "mov x1, x10\n"
+        "mov x2, x11\n"
+        "svc %[SYS_CODE]"
+        :
+        : [priority] "r" (priority),
+        [function] "r" (function),
+        [sp_size] "r" (sp_size),
         [SYS_CODE] "i"(CREATE) 
         : "x9", "x10"
     );

@@ -30,12 +30,13 @@ void reschedule_task_with_return(Heap *heap, TaskFrame *tf, long long ret){
 void handle_create(Heap *heap, TaskFrame **nextFreeTaskFrame){
     int priority = (int)(currentTaskFrame->x[0]);
     void (*function)() = (void *)(currentTaskFrame->x[1]);
+    int sp_size = (void *)(currentTaskFrame->x[2]);
     if(priority<0){
         uart_printf(CONSOLE, "\x1b[31mInvalid priority %d\x1b[0m\r\n", priority);
         reschedule_task_with_return(heap, currentTaskFrame, -1);
         return;
     }
-    TaskFrame* created_task = getNextFreeTaskFrame(nextFreeTaskFrame);
+    TaskFrame* created_task = getNextFreeTaskFrame(nextFreeTaskFrame, sp_size);
     if(created_task==NULL){
         uart_printf(CONSOLE, "\x1b[31mKernel out of task descriptors\x1b[0m\r\n");
         reschedule_task_with_return(heap, currentTaskFrame, -2);

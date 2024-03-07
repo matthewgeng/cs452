@@ -11,6 +11,7 @@
 #include "gameserver.h"
 #include "util.h"
 #include "traincontrol.h"
+#include "pathfinding.h"
 
 
 void k2test() {
@@ -39,7 +40,7 @@ void k2test() {
 
 void k2(){
     uart_dprintf(CONSOLE, "Root Task\r\n");
-    Create(1, &nameserver);
+    Create_sp_size(1, &nameserver, 1);
     Create(2, &gameserver);
     Create(100, &k2test);
     
@@ -362,6 +363,7 @@ void setup(){
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(3, &console_time);
+    Create_sp_size(1, &path_finding, 2);
     // Create(3, &sensor_update);
     // Create(4, &reverse);
     // Create(5, &user_input);
@@ -373,7 +375,7 @@ void rootTask(){
         uart_dprintf(CONSOLE, "Root Task\r\n");
     #endif 
     // order or nameserver and idle_task matters since their tid values are assumed in implementation
-    Create(2, &nameserver);
+    Create_sp_size(2, &nameserver, 1);
     Create(1000, &idle_task);
     Create(0, &clock_notifier);
     Create(1, &clock);
