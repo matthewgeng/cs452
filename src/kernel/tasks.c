@@ -10,8 +10,8 @@
 #include "gameclient.h"
 #include "gameserver.h"
 #include "util.h"
-#include "traincontrol.h"
 #include "pathfinding.h"
+#include "traincontrol.h"
 
 
 void k2test() {

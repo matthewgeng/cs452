@@ -4,6 +4,7 @@
 #include "nameserver.h"
 #include "track_data.h"
 #include "heap.h"
+#include "pathfinding.h"
 
 HeapNode *hns_init(HeapNode* hns, size_t size){
     for(size_t i = 0; i<size; i++){
