@@ -1,22 +1,34 @@
 #include "taskframe.h"
 
-TaskFrame *tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t num_task_frames) {
+#include "rpi.h"
 
-    for(size_t i = 0; i<num_task_frames; i++){
-        if(i<num_task_frames-1){
-            task_frames[i].next = task_frames+i+1;
-        }else{
-            task_frames[i].next = NULL;
+void tasks_init(TaskFrame* task_frames, TaskFrame *nextFreeTaskFrame[]) {
+
+    size_t cur_stack = USER_STACK_START;
+    uint32_t task_nums[] = NUM_TASKS;
+    uint32_t task_sizes[] =  TASK_SIZES;
+    uint8_t tf_index = 0;
+    for(int k = 0; k<3; k++){
+        for(size_t i = 0; i<task_nums[k]; i++){
+            int ind = i+tf_index;
+            if(i<task_nums[k]-1){
+                task_frames[ind].next = task_frames+ind+1;
+            }else{
+                task_frames[ind].next = NULL;
+            }
+            // stack initialization
+            task_frames[ind].tid = ind;
+            task_frames[ind].status = INACTIVE;
+            task_frames[ind].sd = NULL;
+            task_frames[ind].rd = NULL;
+            task_frames[ind].sp_size = k;
+            task_frames[ind].sp = cur_stack;
+            cur_stack += task_sizes[k];
+            initialize_intcb(&(task_frames[ind].sender_queue), task_frames[ind].sender_queue_data, MAX_NUM_TASKS, 0);
         }
-        // stack initialization
-        task_frames[i].sp = stack_base + i*stack_size;
-        task_frames[i].tid = i;
-        task_frames[i].status = INACTIVE;
-        task_frames[i].sd = NULL;
-        task_frames[i].rd = NULL;
-        initialize_intcb(&(task_frames[i].sender_queue), task_frames[i].sender_queue_data, MAX_NUM_TASKS, 0);
+        nextFreeTaskFrame[k] = task_frames + tf_index;
+        tf_index += task_nums[k];
     }
-    return task_frames;
 }
 
 int task_cmp(const TaskFrame* tf1, const TaskFrame* tf2) {
@@ -35,13 +47,15 @@ int task_cmp(const TaskFrame* tf1, const TaskFrame* tf2) {
     return 0;
 }
 
-TaskFrame *getNextFreeTaskFrame(TaskFrame **nextFreeTaskFrame){
-    if(*nextFreeTaskFrame==NULL){
+TaskFrame *getNextFreeTaskFrame(TaskFrame *nextFreeTaskFrame[], int sp_size){
+    TaskFrame *tf = nextFreeTaskFrame[sp_size];
+    if(tf==NULL){
         return NULL;
     }
-    TaskFrame *tf = *nextFreeTaskFrame;
+    // for(;;){}
+
     tf->status = READY;
-    *nextFreeTaskFrame = (*nextFreeTaskFrame)->next;
+    nextFreeTaskFrame[sp_size] = nextFreeTaskFrame[sp_size]->next;
     return tf;
 }
 

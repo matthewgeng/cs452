@@ -5,16 +5,6 @@
 #include <stddef.h>
 #include "int_cb.h"
 
-#define INACTIVE 0
-#define READY 1
-#define SEND_WAIT 2
-#define RECEIVE_WAIT 3
-#define REPLY_WAIT 4
-
-#define USER_STACK_START 580000
-#define USER_STACK_SIZE 2048
-#define SENDER_QUEUE_SIZE 5
-
 typedef struct SendData {
   int tid;
   char *msg;
@@ -45,12 +35,13 @@ typedef struct TaskFrame {
   struct ReceiveData *rd;
   IntCB sender_queue;
   int sender_queue_data[MAX_NUM_TASKS];
+  uint8_t sp_size;
   struct TaskFrame *next;
 } TaskFrame;
 
-TaskFrame *tasks_init(TaskFrame* task_frames, size_t stack_base, size_t stack_size, size_t num_task_frames);
+void tasks_init(TaskFrame* task_frames, TaskFrame *nextFreeTaskFrame[]);
 int task_cmp(const TaskFrame *tf1, const TaskFrame* tf2);
-TaskFrame *getNextFreeTaskFrame(TaskFrame **nextFreeTaskFrame);
+TaskFrame *getNextFreeTaskFrame(TaskFrame *nextFreeTaskFrame[], int sp_size);
 void reclaimTaskFrame(TaskFrame **nextFreeTaskFrame, TaskFrame *tf);
 
 SendData *sds_init(SendData* sds, size_t size);

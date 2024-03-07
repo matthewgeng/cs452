@@ -79,10 +79,9 @@ int kmain() {
     TaskFrame* blocked_on_irq[NUM_IRQ_EVENTS] = {NULL};
 
     // USER TASK INITIALIZATION
-    TaskFrame *nextFreeTaskFrame;
+    TaskFrame *nextFreeTaskFrame[3];
     TaskFrame user_tasks[MAX_NUM_TASKS];
-    nextFreeTaskFrame = tasks_init(user_tasks, USER_STACK_START, USER_STACK_SIZE, MAX_NUM_TASKS);
-
+    tasks_init(user_tasks, nextFreeTaskFrame);
     // TASK DESCRIPTOR INITIALIZATION
     Heap heap; // min heap
     TaskFrame* tfs_heap[MAX_NUM_TASKS];
@@ -97,7 +96,7 @@ int kmain() {
     nextFreeReceiveData = rds_init(receive_datas, MAX_NUM_TASKS);
 
     // FIRST TASKS INITIALIZATION
-    TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame);
+    TaskFrame* root_task = getNextFreeTaskFrame(&nextFreeTaskFrame, 0);
     task_init(root_task, 100, sys_time(), &rootTask, 0, (uint64_t)&Exit, 0x60000240, READY); // 1001 bits for DAIF
     heap_push(&heap, root_task);
 

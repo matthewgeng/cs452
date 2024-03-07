@@ -85,29 +85,6 @@ void k3(){
     Reply(user4, user4_data, sizeof(user4_data));
 }
 
-void k4(){
-    int cout = WhoIs("cout\0");
-    int cin = WhoIs("cin\0");
-    int clock = WhoIs("clock\0"); // TODO: make every server have a function to get name
-
-    // clear screen
-    Puts(cout, 0, "\033[2J");
-    // reset cursor to top left
-    Puts(cout, 0, "\033[H");
-    // program start
-    Puts(cout, 0, "Program starting: \r\n\r\n");
-    Puts(cout, 0, "Idle percentage:   \r\n");
-
-    Puts(cout, 0, "running k4\r\n");
-
-    for(;;) {
-        char c = Getc(cin, 0);
-        Puts(cout, 0, "got data: ");
-        Putc(cout, 0, c);
-        Puts(cout, 0, "\r\n");
-    }
-}
-
 void idle_task(){
     #if DEBUG
         uart_dprintf(CONSOLE, "Idle Task\r\n");
@@ -330,7 +307,7 @@ void user_input(){
 }
 
 
-void setup(){
+void k4(){
 
     int cout = WhoIs("cout\0");
     int marklin_tid = WhoIs("mio\0");
@@ -372,7 +349,8 @@ void rootTask(){
         uart_dprintf(CONSOLE, "Root Task\r\n");
     #endif 
     // order or nameserver and idle_task matters since their tid values are assumed in implementation
-    Create(2, &nameserver);
+    Create_sp_size(2, &nameserver, 1);
+    // Create(2, &nameserver);
     Create(1000, &idle_task);
     Create(0, &clock_notifier);
     Create(1, &clock);
@@ -387,8 +365,8 @@ void rootTask(){
     Create(3, &marklin_in_notifier);
     Create(3, &marklin_io);
     
-    // Create(3, &k4);
-    Create(3, &setup);
+    Create(3, &k4);
+    // Create(3, &setup);
     
     // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
