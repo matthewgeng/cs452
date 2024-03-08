@@ -41,5 +41,8 @@ SECTIONS {
     . = ALIGN(16);
     bss_begin = .;
     .bss : { *(.bss) }
-    bss_end = .;
+    bss_end = .;    
+
+    . += 16;
+    user_stack_start = .;
 }

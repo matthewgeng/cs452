@@ -4,7 +4,7 @@
 
 void tasks_init(TaskFrame* task_frames, TaskFrame *nextFreeTaskFrame[]) {
 
-    size_t cur_stack = USER_STACK_START;
+    size_t cur_stack = (size_t)(&user_stack_start);
     uint32_t task_nums[] = NUM_TASKS;
     uint32_t task_sizes[] =  TASK_SIZES;
     uint8_t tf_index = 0;

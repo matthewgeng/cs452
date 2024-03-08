@@ -52,4 +52,7 @@ ReceiveData *rds_init(ReceiveData* rds, size_t size);
 ReceiveData *getNextFreeReceiveData(ReceiveData **nextFreeReceiveData);
 void reclaimReceiveData(ReceiveData **nextFreeReceiveData, ReceiveData *rd);
 
+// defined in linker script, used & (address operator) to get linker address
+extern char user_stack_start;
+
 #endif
