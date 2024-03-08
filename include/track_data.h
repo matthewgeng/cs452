@@ -1,6 +1,7 @@
 /* THIS FILE IS GENERATED CODE -- DO NOT EDIT */
 
 #include "pathfinding.h"
+#include <stdint.h>
 
 // The track initialization functions expect an array of this size.
 #define TRACK_MAX 144

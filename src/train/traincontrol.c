@@ -3,6 +3,7 @@
 #include "util.h"
 #include "io.h"
 #include "traincontrol.h"
+#include "pathfinding.h"
 
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   char cmd[3];
@@ -110,22 +111,14 @@ int get_sensor_num(char *str){
   res += (sensor_letter-'A')*16;
   sensor_num = getArgumentTwoDigitNumber(str+1);
   if(sensor_num<0 || sensor_num>16){
-    return -1;
+    return -2;
   }
   res += sensor_num-1;
   return res;
 }
 
-void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int clock, char *str, uint32_t last_speed[]){  
-  char last_fun[30];
-  str_cpy(last_fun, "\033[11;1H\033[K");
-  str_cpy_w0(last_fun+10, str);
-  Puts(console_tid, CONSOLE, last_fun);
+void execute_tr(char *str, char *func_res, int console_tid, int marklin_tid, uint32_t last_speed[]){
 
-  char func_res[30];
-  str_cpy(func_res, "\033[12;1H\033[K");
-
-  if(str[0]=='t' && str[1]=='r' && str[2]==' '){
     unsigned int trainNumber, trainSpeed;
     uint16_t trainSpeedStartIndex;
 
@@ -152,7 +145,10 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int cloc
     str_cpy_w0(func_res+10, "Train speed changed");
     Puts(console_tid, CONSOLE, func_res);
 
-  }else if(str[0]=='r' && str[1]=='v' && str[2]==' '){
+}
+
+void execute_rv(char *str, char *func_res, int console_tid, int marklin_tid, int reverse_tid, uint32_t last_speed[]){
+  
     unsigned int trainNumber;
     char arg[2];
 
@@ -174,7 +170,10 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int cloc
     str_cpy_w0(func_res+10, "Train reversed");
     Puts(console_tid, CONSOLE, func_res);
 
-  }else if(str[0]=='s' && str[1]=='w' && str[2]==' '){
+}
+
+void execute_sw(char *str, char *func_res, int console_tid, int marklin_tid, uint32_t last_speed[]){
+
     unsigned int switchNumber;
     uint16_t switchDirectionIndex;
 
@@ -203,6 +202,74 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int cloc
     str_cpy_w0(func_res+10, "Switch direction changed");
     Puts(console_tid, CONSOLE, func_res);
 
+}
+
+void execute_pf(char *str, char *func_res, int console_tid, int marklin_tid, int pathfind_tid, uint32_t last_speed[]){
+
+    int src, dest;
+    str += 3;
+    src = get_sensor_num(str);
+    if(src==-1){
+      str_cpy_w0(func_res+10, "Invalid sensor char 1");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }else if(src==-2){
+      str_cpy_w0(func_res+10, "Invalid sensor num 1");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    if(str[2]==' '){
+      str += 3;
+    }else if(str[3]==' '){
+      str += 4;
+    }else{
+      str_cpy_w0(func_res+10, "Invalid pathfinding command");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+
+    dest = get_sensor_num(str);
+    if(dest==-1){
+      str_cpy_w0(func_res+10, "Invalid sensor char 2");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }else if(dest==-2){
+      str_cpy_w0(func_res+10, "Invalid sensor num 2");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+
+    PathMessage pm;
+    pm.src = src;
+    pm.dest = dest;
+
+    int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
+    if(reply_len!=0){
+      #if DEBUG
+          uart_dprintf(CONSOLE, "pathfind replied incompatible msg %d\r\n", reply_len);
+      #endif
+    }
+    str_cpy_w0(func_res+10, "Path Find Ran");
+    Puts(console_tid, CONSOLE, func_res);
+}
+
+void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int pathfind_tid, int clock, char *str, uint32_t last_speed[]){  
+  char last_fun[30];
+  str_cpy(last_fun, "\033[11;1H\033[K");
+  str_cpy_w0(last_fun+10, str);
+  Puts(console_tid, CONSOLE, last_fun);
+
+  char func_res[30];
+  str_cpy(func_res, "\033[12;1H\033[K");
+
+  if(str[0]=='t' && str[1]=='r' && str[2]==' '){
+    execute_tr(str, func_res, console_tid, marklin_tid, last_speed);
+  }else if(str[0]=='r' && str[1]=='v' && str[2]==' '){
+    execute_rv(str, func_res, console_tid, marklin_tid, reverse_tid, last_speed);
+  }else if(str[0]=='s' && str[1]=='w' && str[2]==' '){
+    execute_sw(str, func_res, console_tid, marklin_tid, last_speed);
+  }else if(str[0]=='p' && str[1]=='f' && str[2]==' '){
+    execute_pf(str, func_res, console_tid, marklin_tid, pathfind_tid, last_speed);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);
@@ -245,6 +312,8 @@ void switchesSetup(int console_tid, int marklin_tid){
   sw(console_tid, marklin_tid, 14, 'C');
   sw(console_tid, marklin_tid, 15, 'C');
   sw(console_tid, marklin_tid, 16, 'C');
+  sw(console_tid, marklin_tid, 17, 'C');
+  sw(console_tid, marklin_tid, 18, 'C');
   sw(console_tid, marklin_tid, 153, 'C');
   sw(console_tid, marklin_tid, 154, 'S');
   sw(console_tid, marklin_tid, 155, 'S');

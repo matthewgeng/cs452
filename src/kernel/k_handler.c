@@ -45,6 +45,9 @@ void handle_create(Heap *heap, TaskFrame **nextFreeTaskFrame){
     task_init(created_task, priority, sys_time(), function, currentTaskFrame->tid, (uint64_t)&Exit, 0x60000240, READY);
     heap_push(heap, created_task);
     reschedule_task_with_return(heap, currentTaskFrame, created_task->tid);
+    // if(sp_size==2){
+    //     uart_printf(CONSOLE, "\033[31;1H\033[K tid: %d",created_task->tid);
+    // }
 }
 
 void handle_exit(TaskFrame **nextFreeTaskFrame){
@@ -78,6 +81,7 @@ void handle_send(Heap *heap, TaskFrame user_tasks[], SendData **nextFreeSendData
     int msglen = (int)(currentTaskFrame->x[2]);
     char *reply = (char *)(currentTaskFrame->x[3]);
     int rplen = (int)(currentTaskFrame->x[4]);            
+
 
     // find recipient tid, if not exist, return -1
     // if sender task not in ready, error

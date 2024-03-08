@@ -219,7 +219,7 @@ void user_input(){
     int marklin_tid = WhoIs("mio\0");
     int clock = WhoIs("clock\0");
     int reverse_tid = WhoIs("reverse\0");
-    // int pathfind_tid = WhoIs("pathfind\0");
+    int pathfind_tid = WhoIs("pathfind\0");
     int max_input_len = 20;
     char input[max_input_len+2];
     int input_index = 0;
@@ -245,7 +245,7 @@ void user_input(){
             if(input[0] == 'q' && input[1]=='\0') {
                 Quit();
             }
-            executeFunction(cout, marklin_tid, reverse_tid, clock, input, last_speed);
+            executeFunction(cout, marklin_tid, reverse_tid, pathfind_tid, clock, input, last_speed);
 
             input_index = 0;
             // clear input line and add >
@@ -313,6 +313,8 @@ void k4(){
 
     int cout = WhoIs("cout\0");
     int marklin_tid = WhoIs("mio\0");
+
+    // uart_printf(CONSOLE, "\033[2J");
     
     // clear screen
     Puts(cout, 0, "\033[2J");
@@ -326,16 +328,17 @@ void k4(){
     Putc(marklin_tid, MARKLIN, 96);
     Putc(marklin_tid, MARKLIN, 0xC0);
 
-    switchesSetup(cout, marklin_tid);
     char *s1 = "Switches\r\n";
-    char *s2 = "001: C   002: C   003: C   004: C   005: C   006: S   007: S   008: C\r\n";
-    char *s3 = "009: C   010: C   011: C   012: C   013: C   014: C   015: C   016: C\r\n";
-    char *s4 = "017: C   018: C   153: C   154: S   155: S   156: C";
+    char *s2 = "001:     002:     003:     004:     005:     006:     007:     008:  \r\n";
+    char *s3 = "009:     010:     011:     012:     013:     014:     015:     016:  \r\n";
+    char *s4 = "017:     018:     153:     154:     155:     156:  ";
     printf(cout, CONSOLE, "\033[3;1H");
     Puts(cout, CONSOLE, s1);
     Puts(cout, CONSOLE, s2);
     Puts(cout, CONSOLE, s3);
     Puts(cout, CONSOLE, s4);
+
+    switchesSetup(cout, marklin_tid);
 
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
@@ -343,7 +346,6 @@ void k4(){
     Create(3, &sensor_update);
     Create(4, &reverse);
     Create(5, &user_input);    
-    // Create_sp_size(1, &path_finding, 2);
 }
 
 
@@ -370,6 +372,7 @@ void rootTask(){
     
     Create(3, &k4);
     // Create(3, &setup);
+    Create_sp_size(1, &path_finding, 2);
     
     // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }

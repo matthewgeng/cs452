@@ -18,6 +18,7 @@ void console_out_notifier() {
     IOMessage m = {0, "", 0};
     for(;;){
         int res = AwaitEvent(CONSOLE_TX);
+        // uart_printf(CONSOLE, "\0337\033[32;1H\033[Kcout notifier %d\0338", Time(clock));
         if (res < 0) {
             // TODO: make more robust
             uart_printf(CONSOLE, "ERROR console out notifier\r\n");
@@ -63,6 +64,7 @@ void console_out() {
 
     int cout_notifier = WhoIs("cout_notifier\0");
     int notifier_parked = 0;
+    int clock = WhoIs("clock\0");
 
     int tid;
     // circular buffer 
@@ -79,7 +81,7 @@ void console_out() {
 
         // print
         if (tid == cout_notifier) {
-            // uart_printf(CONSOLE, "notifier recieved\r\n");
+            // uart_printf(CONSOLE, "\0337\033[40;1notifier recieved, %d\0338", Time(clock));
             // try to flush buffer 
             // uart_printf(CONSOLE, "message length from noti %u\r\n", m.len);
 
@@ -88,7 +90,7 @@ void console_out() {
             }
 
 
-            // uart_printf(CONSOLE, "\0337\033[30;1Hbuffer size %u\0338", buffer.count);
+            // uart_printf(CONSOLE, "\0337\033[25;1Hbuffer size %u\0338", buffer.count);
             // if we have data still, we should wait for the notifier to let us flush
             if (!is_empty_charcb(&buffer)) {
                 // reply to notifier
@@ -97,6 +99,7 @@ void console_out() {
             // if we don't have data, we shouldn't respond to the notifier
             } else {
                 notifier_parked = 1;
+                // uart_printf(CONSOLE, "\0337\033[50;1notifier parked, %d\0338", Time(clock));
             }
 
         // store data in buffer

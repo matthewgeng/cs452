@@ -39,6 +39,8 @@ typedef struct HeapNode {
   uint32_t dist;
   uint8_t switches[20];
   uint8_t num_switches;
+  uint8_t sensors[80];
+  uint8_t num_sensors;
   struct HeapNode *next;
 } HeapNode;
 
