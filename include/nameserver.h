@@ -5,6 +5,11 @@
 
 #include "constants.h"
 
+typedef struct NameServerMsg{
+    char type;
+    char name[MAX_TASK_NAME_CHAR+1];
+} NameServerMsg;
+
 typedef struct NameMap{
     char mapping[MAX_NUM_TASKS][MAX_TASK_NAME_CHAR+1];
 } NameMap;
