@@ -36,7 +36,7 @@ void sw(int cout, int mio, unsigned int switchNumber, char switchDirection){
   cmd[1] = switchNumber;
   cmd[2] = 32;
   cmd[3] = 0;
-  Puts_len(mio, MARKLIN, cmd, 2);
+  Puts_len(mio, MARKLIN, cmd, 3);
 
   uint32_t r,c;
   

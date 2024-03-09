@@ -14,6 +14,7 @@
 #include "pathfinding.h"
 #include "sensors.h"
 #include "trainserver.h"
+#include "reverse.h"
 
 
 void k2test() {
@@ -149,9 +150,7 @@ void user_input(){
     int cin = WhoIs("cin\0");
     int marklin_tid = WhoIs("mio\0");
     int clock = WhoIs("clock\0");
-    int reverse_tid = WhoIs("reverse\0");
-    int pathfind_tid = WhoIs("pathfind\0");
-    int switch_tid = WhoIs("switch\0");
+    int train_server_tid = WhoIs("trainserver\0");
     int max_input_len = 20;
     char input[max_input_len+2];
     int input_index = 0;
@@ -163,11 +162,6 @@ void user_input(){
 
     char next_char_str[] = "\033[10;0H  ";
     // next_char_str[2] = INPUT_ROW;
-
-    uint32_t last_speed[100];
-    for(int i = 0; i<100; i++){
-      last_speed[i] = 0;
-    }
     for(;;){
 
         char c = Getc(cin, CONSOLE);
@@ -177,7 +171,7 @@ void user_input(){
             if(input[0] == 'q' && input[1]=='\0') {
                 Quit();
             }
-            executeFunction(cout, marklin_tid, reverse_tid, switch_tid, pathfind_tid, input, last_speed);
+            executeFunction(cout, train_server_tid, input);
 
             input_index = 0;
             // clear input line and add >

@@ -27,7 +27,7 @@ void sensor_update(){
   int new_sensor;
   int intended_reply_len;
   TrainServerMsg msg;
-  msg.type = 'S';
+  msg.type = TRAIN_SERVER_NEW_SENSOR;
 
   for(;;){
     Putc(mio, MARKLIN, 0x85);
@@ -52,7 +52,7 @@ void sensor_update(){
       }
     }
     
-    msg.arg = new_sensor;
+    msg.arg1 = new_sensor;
     intended_reply_len = Send(train_server_tid, new_sensor, sizeof(TrainServerMsg));
     if(intended_reply_len!=0){
       uart_printf(CONSOLE, "\0337\033[30;1H\033[Ksensor task unexpected reply from train server %d\0338", intended_reply_len);

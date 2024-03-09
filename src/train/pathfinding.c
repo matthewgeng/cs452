@@ -266,13 +266,7 @@ void path_finding(){
             pathfind(pm.arg1, pm.dest, switch_tid, track, &nextFreeHeapNode);
         }else if(pm.type=='T'){
             // TODO: need to get the current location somehow later
-            intended_reply_len = Send(train_server_tid, pm.arg1, sizeof(uint8_t), cur_sensor, sizeof(int));
-            if(intended_reply_len!=sizeof(int) || cur_sensor<0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get current train location %d\0338", cur_sensor);
-                continue;
-            }
-            // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kcur_sensor %d\0338", cur_sensor);
-            // for(;;){}
+            cur_sensor = 10;
             buffer_dist = 500; //CHANGE!
             res = get_switches_setup(switch_tid, switch_states);
             if(res<0){

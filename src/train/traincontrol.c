@@ -4,57 +4,7 @@
 #include "traincontrol.h"
 #include "pathfinding.h"
 #include "switches.h"
-
-void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
-  char cmd[3];
-  cmd[0] = trainSpeed;
-  cmd[1] = trainNumber;
-  cmd[2] = 0;
-  Puts_len(marklin_tid, MARKLIN, cmd, 2);
-
-  last_speed[trainNumber] = trainSpeed;
-}
-
-void reverse(){
-
-    RegisterAs("reverse\0");
-    int marklin_tid = WhoIs("mio\0");
-    int clock = WhoIs("clock\0");
-    int cout = WhoIs("cout\0");
-
-    int tid;
-    char msg[2];
-    int train_number, last_speed;
-    int msg_len;
-    char cmd[4];
-    for(;;){
-        msg_len = Receive(&tid, msg, 2);
-        Reply(tid, NULL, 0);
-        if(msg_len!=2){
-            #if DEBUG
-                uart_dprintf(CONSOLE, "rv received incompatible msg %d\r\n", msg_len);
-            #endif
-        }
-        train_number = (int)msg[0];
-        last_speed = (int)msg[1];
-
-        cmd[0] = 0;
-        cmd[1] = train_number;
-        Puts_len(marklin_tid, MARKLIN, cmd, 2);
-        if(last_speed<=10){
-          Delay(clock, 500);
-        }else{
-          Delay(clock, 600);
-        }
-        cmd[0] = 15;
-        cmd[1] = train_number;
-        Puts_len(marklin_tid, MARKLIN, cmd, 2);
-        cmd[0] = last_speed;
-        cmd[1] = train_number;
-        Puts_len(marklin_tid, MARKLIN, cmd, 2);
-    }
-
-}
+#include "trainserver.h"
 
 int get_sensor_num(char *str){
   char sensor_letter;
@@ -73,7 +23,7 @@ int get_sensor_num(char *str){
   return res;
 }
 
-void execute_tr(char *str, char *func_res, int console_tid, int marklin_tid, uint32_t last_speed[]){
+void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid){
 
     unsigned int trainNumber, trainSpeed;
     uint16_t trainSpeedStartIndex;
@@ -97,16 +47,23 @@ void execute_tr(char *str, char *func_res, int console_tid, int marklin_tid, uin
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    tr(marklin_tid, trainNumber, trainSpeed, last_speed);
+    TrainServerMsg tsm;
+    tsm.type = TRAIN_SERVER_TR;
+    tsm.arg1 = trainNumber;
+    tsm.arg2 = trainSpeed;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    if(reply_len!=0){
+      #if DEBUG
+          uart_dprintf(CONSOLE, "rv replied incompatible msg %d\r\n", reply_len);
+      #endif
+    }
     str_cpy_w0(func_res+10, "Train speed changed");
     Puts(console_tid, CONSOLE, func_res);
-
 }
 
-void execute_rv(char *str, char *func_res, int console_tid, int marklin_tid, int reverse_tid, uint32_t last_speed[]){
+void execute_rv(char *str, char *func_res, int console_tid, int train_server_tid){
   
     unsigned int trainNumber;
-    char arg[2];
 
     trainNumber = getArgumentTwoDigitNumber(str+3);
     if(trainNumber==1000){
@@ -115,20 +72,19 @@ void execute_rv(char *str, char *func_res, int console_tid, int marklin_tid, int
       // displayFuncMessage("Invalid train number");
       return;
     }
-    arg[0] = (char)trainNumber;
-    arg[1] = (char)(last_speed[trainNumber]);
-    int reply_len = Send(reverse_tid, arg, 2, NULL, 0);
+    TrainServerMsg tsm;
+    tsm.type = TRAIN_SERVER_RV;
+    tsm.arg1 = trainNumber;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
     if(reply_len!=0){
-      #if DEBUG
-          uart_dprintf(CONSOLE, "rv replied incompatible msg %d\r\n", reply_len);
-      #endif
+      str_cpy_w0(func_res+10, "rv invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
     }
-    str_cpy_w0(func_res+10, "Train reversed");
-    Puts(console_tid, CONSOLE, func_res);
 
 }
 
-void execute_sw(char *str, char *func_res, int console_tid, int switch_tid, uint32_t last_speed[]){
+void execute_sw(char *str, char *func_res, int console_tid, int train_server_tid){
 
     unsigned int switchNumber;
     uint16_t switchDirectionIndex;
@@ -154,21 +110,21 @@ void execute_sw(char *str, char *func_res, int console_tid, int switch_tid, uint
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    SwitchChange sc;
-    sc.switch_num = switchNumber;
-    sc.dir = switchDirection;
-    int res = change_switches_cmd(switch_tid, &sc, 1);
-    if(res<0){
-      str_cpy_w0(func_res+10, "Switch change failed");
+    TrainServerMsg tsm;
+    tsm.type = TRAIN_SERVER_SW;
+    tsm.arg1 = switchNumber;
+    tsm.argchar = switchDirection;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    if(reply_len!=0){
+      str_cpy_w0(func_res+10, "sw invalid rpllen");
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
     str_cpy_w0(func_res+10, "Switch direction changed");
     Puts(console_tid, CONSOLE, func_res);
-
 }
 
-void execute_pf(char *str, char *func_res, int console_tid, int pathfind_tid, uint32_t last_speed[]){
+void execute_pf(char *str, char *func_res, int console_tid, int train_server_tid){
 
     int src, dest;
     str += 3;
@@ -202,23 +158,21 @@ void execute_pf(char *str, char *func_res, int console_tid, int pathfind_tid, ui
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-
-    PathMessage pm;
-    pm.type = 'P';
-    pm.arg1 = src;
-    pm.dest = dest;
-
-    int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
+    TrainServerMsg tsm;
+    tsm.type = TRAIN_SERVER_PF;
+    tsm.arg1 = src;
+    tsm.arg2 = dest;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
     if(reply_len!=0){
-      #if DEBUG
-          uart_dprintf(CONSOLE, "pathfind replied incompatible msg %d\r\n", reply_len);
-      #endif
+      str_cpy_w0(func_res+10, "pf invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
     }
     str_cpy_w0(func_res+10, "Path Find Ran");
     Puts(console_tid, CONSOLE, func_res);
 }
 
-void execute_nav(char *str, char *func_res, int console_tid, int pathfind_tid, uint32_t last_speed[]){
+void execute_nav(char *str, char *func_res, int console_tid, int train_server_tid){
 
 
     uint8_t train_number = getArgumentTwoDigitNumber(str+4);
@@ -243,23 +197,21 @@ void execute_nav(char *str, char *func_res, int console_tid, int pathfind_tid, u
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-
-    PathMessage pm;
-    pm.type = 'T';
-    pm.arg1 = train_number;
-    pm.dest = dest;
-
-    int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
+    TrainServerMsg tsm;
+    tsm.type = TRAIN_SERVER_NAV;
+    tsm.arg1 = train_number;
+    tsm.arg2 = dest;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
     if(reply_len!=0){
-      #if DEBUG
-          uart_dprintf(CONSOLE, "pathfind replied incompatible msg %d\r\n", reply_len);
-      #endif
+      str_cpy_w0(func_res+10, "pf invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
     }
     str_cpy_w0(func_res+10, "Train navigation Ran");
     Puts(console_tid, CONSOLE, func_res);
 }
 
-void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int switch_tid, int pathfind_tid, char *str, uint32_t last_speed[]){  
+void executeFunction(int console_tid, int train_server_tid, char *str){  
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
   str_cpy_w0(last_fun+10, str);
@@ -269,15 +221,15 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int swit
   str_cpy(func_res, "\033[12;1H\033[K");
 
   if(str[0]=='t' && str[1]=='r' && str[2]==' '){
-    execute_tr(str, func_res, console_tid, marklin_tid, last_speed);
+    execute_tr(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='r' && str[1]=='v' && str[2]==' '){
-    execute_rv(str, func_res, console_tid, marklin_tid, reverse_tid, last_speed);
+    execute_rv(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='s' && str[1]=='w' && str[2]==' '){
-    execute_sw(str, func_res, console_tid, switch_tid, last_speed);
+    execute_sw(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='p' && str[1]=='f' && str[2]==' '){
-    execute_pf(str, func_res, console_tid, pathfind_tid, last_speed);
+    execute_pf(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='n' && str[1]=='a' && str[2]=='v' && str[3]==' '){
-    execute_nav(str, func_res, console_tid, pathfind_tid, last_speed);
+    execute_nav(str, func_res, console_tid, train_server_tid);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);
