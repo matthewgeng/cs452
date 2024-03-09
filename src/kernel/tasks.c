@@ -6,7 +6,7 @@
 #include "taskframe.h"
 #include "timer.h"
 #include "io.h"
-#include "console.h"
+#include "constants.h"
 #include "gameclient.h"
 #include "gameserver.h"
 #include "util.h"
@@ -114,6 +114,7 @@ void i2str(int i, char *str){
     char bf[3];
     ui2a( i, 10, bf );
     if(i<10){
+        str[0] = '0';
         str[1] = bf[0];
     }else{
         str[0] = bf[0];
@@ -127,11 +128,7 @@ void console_time(){
     char time_str[] = "\0337\033[1;1H\033[K00:00. \0338";
     char bf[3];
     int time = Time(clock_tid);
-        // char tmp_bf[20];
-        // ui2a(time, 10, tmp_bf);
-        // Puts(console_tid, CONSOLE, tmp_bf);
     for(;;){
-        // uart_printf(CONSOLE, "\0337\033[15;1H\033[Ktime%u\0338", time);
         unsigned int minutes = time/100/60;
         unsigned int seconds = (time/100)%60;
         unsigned int tenthOfSecond = (time/10)%10;
@@ -144,7 +141,6 @@ void console_time(){
         DelayUntil(clock_tid, time);        
     }
 }
-
 void sensor_update(){
   int clock_tid = WhoIs("clock\0");
   int cout = WhoIs("cout\0");
@@ -220,6 +216,7 @@ void user_input(){
     int clock = WhoIs("clock\0");
     int reverse_tid = WhoIs("reverse\0");
     int pathfind_tid = WhoIs("pathfind\0");
+    int switch_tid = WhoIs("switch\0");
     int max_input_len = 20;
     char input[max_input_len+2];
     int input_index = 0;
@@ -245,7 +242,7 @@ void user_input(){
             if(input[0] == 'q' && input[1]=='\0') {
                 Quit();
             }
-            executeFunction(cout, marklin_tid, reverse_tid, pathfind_tid, clock, input, last_speed);
+            executeFunction(cout, marklin_tid, reverse_tid, switch_tid, pathfind_tid, input, last_speed);
 
             input_index = 0;
             // clear input line and add >
@@ -337,14 +334,13 @@ void k4(){
     Puts(cout, CONSOLE, s2);
     Puts(cout, CONSOLE, s3);
     Puts(cout, CONSOLE, s4);
-
-    switchesSetup(cout, marklin_tid);
-
+    
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(3, &console_time);
     Create(3, &sensor_update);
     Create(4, &reverse);
+    Create(4, &switches_server);
     Create(5, &user_input);    
 }
 

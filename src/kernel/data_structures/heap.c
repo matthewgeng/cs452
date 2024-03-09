@@ -1,5 +1,6 @@
 #include "heap.h"
 #include "rpi.h"
+#include "pathfinding.h"
 
 // MIN HEAP
 
@@ -15,10 +16,8 @@ void swap(Heap* heap, size_t idx_a, size_t idx_b) {
     heap->data[idx_a] = heap->data[idx_b];
     heap->data[idx_b] = tmp;
 }
-
 void sift_up(Heap* heap, size_t elem_idx) {
     size_t parent_idx = (elem_idx-1)/2;
-
     // while element is not at the top and our current element is < our parent element
     while (elem_idx > 0 && heap->cmp(heap->data[elem_idx], heap->data[parent_idx]) < 0) {
         // swap

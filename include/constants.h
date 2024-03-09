@@ -1,6 +1,12 @@
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
+#define SWITCHES_ROW 3
+#define SENSORS_ROW 8
+#define INPUT_ROW 10
+#define LAST_FUNCTON_ROW 11
+#define FUNCTION_RESULT_ROW 12
+
 #define NUM_TASKS {20,2,1}
 #define MAX_NUM_TASKS 23
 #define NAME_SERVER_TID 20

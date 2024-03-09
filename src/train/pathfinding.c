@@ -34,9 +34,13 @@ void reclaimHeapNode(HeapNode **nextFreeHeapNode, HeapNode *hn){
     *nextFreeHeapNode = hn;
 }
 
-
-int heap_node_cmp(HeapNode *n1, HeapNode *n2){
-    return n1->dist > n2->dist;
+int heap_node_cmp(HeapNode *n1, HeapNode *n2) {
+    if (n1->dist < n2->dist) {
+        return -1;
+    } else if (n1->dist > n2->dist) {
+        return 1;
+    }
+    return 0;
 }
 
 HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_node *track, int track_len, HeapNode **nextFreeHeapNode){
@@ -77,8 +81,9 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
     // for(;;){}
 
     HeapNode *res; 
+    char dirs[2] = {'S', 'C'};
 
-    // int tmp_count = 0;
+    int tmp_count = 0;
 
     while(heap.length!=0){
         cur_node = heap_pop(&heap);
@@ -86,6 +91,7 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
         // tmp_count += 1;
         cur_dist = cur_node->dist;
         if(cur_node->node_index == pm->dest){
+            // for(;;){}
             res = cur_node;
             while(heap.length!=0){
                 cur_node = heap_pop(&heap);
@@ -104,6 +110,7 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
                 cur_node->node_index = new_dest;
                 cur_node->sensors[cur_node->num_sensors] = new_dest;
                 cur_node->num_sensors += 1;
+
                 heap_push(&heap, cur_node);
             }else{
                 reclaimHeapNode(nextFreeHeapNode, cur_node);
@@ -112,6 +119,7 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
             HeapNode **hns[2];
             hns[0] = getNextFreeHeapNode(nextFreeHeapNode);
             hns[1] = getNextFreeHeapNode(nextFreeHeapNode);
+            //TODO: can make more efficient by using the cur node
             for(int i = 0; i<2; i++){
                 new_dist = cur_dist + cur_track_node->edge[i].dist;
                 new_dest = cur_track_node->edge[i].dest - track;
@@ -124,10 +132,22 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
                     for(int i = 0; i<cur_node->num_sensors; i++) next_node->sensors[i]=cur_node->sensors[i];
                     next_node->sensors[cur_node->num_sensors] = new_dest;
 
+                    for(int i = 0; i<cur_node->num_switches; i++){
+                        next_node->switches[i].switch_num=cur_node->switches[i].switch_num;
+                        next_node->switches[i].dir=cur_node->switches[i].dir;
+                    } 
+                    next_node->switches[cur_node->num_switches].switch_num = cur_track_node->num;
+                    next_node->switches[cur_node->num_switches].dir = dirs[i];
                     next_node->num_switches = cur_node->num_switches + 1;
-                    for(int i = 0; i<cur_node->num_switches; i++) next_node->switches[i]=cur_node->switches[i];
-                    next_node->switches[cur_node->num_switches] = cur_track_node->num*(i+1);
-
+                    if(cur_track_node->num == 156 && i==1){
+                        next_node->switches[next_node->num_switches].switch_num = 155;
+                        next_node->switches[next_node->num_switches].dir = 'S';
+                        next_node->num_switches += 1;
+                    }else if(cur_track_node->num == 154 && i==1){
+                        next_node->switches[next_node->num_switches].switch_num = 153;
+                        next_node->switches[next_node->num_switches].dir = 'S';
+                        next_node->num_switches += 1;
+                    }
                     heap_push(&heap, next_node);
                 }else{
                     reclaimHeapNode(nextFreeHeapNode, next_node);
@@ -144,18 +164,15 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
     return NULL;
 }
 
-void change_switches(int cout, int mio, int num_switch_changes, uint8_t *switches_setup){
+void change_switches(int cout, int mio, int num_switch_changes, SwitchChange *switches_setup){
     int switch_num;
+    char dir;
     uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", num_switch_changes);
     for(int i = 0; i<num_switch_changes; i++){
-        switch_num = switches_setup[i];
-        uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d\0338", 20+i, switch_num);
-        if(switch_num<=20){
-            sw(cout, mio, switch_num, 'S');
-        }else{
-            switch_num /= 2;
-            sw(cout, mio, switch_num, 'C');
-        }
+        switch_num = switches_setup[i].switch_num;
+        dir = switches_setup[i].dir;
+        uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, switch_num, dir);
+        sw(cout, mio, switch_num, dir);
     }
 }
 

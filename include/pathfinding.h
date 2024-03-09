@@ -1,7 +1,7 @@
 #ifndef PATHFINDING_H
 #define PATHFINDING_H
 
-#include <stdint.h>
+#include "switches.h"
 
 typedef enum {
   NODE_NONE,
@@ -37,7 +37,7 @@ struct track_node {
 typedef struct HeapNode {
   uint8_t node_index;
   uint32_t dist;
-  uint8_t switches[20];
+  SwitchChange switches[22];
   uint8_t num_switches;
   uint8_t sensors[80];
   uint8_t num_sensors;

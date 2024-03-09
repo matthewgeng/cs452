@@ -1,9 +1,9 @@
 #include "rpi.h"
-#include "console.h"
 #include "util.h"
 #include "io.h"
 #include "traincontrol.h"
 #include "pathfinding.h"
+#include "switches.h"
 
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   char cmd[3];
@@ -14,7 +14,6 @@ void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint
 
   last_speed[trainNumber] = trainSpeed;
 }
-
 
 void reverse(){
 
@@ -55,49 +54,6 @@ void reverse(){
         Puts_len(marklin_tid, MARKLIN, cmd, 2);
     }
 
-}
-
-void sw(int console_tid, int marklin_tid, unsigned int switchNumber, char switchDirection){
-  char cmd[4];
-  if(switchDirection=='S'){
-    cmd[0] = 33;
-  }else if(switchDirection=='C'){
-    cmd[0] = 34;
-  }else{
-    return;
-  }
-  cmd[1] = switchNumber;
-  cmd[2] = 32;
-  cmd[3] = 0;
-  Puts_len(marklin_tid, MARKLIN, cmd, 2);
-
-  uint32_t r,c;
-  
-  if(switchNumber<153){
-    r = SWITCHES_ROW + 1 + (switchNumber-1)/8;
-    c = ((switchNumber-1)%8)*9+6;
-  }else{
-    r = SWITCHES_ROW + 1 + (switchNumber-134)/8;
-    c = ((switchNumber-134)%8-1)*9+6;
-  }
-  char str[] = "\0337\033[ ;       ";
-  ui2a_no0(r, 10, str+4);
-  if(c<10){
-    ui2a_no0(c, 10, str+6);
-    str[7] = 'H';
-    str[8] = switchDirection;
-    str[9] = '\033';
-    str[10] = '8';
-    str[11] = '\0';
-  }else{
-    ui2a_no0(c, 10, str+6);
-    str[8] = 'H';
-    str[9] = switchDirection;
-    str[10] = '\033';
-    str[11] = '8';
-    str[12] = '\0';
-  }
-  Puts(console_tid, CONSOLE, str);
 }
 
 int get_sensor_num(char *str){
@@ -172,7 +128,7 @@ void execute_rv(char *str, char *func_res, int console_tid, int marklin_tid, int
 
 }
 
-void execute_sw(char *str, char *func_res, int console_tid, int marklin_tid, uint32_t last_speed[]){
+void execute_sw(char *str, char *func_res, int console_tid, int switch_tid, uint32_t last_speed[]){
 
     unsigned int switchNumber;
     uint16_t switchDirectionIndex;
@@ -198,13 +154,21 @@ void execute_sw(char *str, char *func_res, int console_tid, int marklin_tid, uin
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    sw(console_tid, marklin_tid, switchNumber, switchDirection);
+    SwitchChange sc;
+    sc.switch_num = switchNumber;
+    sc.dir = switchDirection;
+    int reply_len = Send(switch_tid, &sc, sizeof(SwitchChange), NULL, 0);
+    if(reply_len!=0){
+      #if DEBUG
+          uart_dprintf(CONSOLE, "pathfind replied incompatible msg %d\r\n", reply_len);
+      #endif
+    }
     str_cpy_w0(func_res+10, "Switch direction changed");
     Puts(console_tid, CONSOLE, func_res);
 
 }
 
-void execute_pf(char *str, char *func_res, int console_tid, int marklin_tid, int pathfind_tid, uint32_t last_speed[]){
+void execute_pf(char *str, char *func_res, int console_tid, int pathfind_tid, uint32_t last_speed[]){
 
     int src, dest;
     str += 3;
@@ -253,7 +217,7 @@ void execute_pf(char *str, char *func_res, int console_tid, int marklin_tid, int
     Puts(console_tid, CONSOLE, func_res);
 }
 
-void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int pathfind_tid, int clock, char *str, uint32_t last_speed[]){  
+void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int switch_tid, int pathfind_tid, char *str, uint32_t last_speed[]){  
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
   str_cpy_w0(last_fun+10, str);
@@ -267,9 +231,9 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int path
   }else if(str[0]=='r' && str[1]=='v' && str[2]==' '){
     execute_rv(str, func_res, console_tid, marklin_tid, reverse_tid, last_speed);
   }else if(str[0]=='s' && str[1]=='w' && str[2]==' '){
-    execute_sw(str, func_res, console_tid, marklin_tid, last_speed);
+    execute_sw(str, func_res, console_tid, switch_tid, last_speed);
   }else if(str[0]=='p' && str[1]=='f' && str[2]==' '){
-    execute_pf(str, func_res, console_tid, marklin_tid, pathfind_tid, last_speed);
+    execute_pf(str, func_res, console_tid, pathfind_tid, last_speed);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);
@@ -293,30 +257,3 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int path
 //     }
 // }
 
-
-void switchesSetup(int console_tid, int marklin_tid){
-  // 18 switches + 4 centre ones
-  sw(console_tid, marklin_tid, 1, 'C');
-  sw(console_tid, marklin_tid, 2, 'C');
-  sw(console_tid, marklin_tid, 3, 'C');
-  sw(console_tid, marklin_tid, 4, 'C');
-  sw(console_tid, marklin_tid, 5, 'C');
-  sw(console_tid, marklin_tid, 6, 'S');
-  sw(console_tid, marklin_tid, 7, 'S');
-  sw(console_tid, marklin_tid, 8, 'C');
-  sw(console_tid, marklin_tid, 9, 'C');
-  sw(console_tid, marklin_tid, 10, 'C');
-  sw(console_tid, marklin_tid, 11, 'C');
-  sw(console_tid, marklin_tid, 12, 'C');
-  sw(console_tid, marklin_tid, 13, 'C');
-  sw(console_tid, marklin_tid, 14, 'C');
-  sw(console_tid, marklin_tid, 15, 'C');
-  sw(console_tid, marklin_tid, 16, 'C');
-  sw(console_tid, marklin_tid, 17, 'C');
-  sw(console_tid, marklin_tid, 18, 'C');
-  sw(console_tid, marklin_tid, 153, 'C');
-  sw(console_tid, marklin_tid, 154, 'S');
-  sw(console_tid, marklin_tid, 155, 'S');
-  sw(console_tid, marklin_tid, 156, 'C');
-
-}
