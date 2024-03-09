@@ -6,6 +6,7 @@
 #include "heap.h"
 #include "pathfinding.h"
 #include "util.h"
+#include "trainserver.h"
 
 HeapNode *hns_init(HeapNode hns[], size_t size){
     for(size_t i = 0; i<size; i++){
@@ -222,6 +223,7 @@ void path_finding(){
     // int cout = WhoIs("cout\0");
     // int mio = WhoIs("mio\0");
     int switch_tid = WhoIs("switch\0");
+    int train_server_tid = WhoIs("trainserver\0");
 
     // generate track data
     track_node track[TRACK_MAX];
@@ -235,14 +237,18 @@ void path_finding(){
     PathMessage pm;
     int tid;
     int intended_send_len;
+    int intended_reply_len;
     int num_switch_changes;
     int switch_num;
 
     char switch_states[22];
     int res;
-    uint8_t cur_sensor;
+    int cur_sensor = -2;
     uint16_t buffer_dist;
     int start_node;
+
+    TrainServerMsg tsm;
+    tsm.type = 'P';
 
     HeapNode heap_nodes[150];
     HeapNode *nextFreeHeapNode = heap_nodes;
@@ -260,7 +266,13 @@ void path_finding(){
             pathfind(pm.arg1, pm.dest, switch_tid, track, &nextFreeHeapNode);
         }else if(pm.type=='T'){
             // TODO: need to get the current location somehow later
-            cur_sensor = 10; //CHANGE!
+            intended_reply_len = Send(train_server_tid, pm.arg1, sizeof(uint8_t), cur_sensor, sizeof(int));
+            if(intended_reply_len!=sizeof(int) || cur_sensor<0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get current train location %d\0338", cur_sensor);
+                continue;
+            }
+            // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kcur_sensor %d\0338", cur_sensor);
+            // for(;;){}
             buffer_dist = 500; //CHANGE!
             res = get_switches_setup(switch_tid, switch_states);
             if(res<0){
@@ -273,6 +285,7 @@ void path_finding(){
                 continue;
             }
             pathfind(start_node, pm.dest, switch_tid, track, &nextFreeHeapNode);
+            cur_sensor = -2;
         }else{
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown pathfind command\0338");
             continue;

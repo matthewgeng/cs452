@@ -12,6 +12,8 @@
 #include "util.h"
 #include "traincontrol.h"
 #include "pathfinding.h"
+#include "sensors.h"
+#include "trainserver.h"
 
 
 void k2test() {
@@ -140,73 +142,6 @@ void console_time(){
         time += 10;
         DelayUntil(clock_tid, time);        
     }
-}
-void sensor_update(){
-  int clock_tid = WhoIs("clock\0");
-  int cout = WhoIs("cout\0");
-  int mio = WhoIs("mio\0");
-  int time = Time(clock_tid);;
-  int last_sensor_triggered = 1000;
-  char sensor_byte;
-
-  int sensors[12];
-  IntCB sensor_cb;
-  initialize_intcb(&sensor_cb, sensors, 12, 1);
-
-  int sensors_changed = 0;
-  char sensors_str[] = "\033[8;1H\033[KMost recent sensors:                                                           ";
-  int sensors_str_index;
-  for(;;){
-    Putc(mio, MARKLIN, 0x85);
-    // uart_printf(CONSOLE, "\033[36;1Hput sensor character, %d \r\n", Time(clock_tid));
-    // TODO: change number
-    for(int i = 0; i<10; i++){
-      sensor_byte = Getc(mio, MARKLIN);
-    //   uart_printf(CONSOLE, "\033[37;1Hgot sensor character, %d, %d, time:%d \r\n", i, (int)sensor_byte, Time(clock_tid));
-      for (int u = 0; u < 8; u++) {
-        if (sensor_byte & (1 << u)) {
-          int sensorNum = i*8+7-u;
-        //   uart_printf(CONSOLE, "\033[38;1Hsensor triggered, %d, %d \r\n", sensorNum, Time(clock_tid));
-          if(sensorNum!=last_sensor_triggered){
-            push_intcb(&sensor_cb, sensorNum);
-            last_sensor_triggered = sensorNum;
-            sensors_changed = 1;
-          }
-        }
-      }
-    }
-    if(sensors_changed){
-        // Puts(cout, CONSOLE, sensors_str);
-        // uart_printf(CONSOLE, "\033[39;1Hsensor changed, %d \r\n", Time(clock_tid));
-        sensors_str_index = 31;
-        int cb_count = 0;
-        int cb_index = decrement_intcb(sensor_cb.capacity, sensor_cb.end);
-        int i;
-        char sensor_band;
-        int sensor_num;
-        while(cb_count < sensor_cb.count){
-            i = sensor_cb.queue[cb_index];
-            sensor_band = i/16 + 'A';
-            sensors_str[sensors_str_index] = sensor_band;
-            sensor_num = i%16 + 1;
-            ui2a( sensor_num, 10, sensors_str+sensors_str_index+1 );
-            if(sensor_num<10){
-                sensors_str[sensors_str_index+2] = ' ';
-                sensors_str_index = sensors_str_index+3;
-            }else{
-                sensors_str[sensors_str_index+3] = ' ';
-                sensors_str_index = sensors_str_index+4;
-            }
-            cb_index = decrement_intcb(sensor_cb.capacity, cb_index);
-            cb_count += 1;
-        }
-        sensors_str[sensors_str_index] = '\0';
-        Puts(cout, CONSOLE, sensors_str);
-        sensors_changed = 0;
-    }
-    time += 10;
-    DelayUntil(clock_tid, time);
-  }
 }
 
 void user_input(){
@@ -338,9 +273,10 @@ void k4(){
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(3, &console_time);
-    Create(3, &sensor_update);
     Create(4, &reverse);
     Create(4, &switches_server);
+    Create(4, &sensor_update);
+    Create(4, &trainserver);
     Create(5, &user_input);    
 }
 
