@@ -1,6 +1,27 @@
 #include "switches.h"
 #include "rpi.h"
+#include "syscall.h"
 #include "constants.h"
+
+int change_switches_cmd(int switch_tid, SwitchChange scs[], int num_switch_changes){
+  int reply_len = Send(switch_tid, scs, sizeof(SwitchChange)*num_switch_changes, NULL, 0);
+  if(reply_len!=0){
+    #if DEBUG
+        uart_dprintf(CONSOLE, "pathfind replied incompatible msg %d\r\n", reply_len);
+    #endif
+    return -1;
+  }
+  return 0;
+}
+
+int get_switches_setup(int switch_tid, char switch_states[]){
+  char query = 'S';
+  int reply_len = Send(switch_tid, &query, 1, switch_states, sizeof(char)*22);
+  if(reply_len!=22){
+    return -1;
+  }
+  return 0;
+}
 
 void sw(int cout, int mio, unsigned int switchNumber, char switchDirection){
   // TODO: should only send if it's different from current
@@ -77,7 +98,7 @@ void switches_server(){
   char cmd[4];
   for(;;){
     msg_len = Receive(&tid, switch_changes, sizeof(SwitchChange)*22);
-    if(msg_len==1 && ((char *)switch_changes)[0]=='s'){
+    if(msg_len==1 && ((char *)switch_changes)[0]=='S'){
         // switch state query
         Reply(tid, switch_states, sizeof(uint8_t)*22);
     }else{

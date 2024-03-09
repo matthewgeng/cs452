@@ -157,11 +157,11 @@ void execute_sw(char *str, char *func_res, int console_tid, int switch_tid, uint
     SwitchChange sc;
     sc.switch_num = switchNumber;
     sc.dir = switchDirection;
-    int reply_len = Send(switch_tid, &sc, sizeof(SwitchChange), NULL, 0);
-    if(reply_len!=0){
-      #if DEBUG
-          uart_dprintf(CONSOLE, "pathfind replied incompatible msg %d\r\n", reply_len);
-      #endif
+    int res = change_switches_cmd(switch_tid, &sc, 1);
+    if(res<0){
+      str_cpy_w0(func_res+10, "Switch change failed");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
     }
     str_cpy_w0(func_res+10, "Switch direction changed");
     Puts(console_tid, CONSOLE, func_res);
@@ -204,7 +204,8 @@ void execute_pf(char *str, char *func_res, int console_tid, int pathfind_tid, ui
     }
 
     PathMessage pm;
-    pm.src = src;
+    pm.type = 'P';
+    pm.arg1 = src;
     pm.dest = dest;
 
     int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
@@ -214,6 +215,47 @@ void execute_pf(char *str, char *func_res, int console_tid, int pathfind_tid, ui
       #endif
     }
     str_cpy_w0(func_res+10, "Path Find Ran");
+    Puts(console_tid, CONSOLE, func_res);
+}
+
+void execute_nav(char *str, char *func_res, int console_tid, int pathfind_tid, uint32_t last_speed[]){
+
+
+    uint8_t train_number = getArgumentTwoDigitNumber(str+4);
+    if(train_number==1000){
+      str_cpy_w0(func_res+10, "Invalid train number");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    int dest;
+    if(str[5]==' '){
+      str += 6;
+    }else if(str[6]==' '){
+      str += 7;
+    }
+    dest = get_sensor_num(str);
+    if(dest==-1){
+      str_cpy_w0(func_res+10, "Invalid sensor char");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }else if(dest==-2){
+      str_cpy_w0(func_res+10, "Invalid sensor num");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+
+    PathMessage pm;
+    pm.type = 'T';
+    pm.arg1 = train_number;
+    pm.dest = dest;
+
+    int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
+    if(reply_len!=0){
+      #if DEBUG
+          uart_dprintf(CONSOLE, "pathfind replied incompatible msg %d\r\n", reply_len);
+      #endif
+    }
+    str_cpy_w0(func_res+10, "Train navigation Ran");
     Puts(console_tid, CONSOLE, func_res);
 }
 
@@ -234,6 +276,8 @@ void executeFunction(int console_tid, int marklin_tid, int reverse_tid, int swit
     execute_sw(str, func_res, console_tid, switch_tid, last_speed);
   }else if(str[0]=='p' && str[1]=='f' && str[2]==' '){
     execute_pf(str, func_res, console_tid, pathfind_tid, last_speed);
+  }else if(str[0]=='n' && str[1]=='a' && str[2]=='v' && str[3]==' '){
+    execute_nav(str, func_res, console_tid, pathfind_tid, last_speed);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);

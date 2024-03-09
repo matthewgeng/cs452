@@ -43,7 +43,7 @@ int heap_node_cmp(HeapNode *n1, HeapNode *n2) {
     return 0;
 }
 
-HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_node *track, int track_len, HeapNode **nextFreeHeapNode){
+HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, HeapNode **nextFreeHeapNode){
 
     //TODO: start pathfinding maybe 2/3 sensors after so the train doesn't go off course
     /* 
@@ -61,7 +61,7 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
     for(int i = 0; i<track_len; i++){
         min_dist[i] = 2000000000;
     }
-    min_dist[pm->src] = 0;
+    min_dist[src] = 0;
 
     int new_dist;
     int new_dest;
@@ -70,14 +70,14 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
     track_node *cur_track_node;
 
     cur_node = getNextFreeHeapNode(nextFreeHeapNode);
-    cur_node->node_index = pm->src;
+    cur_node->node_index = src;
     cur_node->dist = 0;
     cur_node->num_switches = 0;
-    cur_node->sensors[0] = pm->src;
+    cur_node->sensors[0] = src;
     cur_node->num_sensors = 1;
     heap_push(&heap, cur_node);
 
-    uart_printf(CONSOLE, "\0337\033[17;1H\033[Kswitches setup %u %u\0338", pm->src, pm->dest);
+    uart_printf(CONSOLE, "\0337\033[17;1H\033[Kswitches setup %u %u\0338", src, dest);
     // for(;;){}
 
     HeapNode *res; 
@@ -90,14 +90,14 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
         // uart_printf(CONSOLE, "\0337\033[%u;1H\033[Knext node, %d %d\0338", 20+tmp_count, cur_node->node_index, cur_node->dist);
         // tmp_count += 1;
         cur_dist = cur_node->dist;
-        if(cur_node->node_index == pm->dest){
+        if(cur_node->node_index == dest){
             // for(;;){}
             res = cur_node;
             while(heap.length!=0){
                 cur_node = heap_pop(&heap);
                 reclaimHeapNode(nextFreeHeapNode, cur_node);
             }
-            uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u\0338", pm->src, pm->dest);
+            uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
             return res;
         }
         cur_track_node = track + cur_node->node_index;
@@ -164,24 +164,64 @@ HeapNode *get_switches_setup(PathMessage *pm, uint8_t *switches_setup, track_nod
     return NULL;
 }
 
-void change_switches(int cout, int mio, int num_switch_changes, SwitchChange *switches_setup){
-    int switch_num;
-    char dir;
+void pathfind_change_switches(int switch_tid, int num_switch_changes, SwitchChange switches_setup[]){
     uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", num_switch_changes);
     for(int i = 0; i<num_switch_changes; i++){
-        switch_num = switches_setup[i].switch_num;
-        dir = switches_setup[i].dir;
-        uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, switch_num, dir);
-        sw(cout, mio, switch_num, dir);
+        uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, switches_setup[i].switch_num, switches_setup[i].dir);
     }
+    change_switches_cmd(switch_tid, switches_setup, num_switch_changes);
+}
+
+int get_start_node(uint8_t src, uint16_t buffer_dist, char switch_states[], track_node track[]){
+    int total_dist = 0;
+    int cur_node = src;
+    int branch_index;
+    uint8_t dir = 0;
+    track_node *cur_track_node;
+    while(total_dist<buffer_dist){
+        cur_track_node = track + cur_node;
+        if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
+            total_dist += cur_track_node->edge[0].dist;
+            cur_node = cur_track_node->edge[0].dest - track;
+        }else if(cur_track_node->type == NODE_BRANCH){
+            branch_index = cur_track_node->num-1;
+            if(branch_index>=153) branch_index -= 134;
+            if(switch_states[branch_index]=='S') dir = 0;
+            else if(switch_states[branch_index]=='C')dir = 1;
+            else return -2;
+
+            total_dist += cur_track_node->edge[dir].dist;
+            cur_node = cur_track_node->edge[dir].dest - track;
+        }else if(cur_track_node->type == NODE_EXIT){
+            return -1;
+        }else{
+            return -2;
+        }
+    }
+    return cur_node;
+}
+
+void pathfind(int src, int dest, int switch_tid, track_node track[], HeapNode **nextFreeHeapNode){
+
+    HeapNode *setup = dijkstra(src, dest, track, TRACK_MAX, nextFreeHeapNode);
+    if(setup==NULL){
+        uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
+    }
+
+    for(int i = 0; i<setup->num_sensors; i++){
+        uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u\0338", 40+i, setup->sensors[i]);
+    }
+    pathfind_change_switches(switch_tid, setup->num_switches, setup->switches);
+    reclaimHeapNode(nextFreeHeapNode, setup);
 }
 
 void path_finding(){
 
     RegisterAs("pathfind\0");
 
-    int cout = WhoIs("cout\0");
-    int mio = WhoIs("mio\0");
+    // int cout = WhoIs("cout\0");
+    // int mio = WhoIs("mio\0");
+    int switch_tid = WhoIs("switch\0");
 
     // generate track data
     track_node track[TRACK_MAX];
@@ -195,9 +235,14 @@ void path_finding(){
     PathMessage pm;
     int tid;
     int intended_send_len;
-    uint8_t switches_setup[21];
     int num_switch_changes;
     int switch_num;
+
+    char switch_states[22];
+    int res;
+    uint8_t cur_sensor;
+    uint16_t buffer_dist;
+    int start_node;
 
     HeapNode heap_nodes[150];
     HeapNode *nextFreeHeapNode = heap_nodes;
@@ -208,21 +253,29 @@ void path_finding(){
         Reply(tid, NULL, 0);
         if(intended_send_len!=sizeof(pm)){
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kpath finding received unknown object\0338");
+            continue;
         }
 
-        HeapNode *setup = get_switches_setup(&pm, switches_setup, track, TRACK_MAX, &nextFreeHeapNode);
-        if(setup==NULL){
-            uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
+        if(pm.type=='P'){
+            pathfind(pm.arg1, pm.dest, switch_tid, track, &nextFreeHeapNode);
+        }else if(pm.type=='T'){
+            // TODO: need to get the current location somehow later
+            cur_sensor = 10; //CHANGE!
+            buffer_dist = 500; //CHANGE!
+            res = get_switches_setup(switch_tid, switch_states);
+            if(res<0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get switches setup\0338");
+                continue;
+            }
+            start_node = get_start_node(cur_sensor, buffer_dist, switch_states, track);
+            if(start_node<0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get start node\0338");
+                continue;
+            }
+            pathfind(start_node, pm.dest, switch_tid, track, &nextFreeHeapNode);
+        }else{
+            uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown pathfind command\0338");
+            continue;
         }
-
-        for(int i = 0; i<setup->num_sensors; i++){
-            uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u\0338", 50+i, setup->sensors[i]);
-        }
-
-        change_switches(cout, mio, setup->num_switches, setup->switches);
-
-        reclaimHeapNode(nextFreeHeapNode, setup);
-        // setup->next = nextFreeHeapNode;
-        // nextFreeHeapNode = setup;
     }
 }

@@ -9,6 +9,9 @@ typedef struct SwitchChange {
   char dir;
 } SwitchChange;
 
+int change_switches_cmd(int switch_tid, SwitchChange scs[], int num_switch_changes);
+int get_switches_setup(int switch_tid, char switch_states[]);
+
 void switches_server();
 
 #endif
