@@ -3,13 +3,18 @@
 
 #include "switches.h"
 
+typedef struct SensorPath{
+  uint8_t num_sensors;
+  uint8_t sensors[80];
+  uint16_t dists[80];
+} SensorPath;
+
 typedef struct HeapNode {
   uint8_t node_index;
   uint32_t dist;
   SwitchChange switches[22];
   uint8_t num_switches;
-  uint8_t sensors[80];
-  uint8_t num_sensors;
+  SensorPath sensor_path;
   struct HeapNode *next;
 } HeapNode;
 

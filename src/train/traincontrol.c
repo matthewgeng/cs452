@@ -113,7 +113,7 @@ void execute_sw(char *str, char *func_res, int console_tid, int train_server_tid
     TrainServerMsg tsm;
     tsm.type = TRAIN_SERVER_SW;
     tsm.arg1 = switchNumber;
-    tsm.argchar = switchDirection;
+    tsm.data[0] = switchDirection;
     int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "sw invalid rpllen");
@@ -173,7 +173,6 @@ void execute_pf(char *str, char *func_res, int console_tid, int train_server_tid
 }
 
 void execute_nav(char *str, char *func_res, int console_tid, int train_server_tid){
-
 
     uint8_t train_number = getArgumentTwoDigitNumber(str+4);
     if(train_number==1000){
@@ -236,20 +235,4 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     return;
   }
 }
-
-
-// void build_sensor_str(int i, char *sensors_str, int *sensors_str_index){
-//     char sensorBand = i/16 + 'A';
-//     int sensorNum = i%16 + 1;
-//     sensors_str[*sensors_str_index] = sensorBand;
-//     ui2a( sensorNum, 10, sensors_str+*sensors_str_index+1 );
-//     uart_printf(CONSOLE, "\033[40;4Hsensor %d %d\r\n", i, sensorNum);
-//     if(sensorNum<10){
-//         sensors_str[*sensors_str_index+2] = ' ';
-//         *sensors_str_index = *sensors_str_index+3;
-//     }else{
-//         sensors_str[*sensors_str_index+3] = ' ';
-//         *sensors_str_index = *sensors_str_index+4;
-//     }
-// }
 

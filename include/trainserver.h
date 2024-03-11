@@ -11,13 +11,14 @@ typedef enum {
   TRAIN_SERVER_PF,
   TRAIN_SERVER_NAV,
   TRAIN_SERVER_NEW_SENSOR,
+  TRAIN_SERVER_NAV_PATH,
 } train_arg_type;
 
 typedef struct TrainServerMsg{
     train_arg_type type;
     uint32_t arg1;
     uint32_t arg2;
-    char argchar;
+    char data[300];
 } TrainServerMsg;
 
 void trainserver();

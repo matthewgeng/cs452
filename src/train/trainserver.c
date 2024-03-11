@@ -5,6 +5,7 @@
 #include "reverse.h"
 #include "switches.h"
 #include "pathfinding.h"
+#include "util.h"
 
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   char cmd[3];
@@ -40,6 +41,8 @@ void trainserver(){
     last_speed[i] = 0;
   }
   int train_location = -1;
+  SensorPath train_sensor_path;
+  SensorPath *received_sp;
 
   for(;;){
     msg_len = Receive(&tid, &tsm, sizeof(TrainServerMsg));
@@ -60,7 +63,7 @@ void trainserver(){
     }else if(tsm.type==TRAIN_SERVER_SW){
       Reply(tid, NULL, 0);
       sc.switch_num = tsm.arg1;
-      sc.dir = tsm.argchar;
+      sc.dir = tsm.data[0];
       int res = change_switches_cmd(switch_tid, &sc, 1);
       if(res<0){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
@@ -77,12 +80,16 @@ void trainserver(){
     }else if(tsm.type==TRAIN_SERVER_NAV){
       Reply(tid, NULL, 0);
       pm.type = 'T';
-      pm.arg1 = tsm.arg1;
+      pm.arg1 = train_location;
       pm.dest = tsm.arg2;
       int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
       if(reply_len!=0){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
       }
+    }else if(tsm.type==TRAIN_SERVER_NAV_PATH){
+      Reply(tid, NULL, 0);
+      memcpy(&train_sensor_path, tsm.data, sizeof(SensorPath));
+      // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kcheck memcpy %u %u %u\0338", train_sensor_path.num_sensors, train_sensor_path.sensors[0], train_sensor_path.dists[0]);
     }else{
       Reply(tid, NULL, 0);
       uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver unknown cmd\0338");
