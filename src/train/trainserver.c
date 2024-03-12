@@ -70,7 +70,7 @@ void trainserver(){
       }
     }else if(tsm.type==TRAIN_SERVER_PF && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);
-      pm.type = 'P';
+      pm.type = PATH_PF;
       pm.arg1 = tsm.arg1;
       pm.dest = tsm.arg2;
       int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
@@ -79,12 +79,19 @@ void trainserver(){
       }
     }else if(tsm.type==TRAIN_SERVER_NAV && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);
-      pm.type = 'T';
+      pm.type = PATH_NAV;
       pm.arg1 = train_location;
       pm.dest = tsm.arg2;
       int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
       if(reply_len!=0){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
+      }
+    }else if(tsm.type==TRAIN_SERVER_PRECOMPUTE && msg_len==sizeof(TrainServerMsgSimple)){
+      Reply(tid, NULL, 0);
+      pm.type = PATH_PRECOMPUTE;
+      int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
+      if(reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver pcp cmd unexpected reply\0338");
       }
     }else if(tsm.type==TRAIN_SERVER_NAV_PATH && msg_len==sizeof(TrainServerMsg)){
       Reply(tid, NULL, 0);

@@ -7,6 +7,7 @@
 #include "pathfinding.h"
 #include "util.h"
 #include "trainserver.h"
+#include "interrupt.h"
 
 HeapNode *hns_init(HeapNode hns[], size_t size){
     for(size_t i = 0; i<size; i++){
@@ -268,7 +269,7 @@ void path_finding(){
             continue;
         }
 
-        if(pm.type=='P'){
+        if(pm.type==PATH_PF){
 
             path = dijkstra(pm.arg1, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, 0, 0);
             if(path==NULL){
@@ -283,7 +284,7 @@ void path_finding(){
                 uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
             }
             reclaimHeapNode(nextFreeHeapNode, path);
-        }else if(pm.type=='T'){
+        }else if(pm.type==PATH_NAV){
             // TODO: need to get the current location somehow later
             cur_pos = pm.arg1;
             if(cur_pos<0 || cur_pos>80){
@@ -330,6 +331,21 @@ void path_finding(){
             reclaimHeapNode(nextFreeHeapNode, path);
             cur_pos = -2;
         
+        }else if(pm.type==PATH_PRECOMPUTE){
+            // TODO: need to get the current location somehow later
+            // uint16_t dists[80];
+            disable_irqs();
+            uart_printf(CONSOLE, "\033[19;1H\033[Kprecompute\r\n");
+            for(int src = 0; src<80; src++){
+                uart_printf(CONSOLE, "src: %d ", src);
+                for(int dest = 0; dest<80; dest++){
+                    path = dijkstra(src, dest, track, TRACK_MAX, &nextFreeHeapNode, 0, 0);
+                    // dists[dest] = path->dist;
+                    uart_printf(CONSOLE, "%d: %u ", dest, path->dist);
+                }
+                uart_printf(CONSOLE, "\r\n");
+            }
+            enable_irqs();
         }else{
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown pathfind command\0338");
             continue;

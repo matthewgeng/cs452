@@ -18,8 +18,15 @@ typedef struct HeapNode {
   struct HeapNode *next;
 } HeapNode;
 
+
+typedef enum {
+  PATH_PF,
+  PATH_NAV,
+  PATH_PRECOMPUTE
+} path_arg_type;
+
 typedef struct PathMessage{
-    char type; //'P' arg1 is sensor, 'T' arg1 is train
+    path_arg_type type; //'P' arg1 is sensor, 'T' arg1 is train
     uint8_t arg1;
     uint8_t dest;
 } PathMessage;
