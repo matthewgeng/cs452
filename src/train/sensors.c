@@ -58,6 +58,7 @@ void sensor_update(){
     if(triggered_sensor!=-1){
       // send whenever we get a sensor
       tsm.arg1 = triggered_sensor;
+      tsm.arg2 = time;
       intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
       if(intended_reply_len!=0){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ksensor task unexpected reply from train server %d\0338", intended_reply_len);
