@@ -240,8 +240,6 @@ void k4(){
     int cout = WhoIs("cout\0");
     int marklin_tid = WhoIs("mio\0");
 
-    // uart_printf(CONSOLE, "\033[2J");
-    
     // clear screen
     Puts(cout, 0, "\033[2J");
     // reset cursor to top left

@@ -15,7 +15,9 @@ void console_out_notifier() {
     int cout = WhoIs("cout\0");
     int clock = WhoIs("clock\0");
     // TODO: maybe we can send none?
-    IOMessage m = {0, 0, ""};
+    IOMessage m;
+    m.type = 0;
+    m.len = 0;
     for(;;){
         int res = AwaitEvent(CONSOLE_TX);
         // uart_printf(CONSOLE, "\0337\033[32;1H\033[Kcout notifier %d\0338", Time(clock));
@@ -40,7 +42,9 @@ void console_in_notifier() {
     int clock = WhoIs("clock\0");
 
     // TODO: maybe we can send none?
-    IOMessage m = {0, 0, ""};
+    IOMessage m;
+    m.type = 0;
+    m.len = 0;
     for(;;){
         int res = AwaitEvent(CONSOLE_RX);
         if (res < 0) {
@@ -104,7 +108,7 @@ void console_out() {
 
         // store data in buffer
         } else {
-            // uart_printf(CONSOLE, "message length from user %u\r\n", m.len);
+            // uart_printf(CONSOLE, "message length from user %d %u %s\r\n", m.type, m.len, m.str);
 
             // store data in buffer
             for (uint32_t i = 0; i < m.len; i++) {
@@ -223,7 +227,9 @@ void marklin_out_tx_notifier() {
 
     int mio = WhoIs("mio\0");
 
-    IOMessage m = {0, 0, ""};
+    IOMessage m;
+    m.type = 0;
+    m.len = 0;
     for(;;){
         // uart_printf(CONSOLE, "\r\n before await tx cur cts %u\r\n", uart_cts(MARKLIN));
         int res = AwaitEvent(MARKLIN_TX);
@@ -246,7 +252,9 @@ void marklin_out_cts_notifier() {
 
     int mio = WhoIs("mio\0");
 
-    IOMessage m = {0, 0, ""};
+    IOMessage m;
+    m.type = 0;
+    m.len = 0;
     for(;;){
         // uart_printf(CONSOLE, "\r\n before await cts cur cts %u\r\n", uart_cts(MARKLIN));
         int res = AwaitEvent(MARKLIN_CTS);
@@ -272,7 +280,9 @@ void marklin_in_notifier() {
 
     int mio = WhoIs("mio\0");
 
-    IOMessage m = {0, 0, ""};
+    IOMessage m;
+    m.type = 0;
+    m.len = 0;
     for(;;){
         int res = AwaitEvent(MARKLIN_RX);
         if (res < 0) {
@@ -455,7 +465,9 @@ void marklin_io() {
 
 int Getc(int tid, int channel) {
     char r;
-    IOMessage m = {GETC, 0, NULL};
+    IOMessage m;
+    m.type = GETC;
+    m.len = 0;
 
     int res = Send(tid, &m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
@@ -472,7 +484,7 @@ int Putc(int tid, int channel, unsigned char ch) {
     m.len = 1;
     m.str[0] = ch;
 
-    int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
+    int res = Send(tid, (char*)&m, sizeof(IOType)+sizeof(uint32_t)+sizeof(char), &r, 1);
     if (res < 0) {
         return -1;
     }
@@ -488,9 +500,10 @@ int Puts(int tid, int channel, unsigned char* ch) {
     IOMessage m;
     m.type = PUTS;
     m.len = str_len(ch);
-    memcpy(m.str, ch, m.len);
+    for(int i = 0; i<m.len; i++) m.str[i]=ch[i];
+    // memcpy(m.str, ch, m.len);
 
-    int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
+    int res = Send(tid, (char*)&m, sizeof(IOType)+sizeof(uint32_t)+sizeof(char)*m.len, &r, 1);
     if (res < 0) {
         return -1;
     }
@@ -505,8 +518,9 @@ int Puts_len(int tid, int channel, unsigned char* ch, int len) {
     IOMessage m;
     m.type = PUTS;
     m.len = len;
-    memcpy(m.str, ch, m.len);
-    int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
+    for(int i = 0; i<m.len; i++) m.str[i]=ch[i];
+    // memcpy(m.str, ch, m.len);
+    int res = Send(tid, (char*)&m, sizeof(IOType)+sizeof(uint32_t)+sizeof(char)*m.len, &r, 1);
     if (res < 0) {
         return -1;
     }
