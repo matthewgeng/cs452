@@ -270,7 +270,8 @@ void k4(){
     Create(5, &reverse);
     Create(4, &switches_server);
     Create(1, &sensor_update);
-    Create(4, &trainserver);
+    // Create(4, &trainserver);
+    Create_sp_size(4, &trainserver, 1);
     Create(5, &user_input);    
     Create_sp_size(4, &path_finding, 2);
 }

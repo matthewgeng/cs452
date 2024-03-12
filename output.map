@@ -473,7 +473,7 @@ LOAD /u3/cs452/public/xdev/bin/../lib/gcc/aarch64-none-elf/12.3.1/libgcc.a
 OUTPUT(iotest.elf elf64-littleaarch64)
 LOAD linker stubs
 
-.debug_info     0x0000000000000000    0x147d4
+.debug_info     0x0000000000000000    0x147fa
  .debug_info    0x0000000000000000      0x3cd src/kernel/data_structures/char_cb.o
  .debug_info    0x00000000000003cd      0x558 src/kernel/data_structures/heap.o
  .debug_info    0x0000000000000925      0x3a6 src/kernel/data_structures/int_cb.o
@@ -489,20 +489,20 @@ LOAD linker stubs
  .debug_info    0x000000000000c549      0x31d src/kernel/server/timer.o
  .debug_info    0x000000000000c866      0x37b src/kernel/syscall.o
  .debug_info    0x000000000000cbe1      0x739 src/kernel/taskframe.o
- .debug_info    0x000000000000d31a     0x167a src/kernel/tasks.o
- .debug_info    0x000000000000e994       0xfc src/kernel/util/assert.o
- .debug_info    0x000000000000ea90      0x805 src/kernel/util/util.o
- .debug_info    0x000000000000f295      0xc3f src/main.o
- .debug_info    0x000000000000fed4     0x1843 src/train/pathfinding.o
- .debug_info    0x0000000000011717      0x484 src/train/reverse.o
- .debug_info    0x0000000000011b9b      0x7c1 src/train/sensors.o
- .debug_info    0x000000000001235c      0x95a src/train/switches.o
- .debug_info    0x0000000000012cb6      0x202 src/train/track_data.o
- .debug_info    0x0000000000012eb8      0xe02 src/train/traincontrol.o
- .debug_info    0x0000000000013cba      0xa9f src/train/trainserver.o
- .debug_info    0x0000000000014759       0x29 src/kernel/asm/context_switching.o
- .debug_info    0x0000000000014782       0x29 src/kernel/asm/exception_vector.o
- .debug_info    0x00000000000147ab       0x29 src/kernel/boot/boot.o
+ .debug_info    0x000000000000d31a     0x167f src/kernel/tasks.o
+ .debug_info    0x000000000000e999       0xfc src/kernel/util/assert.o
+ .debug_info    0x000000000000ea95      0x805 src/kernel/util/util.o
+ .debug_info    0x000000000000f29a      0xc3f src/main.o
+ .debug_info    0x000000000000fed9     0x1843 src/train/pathfinding.o
+ .debug_info    0x000000000001171c      0x484 src/train/reverse.o
+ .debug_info    0x0000000000011ba0      0x7c1 src/train/sensors.o
+ .debug_info    0x0000000000012361      0x95a src/train/switches.o
+ .debug_info    0x0000000000012cbb      0x202 src/train/track_data.o
+ .debug_info    0x0000000000012ebd      0xe02 src/train/traincontrol.o
+ .debug_info    0x0000000000013cbf      0xac0 src/train/trainserver.o
+ .debug_info    0x000000000001477f       0x29 src/kernel/asm/context_switching.o
+ .debug_info    0x00000000000147a8       0x29 src/kernel/asm/exception_vector.o
+ .debug_info    0x00000000000147d1       0x29 src/kernel/boot/boot.o
 
 .debug_abbrev   0x0000000000000000     0x3d41
  .debug_abbrev  0x0000000000000000      0x1d1 src/kernel/data_structures/char_cb.o
@@ -699,7 +699,7 @@ LOAD linker stubs
  .debug_rnglists
                 0x0000000000000f20       0x22 src/train/trainserver.o
 
-.debug_line     0x0000000000000000     0xec57
+.debug_line     0x0000000000000000     0xec63
  .debug_line    0x0000000000000000      0x1be src/kernel/data_structures/char_cb.o
  .debug_line    0x00000000000001be      0x355 src/kernel/data_structures/heap.o
  .debug_line    0x0000000000000513      0x1a5 src/kernel/data_structures/int_cb.o
@@ -725,12 +725,12 @@ LOAD linker stubs
  .debug_line    0x0000000000007af5      0x44b src/train/switches.o
  .debug_line    0x0000000000007f40     0x62b3 src/train/track_data.o
  .debug_line    0x000000000000e1f3      0x5d5 src/train/traincontrol.o
- .debug_line    0x000000000000e7c8      0x333 src/train/trainserver.o
- .debug_line    0x000000000000eafb       0x62 src/kernel/asm/context_switching.o
- .debug_line    0x000000000000eb5d       0x89 src/kernel/asm/exception_vector.o
- .debug_line    0x000000000000ebe6       0x71 src/kernel/boot/boot.o
+ .debug_line    0x000000000000e7c8      0x33f src/train/trainserver.o
+ .debug_line    0x000000000000eb07       0x62 src/kernel/asm/context_switching.o
+ .debug_line    0x000000000000eb69       0x89 src/kernel/asm/exception_vector.o
+ .debug_line    0x000000000000ebf2       0x71 src/kernel/boot/boot.o
 
-.debug_str      0x0000000000000000     0x1a31
+.debug_str      0x0000000000000000     0x1a35
  .debug_str     0x0000000000000000      0x15c src/kernel/data_structures/char_cb.o
                                         0x19a (size before relaxing)
  .debug_str     0x000000000000015c       0x87 src/kernel/data_structures/heap.o
@@ -768,24 +768,24 @@ LOAD linker stubs
                                         0x172 (size before relaxing)
  .debug_str     0x00000000000013f1       0x9f src/main.o
                                         0x48f (size before relaxing)
- .debug_str     0x0000000000001490      0x2fc src/train/pathfinding.o
+ .debug_str     0x0000000000001490      0x2f6 src/train/pathfinding.o
                                         0x553 (size before relaxing)
- .debug_str     0x000000000000178c       0x34 src/train/reverse.o
+ .debug_str     0x0000000000001786       0x34 src/train/reverse.o
                                         0x1a9 (size before relaxing)
- .debug_str     0x00000000000017c0       0x8d src/train/sensors.o
+ .debug_str     0x00000000000017ba       0x8d src/train/sensors.o
                                         0x375 (size before relaxing)
- .debug_str     0x000000000000184d       0x52 src/train/switches.o
+ .debug_str     0x0000000000001847       0x52 src/train/switches.o
                                         0x291 (size before relaxing)
- .debug_str     0x000000000000189f        0xc src/train/track_data.o
+ .debug_str     0x0000000000001899        0xc src/train/track_data.o
                                         0x1a9 (size before relaxing)
- .debug_str     0x00000000000018ab       0x9f src/train/traincontrol.o
+ .debug_str     0x00000000000018a5       0x9f src/train/traincontrol.o
                                         0x351 (size before relaxing)
- .debug_str     0x000000000000194a       0x65 src/train/trainserver.o
-                                        0x380 (size before relaxing)
- .debug_str     0x00000000000019af       0x49 src/kernel/asm/context_switching.o
- .debug_str     0x00000000000019f8       0x22 src/kernel/asm/exception_vector.o
+ .debug_str     0x0000000000001944       0x6f src/train/trainserver.o
+                                        0x38a (size before relaxing)
+ .debug_str     0x00000000000019b3       0x49 src/kernel/asm/context_switching.o
+ .debug_str     0x00000000000019fc       0x22 src/kernel/asm/exception_vector.o
                                          0x48 (size before relaxing)
- .debug_str     0x0000000000001a1a       0x17 src/kernel/boot/boot.o
+ .debug_str     0x0000000000001a1e       0x17 src/kernel/boot/boot.o
                                          0x3d (size before relaxing)
 
 .debug_line_str
