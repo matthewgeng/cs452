@@ -40,6 +40,8 @@ void trainserver(){
   for(int i = 0; i<100; i++){
     last_speed[i] = 0;
   }
+  uint8_t train_id;
+  uint8_t train_dest;
   int train_location = -1;
   SensorPath train_sensor_path;
   SensorPath *received_sp;
@@ -49,8 +51,13 @@ void trainserver(){
     if(tsm.type==TRAIN_SERVER_NEW_SENSOR){
       Reply(tid, NULL, 0);
       train_location = tsm.arg1;
+      if(train_location==train_dest){
+        tr(mio, train_id, 0, last_speed);
+        train_dest = 255;
+      }
     }else if(tsm.type==TRAIN_SERVER_TR){
       Reply(tid, NULL, 0);
+      train_id = tsm.arg1;
       tr(mio, tsm.arg1, tsm.arg2, last_speed);
     }else if(tsm.type==TRAIN_SERVER_RV){
       Reply(tid, NULL, 0);
@@ -79,6 +86,11 @@ void trainserver(){
       }
     }else if(tsm.type==TRAIN_SERVER_NAV){
       Reply(tid, NULL, 0);
+      if(tsm.arg1 != train_id){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav unexpected train number\0338");
+        continue;
+      }
+      train_dest = tsm.arg2;
       pm.type = 'T';
       pm.arg1 = train_location;
       pm.dest = tsm.arg2;

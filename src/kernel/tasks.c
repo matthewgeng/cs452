@@ -267,11 +267,12 @@ void k4(){
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(3, &console_time);
-    Create(4, &reverse);
+    Create(5, &reverse);
     Create(4, &switches_server);
-    Create(4, &sensor_update);
+    Create(1, &sensor_update);
     Create(4, &trainserver);
     Create(5, &user_input);    
+    Create_sp_size(4, &path_finding, 2);
 }
 
 
@@ -298,7 +299,6 @@ void rootTask(){
     
     Create(3, &k4);
     // Create(3, &setup);
-    Create_sp_size(1, &path_finding, 2);
     
     // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }

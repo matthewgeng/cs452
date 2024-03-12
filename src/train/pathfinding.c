@@ -271,17 +271,17 @@ void path_finding(){
         if(pm.type=='P'){
 
             path = dijkstra(pm.arg1, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, 0, 0);
-            if(path==NULL){
-                uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
-                continue;
-            }
-            for(int i = 0; i<path->sensor_path.num_sensors; i++){
-                uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
-            }
-            uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", path->num_switches);
-            for(int i = 0; i<path->num_switches; i++){
-                uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
-            }
+            // if(path==NULL){
+            //     uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
+            //     continue;
+            // }
+            // for(int i = 0; i<path->sensor_path.num_sensors; i++){
+            //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
+            // }
+            // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", path->num_switches);
+            // for(int i = 0; i<path->num_switches; i++){
+            //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
+            // }
             reclaimHeapNode(nextFreeHeapNode, path);
         }else if(pm.type=='T'){
             // TODO: need to get the current location somehow later
