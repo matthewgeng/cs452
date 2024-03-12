@@ -270,7 +270,7 @@ void trainserver(){
       pm.type = PATH_PF;
       pm.arg1 = tsm.arg1;
       pm.dest = tsm.arg2;
-      int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint8_t)*2, NULL, 0);
+      int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
       if(reply_len!=0){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver pf cmd unexpected reply\0338");
       }
@@ -284,7 +284,23 @@ void trainserver(){
       pm.type = PATH_NAV;
       pm.arg1 = train_location;
       pm.dest = tsm.arg2;
-      int reply_len = Send(pathfind_tid, &pm, sizeof(pm), NULL, 0);
+      int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
+      if(reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
+      }
+      got_sensor_path = 0;
+    }else if(tsm.type==TRAIN_SERVER_GO && msg_len==sizeof(TrainServerMsgSimple)){
+      Reply(tid, NULL, 0);
+
+      train_id = tsm.arg1;
+      tr(mio, tsm.arg1, tsm.arg3, last_speed);
+      demo_started = 1;
+
+      train_dest = tsm.arg2;
+      pm.type = PATH_NAV;
+      pm.arg1 = train_location;
+      pm.dest = tsm.arg2;
+      int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
       if(reply_len!=0){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
       }

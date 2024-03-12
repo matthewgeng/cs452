@@ -210,6 +210,57 @@ void execute_nav(char *str, char *func_res, int console_tid, int train_server_ti
     Puts(console_tid, CONSOLE, func_res);
 }
 
+void execute_go(char *str, char *func_res, int console_tid, int train_server_tid){
+
+    uint8_t train_number = getArgumentTwoDigitNumber(str+4);
+    if(train_number==1000){
+      str_cpy_w0(func_res+10, "Invalid train number");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    if(str[5]==' '){
+      str += 6;
+    }else if(str[6]==' '){
+      str += 7;
+    }
+
+    uint8_t train_speed = getArgumentTwoDigitNumber(str);
+    if(train_speed<1 || train_speed>30 || train_speed==15){
+      str_cpy_w0(func_res+10, "Invalid train speed");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    if(str[1]==' '){
+      str += 2;
+    }else if(str[2]==' '){
+      str += 3;
+    }
+
+    int dest = get_sensor_num(str);
+    if(dest==-1){
+      str_cpy_w0(func_res+10, "Invalid sensor char");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }else if(dest==-2){
+      str_cpy_w0(func_res+10, "Invalid sensor num");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    TrainServerMsgSimple tsm;
+    tsm.type = TRAIN_SERVER_GO;
+    tsm.arg1 = train_number;
+    tsm.arg2 = dest;
+    tsm.arg3 = train_speed;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+    if(reply_len!=0){
+      str_cpy_w0(func_res+10, "go invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    str_cpy_w0(func_res+10, "Train Go Ran");
+    Puts(console_tid, CONSOLE, func_res);
+}
+
 void execute_track(char *str, char *func_res, int console_tid, int train_server_tid){
 
     TrainServerMsgSimple tsm;
@@ -254,6 +305,8 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_pf(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='n' && str[1]=='a' && str[2]=='v' && str[3]==' '){
     execute_nav(str, func_res, console_tid, train_server_tid);
+  }else if(str[0]=='g' && str[1]=='0' && str[2]==' '){
+    execute_go(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='t' && str[1]=='r' && str[2]=='a' && str[3]=='c' && str[3]=='k' && str[4]==' '){
     execute_track(str, func_res, console_tid, train_server_tid);
   }else{
