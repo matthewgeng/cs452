@@ -14,7 +14,7 @@ typedef enum IOType {
 typedef struct IOMessage {
     IOType type;
     uint32_t len;
-    char str[100];
+    char str[128];
 } IOMessage;
 
 int Getc(int tid, int channel);
