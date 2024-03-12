@@ -194,10 +194,13 @@ int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_
             start_sensor = cur_track_node->edge[0].dest - track;
         }else if(cur_track_node->type == NODE_BRANCH){
             branch_index = cur_track_node->num-1;
-            if(branch_index>=153) branch_index -= 134;
+            if(branch_index>=152) branch_index -= 134;
             if(switch_states[branch_index]=='S') dir = 0;
             else if(switch_states[branch_index]=='C')dir = 1;
-            else return -2;
+            else{
+                // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown switch v %u %u %s %u\0338", cur_track_node->num, switch_states[branch_index], switch_states, switch_states[19]);
+                return -3;
+            } 
 
             *dist = *dist + cur_track_node->edge[dir].dist;
             start_sensor = cur_track_node->edge[dir].dest - track;
@@ -244,16 +247,25 @@ void path_finding(){
     int num_switch_changes;
     int switch_num;
 
-    char switch_states[22];
     int res;
     int cur_pos = -2;
     int start_sensor;
     uint16_t start_dist;
     uint8_t num_skip = 1;
     SensorPath skipped_sensors;
+    
+    char switch_states[23];
+    switch_states[22] = '\0';
+    res = get_switches_setup(switch_tid, switch_states);
+    if(res<0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get switches setup\0338");
+        for(;;){}
+    }
+    uart_printf(CONSOLE, "\0337\033[34;1H\033[Kswitches: %s\0338", switch_states);
 
     TrainServerMsg tsm;
     tsm.type = TRAIN_SERVER_NAV_PATH;
+    uint8_t next_sensor;
 
     HeapNode heap_nodes[150];
     HeapNode *nextFreeHeapNode = heap_nodes;
@@ -262,36 +274,34 @@ void path_finding(){
 
     for(;;){
         intended_send_len = Receive(&tid, &pm, sizeof(pm));
-        Reply(tid, NULL, 0);
-        if(intended_send_len!=sizeof(pm)){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Kpath finding received unknown object\0338");
-            continue;
-        }
+        // if(intended_send_len!=sizeof(pm)){
+        //     uart_printf(CONSOLE, "\0337\033[30;1H\033[Kpath finding received unknown object\0338");
+        //     continue;
+        // }
+        if(pm.type == PATH_SWITCH_CHANGE){
+            Reply(tid, NULL, 0);
+            for(int i = 0; i<22; i++) switch_states[i] = pm.switches[i];
+        }else if(pm.type==PATH_PF){
 
-        if(pm.type=='P'){
-
+            Reply(tid, NULL, 0);
             path = dijkstra(pm.arg1, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, 0, 0);
-            // if(path==NULL){
-            //     uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
-            //     continue;
-            // }
-            // for(int i = 0; i<path->sensor_path.num_sensors; i++){
-            //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
-            // }
-            // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", path->num_switches);
-            // for(int i = 0; i<path->num_switches; i++){
-            //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
-            // }
+            if(path==NULL){
+                uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
+                continue;
+            }
+            for(int i = 0; i<path->sensor_path.num_sensors; i++){
+                uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
+            }
+            uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", path->num_switches);
+            for(int i = 0; i<path->num_switches; i++){
+                uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
+            }
             reclaimHeapNode(nextFreeHeapNode, path);
-        }else if(pm.type=='T'){
+        }else if(pm.type==PATH_NAV){
+            Reply(tid, NULL, 0);
             cur_pos = pm.arg1;
             if(cur_pos<0 || cur_pos>80){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
-                continue;
-            }
-            res = get_switches_setup(switch_tid, switch_states);
-            if(res<0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get switches setup\0338");
                 continue;
             }
             start_sensor = get_start_sensor(cur_pos, num_skip, switch_states, track, &start_dist, &skipped_sensors);
@@ -322,6 +332,7 @@ void path_finding(){
             // }
 
             change_switches_cmd(switch_tid, path->switches, path->num_switches);
+            //TODO: maybe make this send size also dynamic depending on num of sensors
             memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
             intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
             if(intended_reply_len!=0){
@@ -330,6 +341,19 @@ void path_finding(){
             reclaimHeapNode(nextFreeHeapNode, path);
             cur_pos = -2;
         
+        }else if(pm.type==PATH_NEXT_SENSOR){
+            cur_pos = pm.arg1;
+            res = get_start_sensor(cur_pos, 2, switch_states, track, &start_dist, &skipped_sensors);
+            // uart_printf(CONSOLE, "\0337\033[35;1H\033[Knext sensor %u %d\0338", cur_pos, res);
+            if(res==-1){
+                next_sensor = 255; // will hit an exit next;
+            }else if(res==-2){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Knext sensor query failed\0338");
+            }else{
+                next_sensor = res;
+            }
+            // uart_printf(CONSOLE, "\0337\033[20;1H\033[KNext sensor: %u %u\0338", skipped_sensors.sensors[0], skipped_sensors.sensors[1]);
+            Reply(tid, &(skipped_sensors.sensors), sizeof(uint8_t)*2);
         }else{
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown pathfind command\0338");
             continue;

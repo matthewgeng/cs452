@@ -96,7 +96,7 @@ void handle_send(Heap *heap, TaskFrame user_tasks[], SendData **nextFreeSendData
         return;
     }
     TaskFrame *recipient = user_tasks + tid;
-    if(currentTaskFrame->sd != NULL || currentTaskFrame->status!=READY || recipient->status==SEND_WAIT || recipient->status==REPLY_WAIT){
+    if(currentTaskFrame->sd != NULL || currentTaskFrame->status!=READY){
         uart_printf(CONSOLE, "\x1b[31mOn send sender/recipient status not valid %d %d %d\x1b[0m\r\n", currentTaskFrame->sd, currentTaskFrame->status, recipient->status);
         reschedule_task_with_return(heap, currentTaskFrame, -2);
         return;
