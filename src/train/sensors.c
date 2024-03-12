@@ -30,6 +30,7 @@ void sensor_update(){
   tsm.type = TRAIN_SERVER_NEW_SENSOR;
 
   for(;;){
+    uart_printf(CONSOLE, "\033[30;1Hstart %d", time);
     Putc(mio, MARKLIN, 0x85);
 
     for(int i = 0; i<10; i++){
@@ -52,6 +53,8 @@ void sensor_update(){
       }
     }
     
+    // uart_printf(CONSOLE, "\0337\033[25;1H\033[Knew sensor %d\0338", new_sensor);
+
     tsm.arg1 = new_sensor;
     intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
     if(intended_reply_len!=0){

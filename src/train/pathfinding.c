@@ -284,7 +284,6 @@ void path_finding(){
             }
             reclaimHeapNode(nextFreeHeapNode, path);
         }else if(pm.type=='T'){
-            // TODO: need to get the current location somehow later
             cur_pos = pm.arg1;
             if(cur_pos<0 || cur_pos>80){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
@@ -300,6 +299,7 @@ void path_finding(){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get start node\0338");
                 continue;
             }
+            uart_printf(CONSOLE, "\0337\033[26;1H\033[Kcur, start %d %d\0338", cur_pos, start_sensor);
             path = dijkstra(start_sensor, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, num_skip, start_dist);
             if(path==NULL){
                 uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
