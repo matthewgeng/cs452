@@ -336,11 +336,19 @@ void path_finding(){
             memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
             intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
             if(intended_reply_len!=0){
-                uart_printf(CONSOLE, "\0337\033[18;1H\033[KPathfind sent sensor path and received unexpected rplen\0338");
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[KPathfind sent sensor path and received unexpected rplen\0338");
             }
             reclaimHeapNode(nextFreeHeapNode, path);
             cur_pos = -2;
         
+        }else if(pm.type==PATH_NEXT_SENSOR){
+            if(pm.arg1 == 'a'){
+                init_tracka(track);
+            }else if(pm.arg1 == 'b'){
+                init_trackb(track);
+            }else{
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Kpathfind track change invalid track\0338");
+            }
         }else if(pm.type==PATH_NEXT_SENSOR){
             cur_pos = pm.arg1;
             res = get_start_sensor(cur_pos, 2, switch_states, track, &start_dist, &skipped_sensors);

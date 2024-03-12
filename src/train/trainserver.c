@@ -172,6 +172,7 @@ void trainserver(){
   uint8_t last_triggered_sensor = 255;
   uint8_t does_reset = 0;
 
+  uint8_t demo_started = 0;
   // char next_sensor_str = "\0337\033[18;1H\033[KNext sensor:   \0338";
 
   for(;;){
@@ -179,71 +180,75 @@ void trainserver(){
     if(tsm.type==TRAIN_SERVER_NEW_SENSOR && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);
 
-      // calibration stuff
-      // if dest exists, get sensor and delay to stop
-      // TODO: CHANGE!
-      if(train_dest!=255 && got_sensor_path){
-        sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-2];
-        delay_time = 0;
-      }
+      if(demo_started==1){
+        // calibration stuff
+        // if dest exists, get sensor and delay to stop
+        // TODO: CHANGE!
+        if(train_dest!=255 && got_sensor_path){
+          sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-2];
+          delay_time = 0;
+        }
 
-      if(last_triggered_sensor!=tsm.arg1){
-        train_location = tsm.arg1;
+        if(last_triggered_sensor!=tsm.arg1){
+          train_location = tsm.arg1;
 
-        uart_printf(CONSOLE, "\0337\033[35;1H\033[Ksensor to stop %u, %d\0338", sensor_to_stop, Time(clock));
+          uart_printf(CONSOLE, "\0337\033[35;1H\033[Ksensor to stop %u, %d\0338", sensor_to_stop, Time(clock));
 
-        if(train_location==sensor_to_stop){
-          last_speed[train_id] = 0;
-          dsm.train_number = train_id;
-          dsm.delay_until = (int)(tsm.arg2) + delay_time;
-          intended_reply_len = Send(delay_stop_tid, &dsm, sizeof(DelayStopMsg), NULL, 0);
-          if(intended_reply_len!=0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
+          if(train_location==sensor_to_stop){
+            last_speed[train_id] = 0;
+            dsm.train_number = train_id;
+            dsm.delay_until = (int)(tsm.arg2) + delay_time;
+            intended_reply_len = Send(delay_stop_tid, &dsm, sizeof(DelayStopMsg), NULL, 0);
+            if(intended_reply_len!=0){
+              uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
+            }
+            // tr(mio, train_id, 0, last_speed);
+            train_dest = 255;
+            sensor_to_stop = 255;
+            got_sensor_path = 0;
           }
-          // tr(mio, train_id, 0, last_speed);
-          train_dest = 255;
-          sensor_to_stop = 255;
-          got_sensor_path = 0;
-        }
 
-        pm.type = PATH_NEXT_SENSOR;
-        pm.arg1 = train_location;
-        intended_reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint8_t), next_sensors_new, sizeof(uint8_t)*2);
-        
-        if(intended_reply_len!=sizeof(uint8_t)*2){
-          uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver get next sensor unexpected reply\0338");
-          continue;
-        }
+          pm.type = PATH_NEXT_SENSOR;
+          pm.arg1 = train_location;
+          intended_reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint8_t), next_sensors_new, sizeof(uint8_t)*2);
+          
+          if(intended_reply_len!=sizeof(uint8_t)*2){
+            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver get next sensor unexpected reply\0338");
+            continue;
+          }
 
-        if(next_sensors_new[0] == 255){
-          // will hit an exit soon, reverse halt
-          uart_printf(CONSOLE, "\0337\033[40;1H\033[Ktrainserver stop 0\0338");
-          tr(mio, train_id, 15, last_speed);
-          does_reset = 1;
-        }else{
-          does_reset = loc_err_handling(train_location, next_sensors, next_sensors_err, next_sensors_new);
-        }
-        
-        uart_printf(CONSOLE, "\0337\033[18;1H\033[KNext sensors: %u %u %u %u\0338", next_sensors[0], next_sensors[1], next_sensors_err[0], next_sensors_err[1]);
+          if(next_sensors_new[0] == 255){
+            // will hit an exit soon, reverse halt
+            uart_printf(CONSOLE, "\0337\033[40;1H\033[Ktrainserver stop 0\0338");
+            tr(mio, train_id, 15, last_speed);
+            does_reset = 1;
+          }else{
+            does_reset = loc_err_handling(train_location, next_sensors, next_sensors_err, next_sensors_new);
+          }
+          
+          uart_printf(CONSOLE, "\0337\033[18;1H\033[KNext sensors: %u %u %u %u\0338", next_sensors[0], next_sensors[1], next_sensors_err[0], next_sensors_err[1]);
 
-        if(does_reset){
-          tr(mio, train_id, 0, last_speed);
-          train_dest = 255;
-          sensor_to_stop = 255;
-          train_location = -1;
-          next_sensors[0] = 255;
-          next_sensors[1] = 255;
-          next_sensors_err[0] = 255;
-          next_sensors_err[1] = 255;
-          uart_printf(CONSOLE, "\0337\033[30;1H\033[Kreset\0338");
+          if(does_reset){
+            tr(mio, train_id, 0, last_speed);
+            train_dest = 255;
+            sensor_to_stop = 255;
+            train_location = -1;
+            next_sensors[0] = 255;
+            next_sensors[1] = 255;
+            next_sensors_err[0] = 255;
+            next_sensors_err[1] = 255;
+            demo_started = 0;
+            uart_printf(CONSOLE, "\0337\033[30;1H\033[Kreset\0338");
+          }
+          
         }
-        
+        last_triggered_sensor = tsm.arg1;
       }
-      last_triggered_sensor = tsm.arg1;
     }else if(tsm.type==TRAIN_SERVER_TR){
       Reply(tid, NULL, 0);
       train_id = tsm.arg1;
       tr(mio, tsm.arg1, tsm.arg2, last_speed);
+      demo_started = 1;
     }else if(tsm.type==TRAIN_SERVER_RV && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);
       rm.train_number = tsm.arg1;
@@ -284,6 +289,14 @@ void trainserver(){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
       }
       got_sensor_path = 0;
+    }else if(tsm.type==TRAIN_SERVER_TRACK_CHANGE && msg_len==sizeof(TrainServerMsgSimple)){
+      Reply(tid, NULL, 0);
+      pm.type = PATH_TRACK_CHANGE;
+      pm.arg1 = tsm.arg1;
+      int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint8_t)+sizeof(uint32_t), NULL, 0);
+      if(reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver tarck cmd unexpected reply\0338");
+      }
     }else if(tsm.type==TRAIN_SERVER_NAV_PATH && msg_len==sizeof(TrainServerMsg)){
       //TODO: maybe this should be a reply?
       Reply(tid, NULL, 0);

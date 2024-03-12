@@ -210,6 +210,31 @@ void execute_nav(char *str, char *func_res, int console_tid, int train_server_ti
     Puts(console_tid, CONSOLE, func_res);
 }
 
+void execute_track(char *str, char *func_res, int console_tid, int train_server_tid){
+
+    TrainServerMsgSimple tsm;
+    tsm.type = TRAIN_SERVER_TRACK_CHANGE;
+
+    if(str[6]=='a'){
+      tsm.arg1 = 'a';
+    }else if(str[6]=='b'){
+      tsm.arg1 = 'b';
+    }else{
+      str_cpy_w0(func_res+10, "track change invalid track");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+    if(reply_len!=0){
+      str_cpy_w0(func_res+10, "track change invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    str_cpy_w0(func_res+10, "Track Change Ran");
+    Puts(console_tid, CONSOLE, func_res);
+}
+
 void executeFunction(int console_tid, int train_server_tid, char *str){  
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
@@ -229,6 +254,8 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_pf(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='n' && str[1]=='a' && str[2]=='v' && str[3]==' '){
     execute_nav(str, func_res, console_tid, train_server_tid);
+  }else if(str[0]=='t' && str[1]=='r' && str[2]=='a' && str[3]=='c' && str[3]=='k' && str[4]==' '){
+    execute_track(str, func_res, console_tid, train_server_tid);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);

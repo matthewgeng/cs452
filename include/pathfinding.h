@@ -24,11 +24,12 @@ typedef enum {
   PATH_NAV,
   PATH_NEXT_SENSOR,
   PATH_SWITCH_CHANGE,
+  PATH_TRACK_CHANGE
 } path_arg_type;
 
 typedef struct PathMessage{
     path_arg_type type; //'P' arg1 is sensor, 'T' arg1 is train
-    uint8_t arg1;
+    uint32_t arg1;
     uint8_t dest;
     char switches[22];
 } PathMessage;
