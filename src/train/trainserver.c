@@ -133,119 +133,192 @@ void trainserver(){
   SensorPath *received_sp;
 
   int train_location = -1;
-  uint32_t cur_train_speed = 0; // 0 - 14
-  uint32_t cur_physical_speed = 0; // mm/s 
-  int alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
+  int cur_train_speed = 0; // 0 - 14
+  int cur_physical_speed = 0; // mm/s 
+  int cur_physical_accel = 0; // mm/s^2
+  uint32_t alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
   uint32_t terminal_physical_speed = 0; // mm/s
   uint32_t last_sensor = 0; 
-  uint32_t last_sensor_time = 0; // us
+  uint32_t last_sensor_time = 0; // us since last sensor
+  uint32_t last_new_sensor_time = 0; // us since last new sensor
   TrainSpeedState train_speed_state = STOPPED; // accelerating, deccelerating, constant speed, stopped?
+
+  int w =0;
 
   for(;;){
     msg_len = Receive(&tid, &tsm, sizeof(TrainServerMsg));
-    uart_printf(CONSOLE, "\0337\033[39;1H\033[KSpeed state: %u, cur_train_speed: %u, cur_physical_speed: %u, terminal_speed: %u", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed);
+    uart_printf(CONSOLE, "\0337\033[38;1H\033[KSpeed state: %u, train speed: %u, speed: %u, accel: %d, terminal: %u", train_speed_state, cur_train_speed, cur_physical_speed, cur_physical_accel, terminal_physical_speed);
     if(tsm.type==TRAIN_SERVER_NEW_SENSOR){
       Reply(tid, NULL, 0);
-        if (train_location != tsm.arg1) {
+        int old_train_location = train_location;
+        // TODO: get distance between sensors
+        uint32_t distance_between = 400; // train_location <--> tsm.arg1 in millimeters
+        train_location = tsm.arg1;
 
-            // TODO: get distance between sensors
-            uint32_t distance_between = 400; // train_location <--> tsm.arg1 in millimeters
-            train_location = tsm.arg1;
+        // get time delta
+        uint32_t cur_time = sys_time();
 
-            // get time delta
-            uint32_t cur_time = sys_time();
+        // TODO: not sure if this is needed, currently not used
+        uint32_t sensor_req_time = tsm.arg2;
+        uint32_t sensor_processing_time = cur_time - sensor_req_time;
 
-            // not sure if this is needed
-            uint32_t sensor_req_time = tsm.arg2;
-            uint32_t sensor_processing_time = cur_time - sensor_req_time;
+        // calculate delta, TODO: not including any other latencies
+        uint32_t delta_last = sys_time_ms((cur_time - last_sensor_time)); // milliseconds
+        last_sensor_time = cur_time;
 
-            // calculate delta with software latencies?
-            uint32_t delta = sys_time_ms((cur_time - last_sensor_time)); // milliseconds
-            last_sensor_time = cur_time;
+        if (train_location != old_train_location) {
+            uint32_t delta_new = sys_time_ms((cur_time - last_new_sensor_time)); // milliseconds
+            last_new_sensor_time = cur_time;
 
-            uint32_t average_new_speed = (distance_between*1000) / delta; // millimeters per second
-        // new speed calculations
-        uart_printf(CONSOLE, "\0337\033[38;1H\033[KDistance between: %u mm, sensor_time: %u ,delta %u ms, avg speed: %u ms/s\0338", distance_between, sensor_processing_time,  delta, average_new_speed);
+            int average_new_speed = (distance_between*1000) / delta_new; // millimeters per second
+            // new speed calculations
+            uart_printf(CONSOLE, "\0337\033[39;1H\033[KDistance between: %d mm, sensor_time: %d, delta %d ms, avg speed: %d ms/s\0338", distance_between, sensor_processing_time, delta_new, average_new_speed);
 
-        /*
-            3 cases: 
+            /*
+                3 cases: 
 
-                1) speeding up:
+                    1) speeding up:
 
-                    average speed >= terminal (dynamic with train speed changes)
-                        speed calculation likely due to error, can simply update the current speed
-                        set to constant
+                        average speed >= terminal (dynamic with train speed changes)
+                            speed calculation likely due to error, can simply update the current speed
+                            set to constant
 
-                    average speed < terminal
-                        actual train is at terminal speed
-
-
-                        actual train is not at terminal speed
-
-
-                2) slowing down:
-                    average speed > terminal (dynamic with train speed changes)
-                        currently at terminal speed
-
-                        currently not at terminal speed
-                    average speed <= terminal
-                        speed calculation likely due to error, can simply update the current speed
-                        set to constant
-
-                3) constant:
-                    average speed >= terminal (dynamic with train speed changes)
-                        speed calculation likely due to error, can simply update the current speed
-                    average speed < terminal
-                        currently at terminal speed
-
-                        currently not at terminal speed
+                        average speed < terminal
+                            actual train is at terminal speed
 
 
-        */
+                            actual train is not at terminal speed
 
-        uint32_t new_cur_speed = 0; // millimeters
 
-        switch (train_speed_state) {
-            case ACCELERATING:
+                    2) slowing down:
+                        average speed > terminal (dynamic with train speed changes)
+                            currently at terminal speed
 
-                if (average_new_speed >= terminal_physical_speed) {
+                            currently not at terminal speed
+                        average speed <= terminal
+                            speed calculation likely due to error, can simply update the current speed
+                            set to constant
+
+                    3) constant:
+                        average speed >= terminal (dynamic with train speed changes)
+                            speed calculation likely due to error, can simply update the current speed
+                        average speed < terminal
+                            currently at terminal speed
+
+                            currently not at terminal speed
+
+
+            */
+
+            int new_cur_speed = 0;
+
+            switch (train_speed_state) {
+                case ACCELERATING:
+
+                    if (average_new_speed >= terminal_physical_speed) {
+                        new_cur_speed = average_new_speed;
+                        train_speed_state = CONSTANT_SPEED;
+                        cur_physical_accel = 0;
+                    } else {
+                        new_cur_speed = average_new_speed + (average_new_speed - cur_physical_speed);
+                        cur_physical_accel = (new_cur_speed - cur_physical_speed)*1000/delta_new;
+                    }
+                    break;
+                case DECELERATING:
+                    if (terminal_physical_speed == 0 && average_new_speed == terminal_physical_speed) {
+                        train_speed_state = STOPPED;
+                        cur_physical_accel = 0;
+                    } else if (average_new_speed <= terminal_physical_speed || cur_physical_speed <= terminal_physical_speed) {
+                        train_speed_state = CONSTANT_SPEED;
+                        cur_physical_accel = 0;
+                    } else {
+                        // TODO: case when average speed is greater than the current speed due to some error/turn idk
+
+                        if (cur_physical_speed < average_new_speed) {
+                            new_cur_speed = cur_physical_speed;
+                            cur_physical_accel = 0;
+                            uart_printf(CONSOLE, "\0337\033[43;1H\033[Kweird cur speed: %d , new_speed: %d , Decel cur accel: %d\0338", cur_physical_speed, new_cur_speed, cur_physical_accel);
+                        } else {
+                            new_cur_speed = average_new_speed - (cur_physical_speed - average_new_speed);
+                            cur_physical_accel = (cur_physical_speed - new_cur_speed)*1000/delta_new;
+                            uart_printf(CONSOLE, "\0337\033[43;1H\033[Knorma cur speed: %d , new_speed: %d , Decel cur accel: %d\0338", cur_physical_speed, new_cur_speed, cur_physical_accel);
+                        }
+                    }
+
+                    break;
+                case CONSTANT_SPEED:
                     new_cur_speed = average_new_speed;
-                    train_speed_state = CONSTANT_SPEED;
-                } else {
-                    new_cur_speed = average_new_speed + (average_new_speed - cur_physical_speed);
-                }
+                    cur_physical_accel = 0;
+                    break;
 
-                break;
-        
-            case DECELERATING:
-                if (terminal_physical_speed == 0 && average_new_speed == terminal_physical_speed) {
-                    train_speed_state = STOPPED;
-                } else if (average_new_speed <= terminal_physical_speed) {
-                    train_speed_state = CONSTANT_SPEED;
-                } else {
-                    new_cur_speed = average_new_speed - (cur_physical_speed - average_new_speed);
-                }
-                break;
-            case CONSTANT_SPEED:
-                new_cur_speed = average_new_speed;
-                break;
+                case STOPPED:
+                    // TODO: handle this state
+                    new_cur_speed = 0;
+                    cur_physical_accel = 0;
+                    cur_physical_speed = 0;
+                    break;
 
-            case STOPPED:
-                // TODO: handle this state
-                break;
+                default:
+                    // TODO: error
+                    break;
+            }
 
-            default:
-                // TODO: error
-                break;
+            uart_printf(CONSOLE, "\0337\033[40;1H\033[KAverage new speed: %d\0338", average_new_speed);
+            uart_printf(CONSOLE, "\0337\033[41;1H\033[KNew speed: %d\0338", new_cur_speed);
+            uart_printf(CONSOLE, "\0337\033[41;1H\033[KNew speed: %d\0338", new_cur_speed);
+
+            // int alpha_bit_shift = 2; // multiplty by 0.25 (bitshift twice, 1/4 == divide by 4) and 0.75 (original - original bitshift once)
+            cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 2)) + (new_cur_speed >> 2);
+            uart_printf(CONSOLE, "\0337\033[42;1H\033[KCur speed: %d\0338", cur_physical_speed);
+        } else {
+            // switch (train_speed_state) {
+            //     case ACCELERATING:
+
+            //         break;
+            //     case DECELERATING:
+                
+            //         int new_cur_speed = (cur_physical_speed - (cur_physical_accel)*delta_last);
+
+            //         if (terminal_physical_speed == 0 && new_cur_speed <= terminal_physical_speed) {
+            //             train_speed_state = STOPPED;
+            //             new_cur_speed = 0;
+            //             cur_physical_accel = 0;
+            //             cur_physical_speed = 0;
+            //         } else if (new_cur_speed <= terminal_physical_speed || cur_physical_speed <= terminal_physical_speed) {
+            //             train_speed_state = CONSTANT_SPEED;
+            //             cur_physical_accel = 0;
+            //         } else {
+            //             cur_physical_accel = (cur_physical_speed - new_cur_speed)*1000/delta_last;
+            //             cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 1)) + (new_cur_speed >> 1);
+            //         }
+
+            //         uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, delta: %d, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, delta_last,train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
+            //         // uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
+
+            //         w++;
+
+            //         if (w == 5) {
+            //             for(;;){}
+            //         }
+            //         break;
+            //     case CONSTANT_SPEED:
+            //         cur_physical_accel = 0;
+            //         break;
+
+            //     case STOPPED:
+            //         // TODO: handle this state
+            //         new_cur_speed = 0;
+            //         cur_physical_accel = 0;
+            //         cur_physical_speed = 0;
+            //         break;
+
+            //     default:
+            //         // TODO: error
+            //         break;
+            // }
+
         }
 
-
-            uart_printf(CONSOLE, "\0337\033[40;1H\033[KAverage new speed: %u\0338", average_new_speed);
-            uart_printf(CONSOLE, "\0337\033[41;1H\033[KNew speed: %u\0338", new_cur_speed);
-            // int alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
-            cur_physical_speed = (cur_physical_speed >> 3) + (new_cur_speed >> 1);
-            uart_printf(CONSOLE, "\0337\033[42;1H\033[KCur speed: %u\0338", cur_physical_speed);
-        }
     } else if(tsm.type==TRAIN_SERVER_TR){
       Reply(tid, NULL, 0);
       train_id = tsm.arg1;

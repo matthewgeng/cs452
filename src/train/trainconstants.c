@@ -18,13 +18,13 @@ int train2_terminal_speed(uint32_t train_speed) {
         case 0:
             return 0;
         case 4:
-            return 85;
+            return 170;
         case 8:
-            return 191;
+            return 382;
         case 12:
-            return 299;
+            return 598;
         case 14:
-            return 315;
+            return 630;
         default:
             // unsupported speed
             return -1;          
@@ -37,13 +37,13 @@ int train47_terminal_speed(uint32_t train_speed) {
         case 0:
             return 0;
         case 4:
-            return 89;
+            return 179;
         case 8:
-            return 192;
+            return 385;
         case 12:
-            return 286;
+            return 572;
         case 14:
-            return 291;
+            return 583;
         default:
             // unsupported speed
             return -1;          
