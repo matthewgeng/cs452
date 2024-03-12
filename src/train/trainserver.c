@@ -7,6 +7,7 @@
 #include "pathfinding.h"
 #include "util.h"
 #include "timer.h"
+#include "trainconstants.h"
 
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   char cmd[3];
@@ -132,32 +133,39 @@ void trainserver(){
   SensorPath *received_sp;
 
   int train_location = -1;
-  uint32_t cur_train_speed; // 0 - 14
+  uint32_t cur_train_speed = 0; // 0 - 14
   uint32_t cur_physical_speed = 0; // mm/s 
   int alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
-  uint32_t terminal_physical_speed; // mm/s
+  uint32_t terminal_physical_speed = 0; // mm/s
+  uint32_t last_sensor = 0; 
+  uint32_t last_sensor_time = 0; // us
   TrainSpeedState train_speed_state = STOPPED; // accelerating, deccelerating, constant speed, stopped?
 
   for(;;){
     msg_len = Receive(&tid, &tsm, sizeof(TrainServerMsg));
-    if(tsm.type==TRAIN_SERVER_NEW_SENSOR && msg_len==sizeof(TrainServerMsgSimple)){
+    uart_printf(CONSOLE, "\0337\033[39;1H\033[KSpeed state: %u, cur_train_speed: %u, cur_physical_speed: %u, terminal_speed: %u", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed);
+    if(tsm.type==TRAIN_SERVER_NEW_SENSOR){
       Reply(tid, NULL, 0);
-      train_location = tsm.arg1;
-      if(train_location==train_dest){
-        tr(mio, train_id, 0, last_speed);
-        train_dest = 255;
-      }
+        if (train_location != tsm.arg1) {
 
-        // TODO: get distance between sensors
-        uint32_t distance_between; // train_location <--> tsm.arg1 in millimeters
-        train_location = tsm.arg1;
+            // TODO: get distance between sensors
+            uint32_t distance_between = 400; // train_location <--> tsm.arg1 in millimeters
+            train_location = tsm.arg1;
 
-        // get time delta
-        uint32_t sensor_req_time = tsm.arg2;
-        uint32_t delta = sys_time_ms(sys_time() - sensor_req_time); // milliseconds
+            // get time delta
+            uint32_t cur_time = sys_time();
 
+            // not sure if this is needed
+            uint32_t sensor_req_time = tsm.arg2;
+            uint32_t sensor_processing_time = cur_time - sensor_req_time;
+
+            // calculate delta with software latencies?
+            uint32_t delta = sys_time_ms((cur_time - last_sensor_time)); // milliseconds
+            last_sensor_time = cur_time;
+
+            uint32_t average_new_speed = (distance_between*1000) / delta; // millimeters per second
         // new speed calculations
-        uint32_t average_new_speed = (distance_between*1000) / delta; // millimeters per second
+        uart_printf(CONSOLE, "\0337\033[38;1H\033[KDistance between: %u mm, sensor_time: %u ,delta %u ms, avg speed: %u ms/s\0338", distance_between, sensor_processing_time,  delta, average_new_speed);
 
         /*
             3 cases: 
@@ -195,7 +203,7 @@ void trainserver(){
 
         */
 
-        uint32_t new_cur_speed; // millimeters
+        uint32_t new_cur_speed = 0; // millimeters
 
         switch (train_speed_state) {
             case ACCELERATING:
@@ -210,13 +218,16 @@ void trainserver(){
                 break;
         
             case DECELERATING:
-                if (average_new_speed <= terminal_physical_speed) {
+                if (terminal_physical_speed == 0 && average_new_speed == terminal_physical_speed) {
+                    train_speed_state = STOPPED;
+                } else if (average_new_speed <= terminal_physical_speed) {
                     train_speed_state = CONSTANT_SPEED;
                 } else {
                     new_cur_speed = average_new_speed - (cur_physical_speed - average_new_speed);
                 }
                 break;
             case CONSTANT_SPEED:
+                new_cur_speed = average_new_speed;
                 break;
 
             case STOPPED:
@@ -229,21 +240,23 @@ void trainserver(){
         }
 
 
-        uart_printf(CONSOLE, "\0337\033[40;1H\033[KNew speed: %u\0338", new_cur_speed);
-        // int alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
-        cur_physical_speed = (cur_physical_speed >> 3) + (new_cur_speed >> 1);
-        uart_printf(CONSOLE, "\0337\033[41;1H\033[KCur speed: %u\0338", cur_physical_speed);
-
+            uart_printf(CONSOLE, "\0337\033[40;1H\033[KAverage new speed: %u\0338", average_new_speed);
+            uart_printf(CONSOLE, "\0337\033[41;1H\033[KNew speed: %u\0338", new_cur_speed);
+            // int alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
+            cur_physical_speed = (cur_physical_speed >> 3) + (new_cur_speed >> 1);
+            uart_printf(CONSOLE, "\0337\033[42;1H\033[KCur speed: %u\0338", cur_physical_speed);
+        }
     } else if(tsm.type==TRAIN_SERVER_TR){
       Reply(tid, NULL, 0);
       train_id = tsm.arg1;
       tr(mio, tsm.arg1, tsm.arg2, last_speed);
 
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[KTrain command received train: %u, last speed: %u, speed: %u\0338", tsm.arg1, last_speed[tsm.arg1], tsm.arg2);
       // set current train speed
       cur_train_speed = tsm.arg2;
 
-      terminal_physical_speed = train_terminal_speed(train_id);
-
+      // TODO: set terminal speed
+      terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg2);
 
       // set train state
       // other states should be managed by sensor data processing to avoid errors when we go from 0 to 14, then 
@@ -254,6 +267,7 @@ void trainserver(){
       } else if (last_speed[tsm.arg1] > tsm.arg2) {
         train_speed_state = DECELERATING;
       }
+      tr(mio, tsm.arg1, tsm.arg2, last_speed);
 
     }else if(tsm.type==TRAIN_SERVER_RV && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);

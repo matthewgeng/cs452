@@ -3,6 +3,7 @@
 #include "rpi.h"
 #include "nameserver.h"
 #include "trainserver.h"
+#include "timer.h"
 
 void sensor_update(){
   RegisterAs("sensor\0");
@@ -31,6 +32,7 @@ void sensor_update(){
 
   for(;;){
     Putc(mio, MARKLIN, 0x85);
+    tsm.arg2 = sys_time();
 
     for(int i = 0; i<10; i++){
       sensor_byte = Getc(mio, MARKLIN);

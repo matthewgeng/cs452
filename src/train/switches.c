@@ -71,7 +71,8 @@ void sw(int cout, int mio, unsigned int switchNumber, char switchDirection){
 void switches_setup(int cout, int mio, char switch_states[]){
   // 18 switches + 4 centre ones
   int nums[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,153,154,155,156};
-  char dirs[] = "CCCCCSSCCCCCCCCCCCCSSC";
+//   char dirs[] = "CCCCCSSCCCCCCCCCCCCSSC";
+  char dirs[] = "CCCCCSSCCCCCSCCCSCCSSC";
   for(int i = 0; i<22; i++){
     sw(cout, mio, nums[i], dirs[i]);
     switch_states[i] = dirs[i];
