@@ -20,19 +20,20 @@ void sensor_update(){
   IntCB sensor_cb;
   initialize_intcb(&sensor_cb, sensors, 12, 1);
 
-  int sensors_changed = 0;
+  int new_sensor_triggered = 0;
   char sensors_str[] = "\033[8;1H\033[KMost recent sensors:                                                           ";
   int sensors_str_index;
 
   // TODO: assuming only 1 new sensor per query rn
-  int new_sensor;
+  int triggered_sensor;
   int intended_reply_len;
   TrainServerMsgSimple tsm;
   tsm.type = TRAIN_SERVER_NEW_SENSOR;
 
   for(;;){
+    // uart_printf(CONSOLE, "\033[30;1Hstart %d", time);
     Putc(mio, MARKLIN, 0x85);
-    tsm.arg2 = sys_time();
+    triggered_sensor = -1;
 
     for(int i = 0; i<10; i++){
       sensor_byte = Getc(mio, MARKLIN);
@@ -40,27 +41,32 @@ void sensor_update(){
         if (sensor_byte & (1 << u)) {
           int sensorNum = i*8+7-u;
           if(sensorNum!=last_sensor_triggered){
-            if(sensors_changed==1){
+            if(new_sensor_triggered==1){
                 // two sensors got triggered in one query
                 // error for now assuming there's only one train on the tracks
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktwo sensors triggered in one query %d %d\0338", sensorNum, new_sensor);
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktwo sensors triggered in one query %d %d\0338", sensorNum, triggered_sensor);
             }
             push_intcb(&sensor_cb, sensorNum);
             last_sensor_triggered = sensorNum;
-            sensors_changed = 1;
-            new_sensor = sensorNum;
+            new_sensor_triggered = 1;
           }
+          triggered_sensor = sensorNum;
         }
       }
     }
     
-    tsm.arg1 = new_sensor;
-    intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
-    if(intended_reply_len!=0){
-      uart_printf(CONSOLE, "\0337\033[30;1H\033[Ksensor task unexpected reply from train server %d\0338", intended_reply_len);
+    // uart_printf(CONSOLE, "\0337\033[25;1H\033[Knew sensor %d\0338", new_sensor);
+    if(triggered_sensor!=-1){
+      // send whenever we get a sensor
+      tsm.arg1 = triggered_sensor;
+      intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+      if(intended_reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ksensor task unexpected reply from train server %d\0338", intended_reply_len);
+      }
     }
     
-    if(sensors_changed){
+    if(new_sensor_triggered==1){
+      // update the console output whenever we get a *new* sensor
         sensors_str_index = 31;
         int cb_count = 0;
         int cb_index = decrement_intcb(sensor_cb.capacity, sensor_cb.end);
@@ -85,7 +91,7 @@ void sensor_update(){
         }
         sensors_str[sensors_str_index] = '\0';
         Puts(cout, CONSOLE, sensors_str);
-        sensors_changed = 0;
+        new_sensor_triggered = 0;
     }
     time += 10;
     DelayUntil(clock_tid, time);

@@ -2,6 +2,7 @@
 #include "rpi.h"
 #include "syscall.h"
 #include "constants.h"
+#include "pathfinding.h"
 
 int change_switches_cmd(int switch_tid, SwitchChange scs[], int num_switch_changes){
   int reply_len = Send(switch_tid, scs, sizeof(SwitchChange)*num_switch_changes, NULL, 0);
@@ -85,6 +86,7 @@ void switches_server(){
   int mio = WhoIs("mio\0");
   int clock = WhoIs("clock\0");
   int cout = WhoIs("cout\0");
+  int pathfind_tid = WhoIs("pathfind\0");
 
   //TODO: can optimize by making it bitwise 2^22
   char switch_states[22];
@@ -97,6 +99,11 @@ void switches_server(){
   char cur_switch_dir;
   int msg_len;
   char cmd[4];
+
+  uint8_t changed;
+  int intended_reply_len;
+  PathMessage pm;
+  pm.type = PATH_SWITCH_CHANGE;
   for(;;){
     msg_len = Receive(&tid, switch_changes, sizeof(SwitchChange)*22);
     if(msg_len==1 && ((char *)switch_changes)[0]=='S'){
@@ -107,14 +114,24 @@ void switches_server(){
         if(msg_len%sizeof(SwitchChange)!=0){
           uart_printf(CONSOLE, "\0337\033[30;1H\033[Kset switches unexpected msg len: %d\0338", msg_len);
         }
+        changed = 0;
         for(int i = 0; i<msg_len/sizeof(SwitchChange); i++){
           cur_switch_num = switch_changes[i].switch_num;
           cur_switch_index = cur_switch_num-1;
           cur_switch_dir = switch_changes[i].dir;
-          if(cur_switch_num>=153) cur_switch_index -= 134;
+          if(cur_switch_num>=152) cur_switch_index -= 134;
           if(switch_states[cur_switch_index] != cur_switch_dir){
             switch_states[cur_switch_index] = cur_switch_dir;
             sw(cout, mio, cur_switch_num, cur_switch_dir);
+            changed = 1;
+          }
+        }
+        if(changed==1){
+          for(int i = 0; i<22; i++) pm.switches[i] = switch_states[i];
+          intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), NULL, 0);
+          if(intended_reply_len!=0){
+            uart_printf(CONSOLE, "\0337\033[30;1H\033[Kswitches unexpected reply len from pathfind\0338");
+            continue;
           }
         }
     }

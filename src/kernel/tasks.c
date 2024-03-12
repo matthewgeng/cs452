@@ -15,7 +15,7 @@
 #include "sensors.h"
 #include "trainserver.h"
 #include "reverse.h"
-
+#include "delaystop.h"
 
 void k2test() {
     uart_printf(CONSOLE, "Beginning testing\r\n");
@@ -271,6 +271,7 @@ void k4(){
     // Create(4, &trainserver);
     Create_sp_size(4, &trainserver, 1);
     Create(5, &user_input);    
+    Create(5, &delay_stop);    
     Create_sp_size(4, &path_finding, 2);
 }
 
