@@ -29,5 +29,12 @@ typedef struct TrainServerMsg{
 
 void trainserver();
 
+typedef enum {
+    ACCELERATING,
+    DECELERATING,
+    CONSTANT_SPEED,
+    STOPPED,
+} TrainSpeedState;
+
 
 #endif

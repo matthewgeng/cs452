@@ -6,6 +6,7 @@
 #include "switches.h"
 #include "pathfinding.h"
 #include "util.h"
+#include "timer.h"
 
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   char cmd[3];
@@ -126,8 +127,16 @@ void trainserver(){
   uint8_t train_id;
   uint8_t train_dest;
   int train_location = -1;
+
   SensorPath train_sensor_path;
   SensorPath *received_sp;
+
+  int train_location = -1;
+  uint32_t cur_train_speed; // 0 - 14
+  uint32_t cur_physical_speed = 0; // mm/s 
+  int alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
+  uint32_t terminal_physical_speed; // mm/s
+  TrainSpeedState train_speed_state = STOPPED; // accelerating, deccelerating, constant speed, stopped?
 
   for(;;){
     msg_len = Receive(&tid, &tsm, sizeof(TrainServerMsg));
@@ -138,10 +147,114 @@ void trainserver(){
         tr(mio, train_id, 0, last_speed);
         train_dest = 255;
       }
-    }else if(tsm.type==TRAIN_SERVER_TR){
+
+        // TODO: get distance between sensors
+        uint32_t distance_between; // train_location <--> tsm.arg1 in millimeters
+        train_location = tsm.arg1;
+
+        // get time delta
+        uint32_t sensor_req_time = tsm.arg2;
+        uint32_t delta = sys_time_ms(sys_time() - sensor_req_time); // milliseconds
+
+        // new speed calculations
+        uint32_t average_new_speed = (distance_between*1000) / delta; // millimeters per second
+
+        /*
+            3 cases: 
+
+                1) speeding up:
+
+                    average speed >= terminal (dynamic with train speed changes)
+                        speed calculation likely due to error, can simply update the current speed
+                        set to constant
+
+                    average speed < terminal
+                        actual train is at terminal speed
+
+
+                        actual train is not at terminal speed
+
+
+                2) slowing down:
+                    average speed > terminal (dynamic with train speed changes)
+                        currently at terminal speed
+
+                        currently not at terminal speed
+                    average speed <= terminal
+                        speed calculation likely due to error, can simply update the current speed
+                        set to constant
+
+                3) constant:
+                    average speed >= terminal (dynamic with train speed changes)
+                        speed calculation likely due to error, can simply update the current speed
+                    average speed < terminal
+                        currently at terminal speed
+
+                        currently not at terminal speed
+
+
+        */
+
+        uint32_t new_cur_speed; // millimeters
+
+        switch (train_speed_state) {
+            case ACCELERATING:
+
+                if (average_new_speed >= terminal_physical_speed) {
+                    new_cur_speed = average_new_speed;
+                    train_speed_state = CONSTANT_SPEED;
+                } else {
+                    new_cur_speed = average_new_speed + (average_new_speed - cur_physical_speed);
+                }
+
+                break;
+        
+            case DECELERATING:
+                if (average_new_speed <= terminal_physical_speed) {
+                    train_speed_state = CONSTANT_SPEED;
+                } else {
+                    new_cur_speed = average_new_speed - (cur_physical_speed - average_new_speed);
+                }
+                break;
+            case CONSTANT_SPEED:
+                break;
+
+            case STOPPED:
+                // TODO: handle this state
+                break;
+
+            default:
+                // TODO: error
+                break;
+        }
+
+
+        uart_printf(CONSOLE, "\0337\033[40;1H\033[KNew speed: %u\0338", new_cur_speed);
+        // int alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
+        cur_physical_speed = (cur_physical_speed >> 3) + (new_cur_speed >> 1);
+        uart_printf(CONSOLE, "\0337\033[41;1H\033[KCur speed: %u\0338", cur_physical_speed);
+
+    } else if(tsm.type==TRAIN_SERVER_TR){
       Reply(tid, NULL, 0);
       train_id = tsm.arg1;
       tr(mio, tsm.arg1, tsm.arg2, last_speed);
+
+      // set current train speed
+      cur_train_speed = tsm.arg2;
+
+      terminal_physical_speed = train_terminal_speed(train_id);
+
+
+      // set train state
+      // other states should be managed by sensor data processing to avoid errors when we go from 0 to 14, then 
+      // before acceleration is done, we set the train speed to 14 again (should not be a constant_speed state)
+
+      if (last_speed[tsm.arg1] < tsm.arg2) {
+        train_speed_state = ACCELERATING;
+      } else if (last_speed[tsm.arg1] > tsm.arg2) {
+        train_speed_state = DECELERATING;
+      }
+
     }else if(tsm.type==TRAIN_SERVER_RV && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);
       rm.train_number = tsm.arg1;
