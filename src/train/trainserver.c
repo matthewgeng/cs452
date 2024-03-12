@@ -333,12 +333,12 @@ void trainserver(){
 
       if(last_triggered_sensor==tsm.arg1){
 
-        uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server same new sensor, %d\0338", Time(clock));
+        // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server same new sensor, %d\0338", Time(clock));
       }
       else if(last_triggered_sensor!=tsm.arg1){
         train_location = tsm.arg1;
 
-        uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server diff new sensor, %d\0338", Time(clock));
+        // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server diff new sensor, %d\0338", Time(clock));
         // loc_err_handling(train_location, next_sensors, next_sensors_err);
 
         pm.type = PATH_NEXT_SENSOR;
@@ -351,9 +351,12 @@ void trainserver(){
         }
         if(next_sensors[1] == 255){
           // will hit an exit
+          uart_printf(CONSOLE, "\0337\033[40;1H\033[Ktrainserver stop 1\0338");
           tr(mio, train_id, 0, last_speed);
         }else if(next_sensors[0] == 255){
           // will hit an exit soon, reverse halt
+          uart_printf(CONSOLE, "\0337\033[40;1H\033[Ktrainserver stop 0\0338");
+
           tr(mio, train_id, 15, last_speed);
         }
         uart_printf(CONSOLE, "\0337\033[18;1H\033[KNext sensor: %u %u\0338", next_sensors[0], next_sensors[1]);
