@@ -14,6 +14,7 @@ typedef enum {
   TRAIN_SERVER_NAV_PATH,
   TRAIN_SERVER_GO,
   TRAIN_SERVER_TRACK_CHANGE,
+  TRAIN_SERVER_SWITCH_RESET
 } train_arg_type;
 
 typedef struct TrainServerMsgSimple{

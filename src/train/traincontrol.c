@@ -286,6 +286,20 @@ void execute_track(char *str, char *func_res, int console_tid, int train_server_
     Puts(console_tid, CONSOLE, func_res);
 }
 
+void execute_switch_reset(char *str, char *func_res, int console_tid, int train_server_tid){
+
+    TrainServerMsgSimple tsm;
+    tsm.type = TRAIN_SERVER_SWITCH_RESET;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+    if(reply_len!=0){
+      str_cpy_w0(func_res+10, "switch reset invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    str_cpy_w0(func_res+10, "Switches reset");
+    Puts(console_tid, CONSOLE, func_res);
+}
+
 void executeFunction(int console_tid, int train_server_tid, char *str){  
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
@@ -309,6 +323,8 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_go(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='t' && str[1]=='r' && str[2]=='a' && str[3]=='c' && str[3]=='k' && str[4]==' '){
     execute_track(str, func_res, console_tid, train_server_tid);
+  }else if(str[0]=='r' && str[1]=='e' && str[2]=='s' && str[3]=='e' && str[3]=='t' && str[4]==' '){
+    execute_switch_reset(str, func_res, console_tid, train_server_tid);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);

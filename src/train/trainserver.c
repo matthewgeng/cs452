@@ -265,6 +265,12 @@ void trainserver(){
       if(res<0){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
       }
+    }else if(tsm.type==TRAIN_SERVER_SWITCH_RESET && msg_len==sizeof(TrainServerMsgSimple)){
+      Reply(tid, NULL, 0);
+      int res = reset_switches(switch_tid);
+      if(res<0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
+      }
     }else if(tsm.type==TRAIN_SERVER_PF && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);
       pm.type = PATH_PF;

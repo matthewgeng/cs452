@@ -11,6 +11,7 @@ typedef struct SwitchChange {
 
 int change_switches_cmd(int switch_tid, SwitchChange scs[], int num_switch_changes);
 int get_switches_setup(int switch_tid, char switch_states[]);
+int reset_switches(int switch_tid);
 
 void switches_server();
 
