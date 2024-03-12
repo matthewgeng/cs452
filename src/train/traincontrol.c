@@ -221,14 +221,14 @@ void execute_pcp(char *str, char *func_res, int console_tid, int train_server_ti
       return;
     }
     str_cpy_w0(func_res+10, "Precompute Ran");
-    Puts(console_tid, CONSOLE, func_res);
+    // Puts(console_tid, CONSOLE, func_res);
 }
 
 void executeFunction(int console_tid, int train_server_tid, char *str){  
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
   str_cpy_w0(last_fun+10, str);
-  Puts(console_tid, CONSOLE, last_fun);
+  // Puts(console_tid, CONSOLE, last_fun);
 
   char func_res[30];
   str_cpy(func_res, "\033[12;1H\033[K");
@@ -243,7 +243,7 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_pf(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='n' && str[1]=='a' && str[2]=='v' && str[3]==' '){
     execute_nav(str, func_res, console_tid, train_server_tid);
-  }else if(str[0]=='p' && str[1]=='c' && str[2]=='p' && str[3]==' '){
+  }else if(str[0]=='p' && str[1]=='c' && str[2]=='p'){
     execute_pcp(str, func_res, console_tid, train_server_tid);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");

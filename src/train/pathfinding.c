@@ -78,9 +78,6 @@ HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, 
     cur_node->sensor_path.num_sensors = start_node_index;
     heap_push(&heap, cur_node);
 
-    uart_printf(CONSOLE, "\0337\033[17;1H\033[Kswitches setup %u %u\0338", src, dest);
-    // for(;;){}
-
     HeapNode *res; 
     char dirs[2] = {'S', 'C'};
 
@@ -106,7 +103,7 @@ HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, 
                 cur_node = heap_pop(&heap);
                 reclaimHeapNode(nextFreeHeapNode, cur_node);
             }
-            uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
+            // uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
             return res;
         }
         if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
@@ -211,6 +208,139 @@ int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_
     return -2;
 }
 
+
+void precompute(uint8_t src, track_node *track, int track_len, HeapNode **nextFreeHeapNode, SensorPath *sp){
+
+    //TODO: start pathfinding maybe 2/3 sensors after so the train doesn't go off course
+    /* 
+    design decisions:
+    using O(ElogV) dijkstra
+    storing switches instead of nodes to save space
+    storing switches in order or switch to make sure they all switch in time
+    */
+
+    Heap heap;
+    HeapNode *heap_node_ptrs[200];
+    heap_init(&heap, heap_node_ptrs, 150, heap_node_cmp);
+
+    uint32_t min_dist[track_len];
+    for(int i = 0; i<track_len; i++){
+        min_dist[i] = 2000000000;
+    }
+    min_dist[src] = 0;
+
+    int new_dist;
+    int new_dest;
+    int cur_dist;
+    HeapNode *cur_node, *next_node;
+    track_node *cur_track_node;
+
+    cur_node = getNextFreeHeapNode(nextFreeHeapNode);
+    cur_node->node_index = src;
+    cur_node->dist = 0;
+    cur_node->num_switches = 0;
+    cur_node->sensor_path.num_sensors = 0;
+    heap_push(&heap, cur_node);
+
+    HeapNode *res; 
+    char dirs[2] = {'S', 'C'};
+
+    int tmp_count = 0;
+    sp->num_sensors = 0;
+
+    while(heap.length!=0){
+        cur_node = heap_pop(&heap);
+     
+        cur_dist = cur_node->dist;
+
+        cur_track_node = track + cur_node->node_index;
+        // uart_printf(CONSOLE, "cur %u %d %u\r\n", cur_node->node_index, cur_track_node->type, cur_node->sensor_path.num_sensors);  
+        if(cur_node->node_index<80){
+            cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = cur_node->node_index;
+            cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
+            cur_node->sensor_path.num_sensors += 1;
+
+            // uart_printf(CONSOLE, "res %u %u\r\n", cur_node->node_index, cur_node->sensor_path.num_sensors);
+            sp->sensors[sp->num_sensors] = cur_node->node_index;
+            sp->dists[sp->num_sensors] = cur_node->dist;
+            sp->num_sensors += 1;
+        }
+
+        if(sp->num_sensors>=5){
+            return;
+        }
+
+        if(cur_node->node_index<80 || cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
+            new_dist = cur_dist + cur_track_node->edge[0].dist;
+            new_dest = cur_track_node->edge[0].dest - track;
+            if(min_dist[new_dest] > new_dist){
+                min_dist[new_dest] = new_dist;
+                cur_node->dist = new_dist;
+                cur_node->node_index = new_dest;
+                heap_push(&heap, cur_node);
+                    // uart_printf(CONSOLE, "added %u %u\r\n", cur_node->node_index, cur_node->sensor_path.num_sensors);
+            }else{
+                reclaimHeapNode(nextFreeHeapNode, cur_node);
+            }
+        }else if(cur_track_node->type == NODE_BRANCH){
+            HeapNode **hns[2];
+            hns[0] = getNextFreeHeapNode(nextFreeHeapNode);
+            hns[1] = getNextFreeHeapNode(nextFreeHeapNode);
+            //TODO: can make more efficient by using the cur node
+            for(int i = 0; i<2; i++){
+                // uart_printf(CONSOLE, "track 70 %u %d %d\r\n", track[70].edge[0].dest, track[70].num, track[70].type);
+                new_dist = cur_dist + cur_track_node->edge[i].dist;
+                new_dest = cur_track_node->edge[i].dest - track;
+                next_node = hns[i];
+                if(min_dist[new_dest] > new_dist){
+                    min_dist[new_dest] = new_dist;
+                    next_node->dist = new_dist;
+                    next_node->node_index = new_dest;
+                    next_node->sensor_path.num_sensors = cur_node->sensor_path.num_sensors;
+        // uart_printf(CONSOLE, "track 70 %u %d %d\r\n", track, track[70].num, track[70].type);
+                    for(int i = 0; i<cur_node->sensor_path.num_sensors; i++){
+                        next_node->sensor_path.sensors[i] = cur_node->sensor_path.sensors[i];
+                        next_node->sensor_path.dists[i] = cur_node->sensor_path.dists[i];
+                    }
+
+                    for(int i = 0; i<cur_node->num_switches; i++){
+                        next_node->switches[i].switch_num=cur_node->switches[i].switch_num;
+                        next_node->switches[i].dir=cur_node->switches[i].dir;
+                    } 
+        // uart_printf(CONSOLE, "track 70 %u %d %d\r\n", track, track[70].num, track[70].type);
+                    next_node->switches[cur_node->num_switches].switch_num = cur_track_node->num;
+                    next_node->switches[cur_node->num_switches].dir = dirs[i];
+                    next_node->num_switches = cur_node->num_switches + 1;
+                    if(cur_track_node->num == 156 && i==1){
+                        next_node->switches[next_node->num_switches].switch_num = 155;
+                        next_node->switches[next_node->num_switches].dir = 'S';
+                        next_node->num_switches += 1;
+                    }else if(cur_track_node->num == 154 && i==1){
+                        next_node->switches[next_node->num_switches].switch_num = 153;
+                        next_node->switches[next_node->num_switches].dir = 'S';
+                        next_node->num_switches += 1;
+                    }
+        // uart_printf(CONSOLE, "track 70 %u %d %d\r\n", track, track[70].num, track[70].type);
+                    // uart_printf(CONSOLE, "added %u %u\r\n", next_node->node_index, next_node->sensor_path.num_sensors);
+                    heap_push(&heap, next_node);
+                }else{
+                    reclaimHeapNode(nextFreeHeapNode, next_node);
+                }
+            }
+            reclaimHeapNode(nextFreeHeapNode, cur_node);
+        }else if(cur_track_node->type == NODE_EXIT){
+            reclaimHeapNode(nextFreeHeapNode, cur_node);
+        }else{
+            if(cur_node->node_index<80){
+                cur_track_node->type = NODE_SENSOR;
+            }else{
+                uart_printf(CONSOLE, "\x1b[31mpathfinding unexpected node type: %d\x1b[0m\r\n", cur_node->node_index);
+            }
+            reclaimHeapNode(nextFreeHeapNode, cur_node);
+        }
+    }
+}
+
 HeapNode *pathfind(int src, int dest, int switch_tid, track_node track[], HeapNode **nextFreeHeapNode, uint8_t num_skip, uint16_t start_dist){
 
     HeapNode *setup = dijkstra(src, dest, track, TRACK_MAX, nextFreeHeapNode, num_skip, start_dist);
@@ -260,6 +390,8 @@ void path_finding(){
     HeapNode *nextFreeHeapNode = heap_nodes;
     nextFreeHeapNode = hns_init(heap_nodes, 150);
     HeapNode *path;
+
+    int tmp_count = 0;
 
     for(;;){
         intended_send_len = Receive(&tid, &pm, sizeof(pm));
@@ -336,14 +468,12 @@ void path_finding(){
             // uint16_t dists[80];
             disable_irqs();
             uart_printf(CONSOLE, "\033[19;1H\033[Kprecompute\r\n");
+            SensorPath sp;
             for(int src = 0; src<80; src++){
-                uart_printf(CONSOLE, "src: %d ", src);
-                for(int dest = 0; dest<80; dest++){
-                    path = dijkstra(src, dest, track, TRACK_MAX, &nextFreeHeapNode, 0, 0);
-                    // dists[dest] = path->dist;
-                    uart_printf(CONSOLE, "%d: %u ", dest, path->dist);
+                precompute(src, track, TRACK_MAX, &nextFreeHeapNode, &sp);
+                for(int i = 0; i<sp.num_sensors; i++){
+                    uart_printf(CONSOLE, "%d,%u,%u\r\n", src, sp.sensors[i], sp.dists[i]);
                 }
-                uart_printf(CONSOLE, "\r\n");
             }
             enable_irqs();
         }else{

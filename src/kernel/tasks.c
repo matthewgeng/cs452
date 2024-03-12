@@ -105,7 +105,7 @@ void idle_task(){
             char str[] = "\0337\033[14;1HIdle:   % \0338";
             ui2a_no0(idle_time_percent, 10, str+15);
             // ui2a_no0(cur_time, 10, str+19);
-            Puts(console_tid, CONSOLE, str);
+            // Puts(console_tid, CONSOLE, str);
             // time = cur_time;
         }
         count += 1;
@@ -175,7 +175,7 @@ void user_input(){
 
             input_index = 0;
             // clear input line and add >
-            Puts(cout, CONSOLE, new_line_str);
+            // Puts(cout, CONSOLE, new_line_str);
             input_col = 3;
         }else if (c == '\b'){
             if(input_col>3){
@@ -266,7 +266,7 @@ void k4(){
     
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
-    Create(3, &console_time);
+    // Create(3, &console_time);
     Create(4, &reverse);
     Create(4, &switches_server);
     Create(4, &sensor_update);
@@ -298,7 +298,7 @@ void rootTask(){
     
     Create(3, &k4);
     // Create(3, &setup);
-    Create_sp_size(1, &path_finding, 2);
+    Create_sp_size(0, &path_finding, 2);
     
     // uart_printf(CONSOLE, "FirstUserTask: exiting\r\n");
 }
