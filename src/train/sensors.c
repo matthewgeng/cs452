@@ -26,7 +26,7 @@ void sensor_update(){
   // TODO: assuming only 1 new sensor per query rn
   int new_sensor;
   int intended_reply_len;
-  TrainServerMsg tsm;
+  TrainServerMsgSimple tsm;
   tsm.type = TRAIN_SERVER_NEW_SENSOR;
 
   for(;;){
@@ -53,7 +53,7 @@ void sensor_update(){
     }
     
     tsm.arg1 = new_sensor;
-    intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(intended_reply_len!=0){
       uart_printf(CONSOLE, "\0337\033[30;1H\033[Ksensor task unexpected reply from train server %d\0338", intended_reply_len);
     }

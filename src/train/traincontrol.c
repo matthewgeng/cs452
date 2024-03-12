@@ -47,11 +47,11 @@ void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    TrainServerMsg tsm;
+    TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_TR;
     tsm.arg1 = trainNumber;
     tsm.arg2 = trainSpeed;
-    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       #if DEBUG
           uart_dprintf(CONSOLE, "rv replied incompatible msg %d\r\n", reply_len);
@@ -72,10 +72,10 @@ void execute_rv(char *str, char *func_res, int console_tid, int train_server_tid
       // displayFuncMessage("Invalid train number");
       return;
     }
-    TrainServerMsg tsm;
+    TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_RV;
     tsm.arg1 = trainNumber;
-    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "rv invalid rpllen");
       Puts(console_tid, CONSOLE, func_res);
@@ -110,11 +110,11 @@ void execute_sw(char *str, char *func_res, int console_tid, int train_server_tid
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    TrainServerMsg tsm;
+    TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_SW;
     tsm.arg1 = switchNumber;
-    tsm.data[0] = switchDirection;
-    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    tsm.arg2 = (uint32_t)switchDirection;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "sw invalid rpllen");
       Puts(console_tid, CONSOLE, func_res);
@@ -158,11 +158,11 @@ void execute_pf(char *str, char *func_res, int console_tid, int train_server_tid
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    TrainServerMsg tsm;
+    TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_PF;
     tsm.arg1 = src;
     tsm.arg2 = dest;
-    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "pf invalid rpllen");
       Puts(console_tid, CONSOLE, func_res);
@@ -196,11 +196,11 @@ void execute_nav(char *str, char *func_res, int console_tid, int train_server_ti
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    TrainServerMsg tsm;
+    TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_NAV;
     tsm.arg1 = train_number;
     tsm.arg2 = dest;
-    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "pf invalid rpllen");
       Puts(console_tid, CONSOLE, func_res);
