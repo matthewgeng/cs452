@@ -15,7 +15,7 @@ void console_out_notifier() {
     int cout = WhoIs("cout\0");
     int clock = WhoIs("clock\0");
     // TODO: maybe we can send none?
-    IOMessage m = {0, "", 0};
+    IOMessage m = {0, 0, ""};
     for(;;){
         int res = AwaitEvent(CONSOLE_TX);
         // uart_printf(CONSOLE, "\0337\033[32;1H\033[Kcout notifier %d\0338", Time(clock));
@@ -40,7 +40,7 @@ void console_in_notifier() {
     int clock = WhoIs("clock\0");
 
     // TODO: maybe we can send none?
-    IOMessage m = {0, "", 0};
+    IOMessage m = {0, 0, ""};
     for(;;){
         int res = AwaitEvent(CONSOLE_RX);
         if (res < 0) {
@@ -223,7 +223,7 @@ void marklin_out_tx_notifier() {
 
     int mio = WhoIs("mio\0");
 
-    IOMessage m = {0, "", 0};
+    IOMessage m = {0, 0, ""};
     for(;;){
         // uart_printf(CONSOLE, "\r\n before await tx cur cts %u\r\n", uart_cts(MARKLIN));
         int res = AwaitEvent(MARKLIN_TX);
@@ -246,7 +246,7 @@ void marklin_out_cts_notifier() {
 
     int mio = WhoIs("mio\0");
 
-    IOMessage m = {0, "", 0};
+    IOMessage m = {0, 0, ""};
     for(;;){
         // uart_printf(CONSOLE, "\r\n before await cts cur cts %u\r\n", uart_cts(MARKLIN));
         int res = AwaitEvent(MARKLIN_CTS);
@@ -272,7 +272,7 @@ void marklin_in_notifier() {
 
     int mio = WhoIs("mio\0");
 
-    IOMessage m = {0, "", 0};
+    IOMessage m = {0, 0, ""};
     for(;;){
         int res = AwaitEvent(MARKLIN_RX);
         if (res < 0) {
@@ -455,7 +455,7 @@ void marklin_io() {
 
 int Getc(int tid, int channel) {
     char r;
-    IOMessage m = {GETC, NULL, 0};
+    IOMessage m = {GETC, 0, NULL};
 
     int res = Send(tid, &m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
@@ -467,11 +467,10 @@ int Getc(int tid, int channel) {
 int Putc(int tid, int channel, unsigned char ch) {
 
     char r;
-    IOMessage m = {
-        PUTC,
-        &ch,
-        1
-    };
+    IOMessage m;
+    m.type = PUTC;
+    m.len = 1;
+    m.str[0] = ch;
 
     int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
@@ -486,11 +485,10 @@ int Putc(int tid, int channel, unsigned char ch) {
 int Puts(int tid, int channel, unsigned char* ch) {
 
     char r;
-    IOMessage m = {
-        PUTS,
-        ch,
-        str_len(ch)
-    };
+    IOMessage m;
+    m.type = PUTS;
+    m.len = str_len(ch);
+    memcpy(m.str, ch, m.len);
 
     int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
@@ -504,12 +502,10 @@ int Puts(int tid, int channel, unsigned char* ch) {
 int Puts_len(int tid, int channel, unsigned char* ch, int len) {
 
     char r;
-    IOMessage m = {
-        PUTS,
-        ch,
-        len
-    };
-
+    IOMessage m;
+    m.type = PUTS;
+    m.len = len;
+    memcpy(m.str, ch, m.len);
     int res = Send(tid, (char*)&m, sizeof(IOMessage), &r, 1);
     if (res < 0) {
         return -1;
