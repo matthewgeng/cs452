@@ -164,7 +164,7 @@ void trainserver(){
   SensorPath train_sensor_path;
   uint8_t got_sensor_path = 0;
   uint8_t sensor_to_stop = 255;
-  uint8_t delay_time;
+  int delay_time;
 
   uint8_t next_sensors[2] = {255,255};
   uint8_t next_sensors_err[2] = {255,255};
@@ -187,11 +187,7 @@ void trainserver(){
         delay_time = 0;
       }
 
-      if(last_triggered_sensor==tsm.arg1){
-
-        // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server same new sensor, %d\0338", Time(clock));
-      }
-      else if(last_triggered_sensor!=tsm.arg1){
+      if(last_triggered_sensor!=tsm.arg1){
         train_location = tsm.arg1;
 
         uart_printf(CONSOLE, "\0337\033[35;1H\033[Ksensor to stop %u, %d\0338", sensor_to_stop, Time(clock));
@@ -199,7 +195,7 @@ void trainserver(){
         if(train_location==sensor_to_stop){
           last_speed[train_id] = 0;
           dsm.train_number = train_id;
-          dsm.delay = delay_time;
+          dsm.delay_until = (int)(tsm.arg2) + delay_time;
           intended_reply_len = Send(delay_stop_tid, &dsm, sizeof(DelayStopMsg), NULL, 0);
           if(intended_reply_len!=0){
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
