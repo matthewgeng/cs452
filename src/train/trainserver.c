@@ -212,35 +212,33 @@ void trainserver(){
             uint32_t delta = sys_time_ms((cur_time - last_sensor_time)); // milliseconds
             last_sensor_time = cur_time;
 
+            // calculate new speed with accel
             switch (train_speed_state) {
                 case ACCELERATING:
 
                     break;
                 case DECELERATING:
-                
                     int new_cur_speed = (cur_physical_speed - (cur_physical_accel)*delta);
+
+                    // TODO: weird case, this shouldn't happen unless our accel is negative which shouldn't happen as well
+                    if (new_cur_speed >= cur_physical_speed) {
+                        new_cur_speed = cur_physical_speed;
+                    }
 
                     if (terminal_physical_speed == 0 && new_cur_speed <= terminal_physical_speed) {
                         train_speed_state = STOPPED;
                         new_cur_speed = 0;
                         cur_physical_accel = 0;
                         cur_physical_speed = 0;
-                    } else if (new_cur_speed <= terminal_physical_speed || cur_physical_speed <= terminal_physical_speed) {
+                    } else if (new_cur_speed <= terminal_physical_speed) {
                         train_speed_state = CONSTANT_SPEED;
                         cur_physical_accel = 0;
                     } else {
                         cur_physical_accel = (cur_physical_speed - new_cur_speed)*1000/delta;
-                        cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 1)) + (new_cur_speed >> 1);
                     }
 
                     uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, delta: %d, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, delta, train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
                     // uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
-
-                    // w++;
-
-                    // if (w == 5) {
-                    //     for(;;){}
-                    // }
                     break;
                 case CONSTANT_SPEED:
                     cur_physical_accel = 0;
@@ -258,6 +256,7 @@ void trainserver(){
                     break;
             }
 
+            cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 2)) + (new_cur_speed >> 2);
         // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server same new sensor, %d\0338", Time(clock));
       } else if(last_triggered_sensor!=tsm.arg1){
         train_location = tsm.arg1;
@@ -329,8 +328,16 @@ void trainserver(){
                         train_speed_state = CONSTANT_SPEED;
                         cur_physical_accel = 0;
                     } else {
-                        new_cur_speed = average_new_speed + (average_new_speed - cur_physical_speed);
-                        cur_physical_accel = (new_cur_speed - cur_physical_speed)*1000/delta_new;
+
+                        // TODO: weird case due to error or something
+                        if (cur_physical_speed > new_cur_speed) {
+                            new_cur_speed = cur_physical_speed;
+                            cur_physical_accel = 0;
+                        } else {
+                            // normal case
+                            new_cur_speed = average_new_speed + (average_new_speed - cur_physical_speed);
+                            cur_physical_accel = (new_cur_speed - cur_physical_speed)*1000/delta_new;
+                        }
                     }
 
                     break;
@@ -342,18 +349,18 @@ void trainserver(){
                         train_speed_state = CONSTANT_SPEED;
                         cur_physical_accel = 0;
                     } else {
-                        // TODO: case when average speed is greater than the current speed due to some error/turn idk
+                        // TODO: weird case when average speed is greater than the current speed due to some error/turn idk
                         if (cur_physical_speed < average_new_speed) {
                             new_cur_speed = cur_physical_speed;
                             cur_physical_accel = 0;
                             uart_printf(CONSOLE, "\0337\033[43;1H\033[Kweird cur speed: %d , new_speed: %d , Decel cur accel: %d\0338", cur_physical_speed, new_cur_speed, cur_physical_accel);
                         } else {
+                            // normal case
                             new_cur_speed = average_new_speed - (cur_physical_speed - average_new_speed);
                             cur_physical_accel = (cur_physical_speed - new_cur_speed)*1000/delta_new;
                             uart_printf(CONSOLE, "\0337\033[43;1H\033[Knorma cur speed: %d , new_speed: %d , Decel cur accel: %d\0338", cur_physical_speed, new_cur_speed, cur_physical_accel);
                             uart_printf(CONSOLE, "\0337\033[53;1H\033[Knorma cur speed: %d , new_speed: %d , Decel cur accel: %d\0338", cur_physical_speed, new_cur_speed, cur_physical_accel);
                         }
-
                     }
 
                     break;
@@ -382,6 +389,8 @@ void trainserver(){
 
         // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server diff new sensor, %d\0338", Time(clock));
         // loc_err_handling(train_location, next_sensors, next_sensors_err);
+
+        
 
         pm.type = PATH_NEXT_SENSOR;
         pm.arg1 = train_location;
@@ -484,6 +493,7 @@ void trainserver(){
       Reply(tid, NULL, 0);
       memcpy(&train_sensor_path, tsm.data, sizeof(SensorPath));
       // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kcheck memcpy %u %u %u\0338", train_sensor_path.num_sensors, train_sensor_path.sensors[0], train_sensor_path.dists[0]);
+      
     }else{
       Reply(tid, NULL, 0);
       uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver unknown cmd %d %u\0338", tsm.type, msg_len);
