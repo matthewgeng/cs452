@@ -1197,6 +1197,8 @@ void init_tracka(track_node *track) {
 
 void init_trackb(track_node *track) {
   // memset(track, 0, TRACK_MAX*sizeof(track_node));
+  int n = TRACK_MAX;
+  for (char* it = (char*)track; n > 0; --n) *it++ = 0;
   track[0].name = "A1";
   track[0].type = NODE_SENSOR;
   track[0].num = 0;

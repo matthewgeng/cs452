@@ -23,7 +23,7 @@ void delay_stop(){
     for(;;){
         Receive(&tid, &dsm, sizeof(DelayStopMsg));
         Reply(tid, NULL, 0);
-        Delay(clock_tid, dsm.delay);
+        Delay(clock_tid, dsm.delay_until);
         stop(mio, dsm.train_number);
     }
 }
