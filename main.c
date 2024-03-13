@@ -614,10 +614,10 @@ static void measure_a_stop() {
   */
 }
 
-static void measure_decel() {
+static void measure_accel() {
 
   int train_to_measure = 47;
-  int sensor_to_measure = 9;
+  int sensor_to_measure = 37;
 
   // int speeds_to_measure[] = {12,14,4,8,12,14};
   int num_loops = 1;
@@ -644,7 +644,7 @@ static void measure_decel() {
             lastSensorTriggered = sensorNum;
 
             if(sensorNum==sensor_to_measure){
-              outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[19;1H\033[Ktime: %d",(time-start_time)/1000);
+              outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[19;1H\033[Ktime: %d %d %d",time, start_time, (time-start_time)/1000);
               tr(train_to_measure, 0);
               // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[20;1H\033[Knum loop: %d",loop_count);
             }
@@ -672,6 +672,7 @@ static void measure_decel() {
         outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[K", INPUT_ROW);
         outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "> ");
         inputCol = 3;
+        outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[18;1H\033[Kstart time: %d",start_time);
         start_time = time;
       }else{
         //add char to input buffer
@@ -795,7 +796,7 @@ int kmain() {
   time = 0;
   // lastTime = 0;
   // measure_v_straight();
-  measure_decel();
+  measure_accel();
 
   // exit to boot loader
   return 0;
