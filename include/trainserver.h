@@ -29,7 +29,7 @@ typedef struct TrainServerMsg{
     uint32_t arg1;
     uint32_t arg2;
     uint8_t arg3;
-    char data[300];
+    char data[256];
 } TrainServerMsg;
 
 void trainserver();

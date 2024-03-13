@@ -15,6 +15,7 @@ typedef struct HeapNode {
   SwitchChange switches[22];
   uint8_t num_switches;
   SensorPath sensor_path;
+  uint8_t reverse_index;
   struct HeapNode *next;
 } HeapNode;
 
