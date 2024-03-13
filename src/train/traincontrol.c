@@ -52,7 +52,7 @@ void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid
       return;
     }
     if(is_valid_speed(trainSpeed)==0){
-      str_cpy_w0(func_res+10, "Unsupported train speed\0");
+      str_cpy_w0(func_res+10, "Only support train speed 0,4,8,12,14 (can +16 for headlights)\0");
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
@@ -320,7 +320,7 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
   str_cpy_w0(last_fun+10, str);
   Puts(console_tid, CONSOLE, last_fun);
 
-  char func_res[30];
+  char func_res[50];
   str_cpy(func_res, "\033[12;1H\033[K");
 
   if(str[0]=='t' && str[1]=='r' && str[2]==' '){

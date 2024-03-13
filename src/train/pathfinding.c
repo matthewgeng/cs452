@@ -185,6 +185,7 @@ int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_
             sensor_path->dists[num_sensors] = *dist;
             num_sensors += 1;
             if(num_sensors==num_skip){
+                uart_printf(CONSOLE, "\0337\033[50;1H\033[Kget start node %d\0338", start_sensor);
                 return start_sensor;
             }
             *dist = *dist + cur_track_node->edge[0].dist;
@@ -351,17 +352,17 @@ void path_finding(){
             }
         }else if(pm.type==PATH_NEXT_SENSOR){
             cur_pos = pm.arg1;
-            res = get_start_sensor(cur_pos, 2, switch_states, track, &start_dist, &skipped_sensors);
+            res = get_start_sensor(cur_pos, 1, switch_states, track, &start_dist, &skipped_sensors);
             // uart_printf(CONSOLE, "\0337\033[35;1H\033[Knext sensor %u %d\0338", cur_pos, res);
             if(res==-1){
-                skipped_sensors.sensors[skipped_sensors.num_sensors] = 255; // will hit an exit next;
+                next_sensor = 255; // will hit an exit next;
             }else if(res==-2){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Knext sensor query failed\0338");
+                next_sensor = 254;
             }else{
                 next_sensor = res;
             }
             // uart_printf(CONSOLE, "\0337\033[20;1H\033[KNext sensor: %u %u\0338", skipped_sensors.sensors[0], skipped_sensors.sensors[1]);
-            Reply(tid, skipped_sensors.sensors, sizeof(uint8_t)*2);
+            Reply(tid, &next_sensor, sizeof(uint8_t));
         }else{
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown pathfind command\0338");
             continue;
