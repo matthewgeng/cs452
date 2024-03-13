@@ -118,6 +118,7 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
     // alpha = 0.5
     // old_speed = old_speed*(1-alpha) + new_cur_speed*(alpha)
     int new_speed = (old_speed - (old_speed >> 1)) + (new_cur_speed >> 1);
+    uart_printf(CONSOLE, "\0337\033[30;1H\033[Knew speed state: %d, avg speed: %u, new speed: %u\0338", train_speed_state, average_new_speed, new_cur_speed);
     return new_speed;
 }
 
@@ -181,55 +182,35 @@ void trainserver(){
 
     if(tsm.type==TRAIN_SERVER_NEW_SENSOR){
         Reply(tid, NULL, 0);
-        if(demo_started==1){
-         // switch (train_speed_state) {
-            //     case ACCELERATING:
-
-            //         break;
-            //     case DECELERATING:
-                
-            //         int new_cur_speed = (cur_physical_speed - (cur_physical_accel)*delta_last);
-
-            //         if (terminal_physical_speed == 0 && new_cur_speed <= terminal_physical_speed) {
-            //             train_speed_state = STOPPED;
-            //             new_cur_speed = 0;
-            //             cur_physical_accel = 0;
-            //             cur_physical_speed = 0;
-            //         } else if (new_cur_speed <= terminal_physical_speed || cur_physical_speed <= terminal_physical_speed) {
-            //             train_speed_state = CONSTANT_SPEED;
-            //             cur_physical_accel = 0;
-            //         } else {
-            //             cur_physical_accel = (cur_physical_speed - new_cur_speed)*1000/delta_last;
-            //             cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 1)) + (new_cur_speed >> 1);
-            //         }
-
-            //         uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, delta: %d, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, delta_last,train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
-            //         // uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
-
-            //         w++;
-
-            //         if (w == 5) {
-            //             for(;;){}
-            //         }
-            //         break;
-            //     case CONSTANT_SPEED:
-            //         cur_physical_accel = 0;
-            //         break;
-
-            //     case STOPPED:
-            //         // TODO: handle this state
-            //         new_cur_speed = 0;
-            //         cur_physical_accel = 0;
-            //         cur_physical_speed = 0;
-            //         break;
-
-            //     default:
-            //         // TODO: error
-            //         break;
-            // }
-
+        // if(demo_started==1){
             // uart_printf(CONSOLE, "\0337\033[38;1H\033[KSpeed state: %d, train speed: %d, speed: %d, current sensor: %d, next sensor: %d, \0338", train_speed_state, cur_train_speed, cur_physical_speed, cur_physical_accel, terminal_physical_speed);
             uart_printf(CONSOLE, "\0337\033[38;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d\0338", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed);
+
+            if(train_dest!=255 && got_sensor_path){
+                    // sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-2];
+                
+                uint32_t stopping_acceleration = train_stopping_acceleration(train_id, cur_train_speed); //mm/s^2
+
+                // (Vf)^2 = (Vo)^2 + 2ad
+                uint32_t stopping_distance = (cur_physical_speed*cur_physical_speed)/(2*stopping_acceleration); // mm
+
+                int last_index = train_sensor_path.num_sensors-1;
+                for (int i = last_index; i >= 0; i--) {
+                    if (train_sensor_path.dists[last_index] - train_sensor_path.dists[i] > stopping_distance) {
+
+                        sensor_to_stop = train_sensor_path.sensors[i];
+                        uint32_t stopping_distance_difference = train_sensor_path.dists[i] - stopping_distance;
+
+                        delay_time = (stopping_distance_difference*10)/cur_physical_speed; // 10ms for system ticks
+                        // delay_time = 0;
+                        uart_printf(CONSOLE, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
+                        break;
+                    }
+                }
+
+                // TODO: use puts
+                uart_printf(CONSOLE, "\0337\033[50;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
+            }
 
             if(last_triggered_sensor==tsm.arg1){
                 // uint32_t cur_time = sys_time();
@@ -288,7 +269,6 @@ void trainserver(){
             } else if(last_triggered_sensor!=tsm.arg1) {
                 train_location = tsm.arg1;
 
-                uint32_t cur_time = sys_time();
 
                 // first sensor hit, we shouldn't do any speed calculations
                 // TODO: isn't 255 a valid sensor?
@@ -299,6 +279,7 @@ void trainserver(){
                         continue;
                     }
 
+                    uint32_t cur_time = sys_time();
                     // get time delta
                     uint32_t delta_new = sys_time_ms((cur_time - last_new_sensor_time)); // milliseconds
                     last_new_sensor_time = cur_time;
@@ -310,7 +291,7 @@ void trainserver(){
                 // TODO: what if distance was invalid i.e. invalid sensor reading
                 if(estimated_next_sensor_time!=0){
                     // TODO: use puts
-                    int time_diff = cur_time-estimated_next_sensor_time;
+                    int time_diff = sys_time()-estimated_next_sensor_time;
                     uart_printf(CONSOLE, "\0337\033[50;1H\033[KEstimated next sensor_time %u \0338", estimated_next_sensor_time);
                     uart_printf(CONSOLE, "\0337\033[51;1H\033[KDistance Difference %d \0338", time_diff*cur_physical_speed);
                 }
@@ -366,12 +347,12 @@ void trainserver(){
                 }
             }
             last_triggered_sensor = tsm.arg1;
-        }
+        // }
     } else if(tsm.type==TRAIN_SERVER_TR){
         Reply(tid, NULL, 0);
         train_id = tsm.arg1;
 
-        uart_printf(CONSOLE, "\0337\033[30;1H\033[KTrain command received train: %u, last speed: %u, speed: %u\0338", tsm.arg1, last_speed[tsm.arg1], tsm.arg2);
+        // uart_printf(CONSOLE, "\0337\033[30;1H\033[KTrain command received train: %u, last speed: %u, speed: %u\0338", tsm.arg1, last_speed[tsm.arg1], tsm.arg2);
         // set current train speed
         cur_train_speed = tsm.arg2;
 
