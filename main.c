@@ -600,7 +600,7 @@ static void measure_a_stop() {
     }
   }
   /*
-  Train 2
+  Train 47
   4: 23
   8: 56.5
   12: 95
@@ -611,6 +611,91 @@ static void measure_a_stop() {
   8: 63
   12: 97.5
   14: 99
+  */
+}
+
+static void measure_decel() {
+
+  int train_to_measure = 47;
+  int sensor_to_measure = 9;
+
+  // int speeds_to_measure[] = {12,14,4,8,12,14};
+  int num_loops = 1;
+  int loop_count = -1;
+  int start_time;
+  int speeds_index = 0;
+
+  // tr(train_to_measure, speeds_to_measure[0]);                
+
+  for (;;) {
+
+    timeUpdate();
+    printToConsole();
+
+    char sensorByte = polling_uart_getc(MARKLIN);
+    if(sensorPollingStarted && sensorByte!=255){
+      sensorByteBuf[sensorByteBufEnd] = sensorByte;
+
+      for (int u = 0; u < 8; u++) {
+        if (sensorByte & (1 << u)) {
+          uint32_t sensorNum = sensorByteBufEnd*8+7-u;
+          if(sensorNum!=lastSensorTriggered){
+            addSensor(sensorNum);
+            lastSensorTriggered = sensorNum;
+
+            if(sensorNum==sensor_to_measure){
+              outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[19;1H\033[Ktime: %d",(time-start_time)/1000);
+              tr(train_to_measure, 0);
+              // outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[20;1H\033[Knum loop: %d",loop_count);
+            }
+            outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[17;1H\033[Kspeeds_index: %d",speeds_index);
+          }
+        }
+      }
+      if(sensorByteBufEnd == 9){
+        displaySensors();
+        sensorByteBufEnd=0;
+      }else{
+        sensorByteBufEnd+=1;
+      }
+    }
+
+    char c = polling_uart_getc(CONSOLE);
+    if(c!=255){
+      if (c == '\r') {
+        if(inputBuf[0] == 'q' && inputBuf[1]=='\0') {
+          return;
+        }
+        executeFunction(inputBuf);
+        clearInputBuffer();
+        // clear input line and add >
+        outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[K", INPUT_ROW);
+        outputBufEnd = strToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "> ");
+        inputCol = 3;
+        start_time = time;
+      }else{
+        //add char to input buffer
+        inputBufEnd = charToRegBuffer(inputBuf, inputBufEnd, c);
+
+        //put char on screen
+        outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;%uH", INPUT_ROW, inputCol);
+        outputBufEnd = charToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, c);
+        inputCol += 1;
+      } 
+    }
+  }
+  /*
+  Train 47
+  4: 
+  8: 
+  12: 
+  14: 
+
+  Train 2
+  4: 
+  8: 
+  12: 
+  14: 
   */
 }
 
@@ -709,7 +794,8 @@ int kmain() {
   matchValue = readRegisterAsUInt32(TIMER_BASE, TIMER_CLO) + COUNTER_PER_TENTH_SECOND;
   time = 0;
   // lastTime = 0;
-  measure_v_straight();
+  // measure_v_straight();
+  measure_decel();
 
   // exit to boot loader
   return 0;
