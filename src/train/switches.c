@@ -158,6 +158,7 @@ void switches_server(){
           update_pathfind(pathfind_tid, &pm, switch_states);
         }
     }else{
+      Reply(tid, NULL, 0);
       uart_printf(CONSOLE, "\0337\033[30;1H\033[Kswitches unknwon cmd\0338");
     }
   }

@@ -183,6 +183,7 @@ void execute_pf(char *str, char *func_res, int console_tid, int train_server_tid
 
 void execute_nav(char *str, char *func_res, int console_tid, int train_server_tid){
 
+    // int clock = WhoIs("clock");
     uint8_t train_number = getArgumentTwoDigitNumber(str+4);
     if(train_number==1000){
       str_cpy_w0(func_res+10, "Invalid train number");
@@ -205,10 +206,35 @@ void execute_nav(char *str, char *func_res, int console_tid, int train_server_ti
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
+
+    int offset = 0;
+
+    if(str[2]!='\0' && str[3]!='\0'){
+      
+      if(str[2]==' '){
+        str += 3;
+      }else if(str[3] == ' '){
+        str += 4;
+      }else{
+        str_cpy_w0(func_res+10, "Invalid offset");
+        Puts(console_tid, CONSOLE, func_res);
+        return;
+      }
+      offset = getArgumentThreeDigitNumber(str);
+      if(offset==1000){
+        str_cpy_w0(func_res+10, "Invalid offset");
+        Puts(console_tid, CONSOLE, func_res);
+        return;
+      }
+    }
+
     TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_NAV;
     tsm.arg1 = train_number;
     tsm.arg2 = dest;
+    tsm.arg3 = offset;
+    
+    // uart_printf(CONSOLE, "\0337\033[53;1H\033[Ktrain control before send %d\0338", Time(clock));
     int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "pf invalid rpllen");

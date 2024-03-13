@@ -230,6 +230,7 @@ void path_finding(){
     // int cout = WhoIs("cout\0");
     // int mio = WhoIs("mio\0");
     int switch_tid = WhoIs("switch\0");
+    // int clock = WhoIs("clock\0");
     int train_server_tid = WhoIs("trainserver\0");
 
     // generate track data
@@ -274,6 +275,7 @@ void path_finding(){
     HeapNode *path;
 
     for(;;){
+        // uart_printf(CONSOLE, "\0337\033[55;1H\033[Kpathfinding before receive %d\0338", Time(clock));
         intended_send_len = Receive(&tid, &pm, sizeof(pm));
         // if(intended_send_len!=sizeof(pm)){
         //     uart_printf(CONSOLE, "\0337\033[30;1H\033[Kpath finding received unknown object\0338");
@@ -297,44 +299,61 @@ void path_finding(){
             for(int i = 0; i<path->num_switches; i++){
                 uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
             }
+
+            memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
+            intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+            if(intended_reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[KPathfind sent sensor path and received unexpected rplen\0338");
+            }
+
             reclaimHeapNode(nextFreeHeapNode, path);
         }else if(pm.type==PATH_NAV){
             Reply(tid, NULL, 0);
-            cur_pos = pm.arg1;
-            if(cur_pos<0 || cur_pos>80){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
-                continue;
-            }
-            start_sensor = get_start_sensor(cur_pos, num_skip, switch_states, track, &start_dist, &skipped_sensors);
-            if(start_sensor<0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get start node\0338");
-                continue;
-            }
-            uart_printf(CONSOLE, "\0337\033[26;1H\033[Kcur, start %d %d\0338", cur_pos, start_sensor);
-            path = dijkstra(start_sensor, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, num_skip, start_dist);
-            if(path==NULL){
-                uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
-                continue;
-            }
-            for(int i = 0; i<num_skip; i++){
-                path->sensor_path.sensors[i] = skipped_sensors.sensors[i];
-                path->sensor_path.dists[i] = skipped_sensors.dists[i];
-            }
+            // uart_printf(CONSOLE, "\0337\033[56;1H\033[Kpathfinding received %d\0338", Time(clock));
+            // for (int j = 0; j < 50; j++) {
 
-            // for(int i = 0; i<num_skip; i++){
-            //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K skipped sensor: %u %u\0338", 35+i, skipped_sensors.sensors[i], skipped_sensors.dists[i]);
-            // }
-            for(int i = 0; i<path->sensor_path.num_sensors; i++){
-                uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
-            }
-            // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", path->num_switches);
-            // for(int i = 0; i<path->num_switches; i++){
-            //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
+                // uart_printf(CONSOLE, "\0337\033[38;1H\033[KLOOPING %d\0338", j);
+                
+                cur_pos = pm.arg1;
+                if(cur_pos<0 || cur_pos>80){
+                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
+                    continue;
+                }
+                start_sensor = get_start_sensor(cur_pos, num_skip, switch_states, track, &start_dist, &skipped_sensors);
+                uart_printf(CONSOLE, "\0337\033[39;1H\033[KStart sensor %d cur pos %d\0338", start_sensor, cur_pos);
+                // start_sensor = cur_pos;
+
+                if(start_sensor<0){
+                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get start node\0338");
+                    continue;
+                }
+                uart_printf(CONSOLE, "\0337\033[26;1H\033[Kcur, start %d %d\0338", cur_pos, start_sensor);
+                path = dijkstra(start_sensor, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, num_skip, start_dist);
+                if(path==NULL){
+                    uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
+                    continue;
+                }
+                for(int i = 0; i<num_skip; i++){
+                    path->sensor_path.sensors[i] = skipped_sensors.sensors[i];
+                    path->sensor_path.dists[i] = skipped_sensors.dists[i];
+                }
+
+                // for(int i = 0; i<num_skip; i++){
+                //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K skipped sensor: %u %u\0338", 35+i, skipped_sensors.sensors[i], skipped_sensors.dists[i]);
+                // }
+                for(int i = 0; i<path->sensor_path.num_sensors; i++){
+                    uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
+                }
+                // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", path->num_switches);
+                // for(int i = 0; i<path->num_switches; i++){
+                //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);
+                // }
+
+                change_switches_cmd(switch_tid, path->switches, path->num_switches);
+                //TODO: maybe make this send size also dynamic depending on num of sensors
+                memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
             // }
 
-            change_switches_cmd(switch_tid, path->switches, path->num_switches);
-            //TODO: maybe make this send size also dynamic depending on num of sensors
-            memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
             intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
             if(intended_reply_len!=0){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[KPathfind sent sensor path and received unexpected rplen\0338");
@@ -343,6 +362,7 @@ void path_finding(){
             cur_pos = -2;
         
         }else if(pm.type==PATH_TRACK_CHANGE){
+            Reply(tid, NULL, 0);
             if(pm.arg1 == 'a'){
                 init_tracka(track);
             }else if(pm.arg1 == 'b'){
@@ -364,6 +384,7 @@ void path_finding(){
             // uart_printf(CONSOLE, "\0337\033[20;1H\033[KNext sensor: %u %u\0338", skipped_sensors.sensors[0], skipped_sensors.sensors[1]);
             Reply(tid, &next_sensor, sizeof(uint8_t));
         }else{
+            Reply(tid, NULL, 0);
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown pathfind command\0338");
             continue;
         }
