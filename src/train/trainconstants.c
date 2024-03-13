@@ -179,39 +179,53 @@ int train_terminal_speed(uint32_t train_num, uint32_t train_speed) {
 }
 
 int train2_terminal_speed(uint32_t train_speed) {
+    int speed = 0;
     switch (train_speed) {
         case 0:
-            return 0;
+            speed = 0;
+            break;
         case 4:
-            return 170;
+            speed = 170;
+            break;
         case 8:
-            return 382;
+            speed = 382;
+            break;
         case 12:
-            return 598;
+            speed = 598;
+            break;
         case 14:
-            return 630;
+            speed = 630;
+            break;
         default:
             // unsupported speed
             return -1;          
     }
+    return speed;
 }
 
 int train47_terminal_speed(uint32_t train_speed) {
+    int speed = 0;
     switch (train_speed) {
         case 0:
-            return 0;
+            speed = 0;
+            break;
         case 4:
-            return 179;
+            speed = 179;
+            break;
         case 8:
-            return 385;
+            speed = 385;
+            break;
         case 12:
-            return 572;
+            speed = 572;
+            break;
         case 14:
-            return 583;
+            speed = 583;
+            break;
         default:
             // unsupported speed
             return -1;          
     }
+    return speed;
 }
 
 int train_stopping_acceleration(uint32_t train_num, uint32_t train_speed) {
