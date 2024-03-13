@@ -174,7 +174,7 @@ int train_terminal_speed(uint32_t train_num, uint32_t train_speed) {
             return train47_terminal_speed(train_speed);
         default:
             // unsupported train
-            return -1;          
+            return train47_terminal_speed(train_speed);       
     }
 }
 
@@ -236,7 +236,7 @@ int train_stopping_acceleration(uint32_t train_num, uint32_t train_speed) {
             return train47_stopping_acceleration(train_speed);
         default:
             // unsupported train
-            return -1;          
+            return train47_stopping_acceleration(train_speed);
     }
 }
 

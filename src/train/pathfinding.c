@@ -263,7 +263,7 @@ void path_finding(){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get switches setup\0338");
         for(;;){}
     }
-    uart_printf(CONSOLE, "\0337\033[34;1H\033[Kswitches: %s\0338", switch_states);
+    // uart_printf(CONSOLE, "\0337\033[34;1H\033[Kswitches: %s\0338", switch_states);
 
     TrainServerMsg tsm;
     tsm.type = TRAIN_SERVER_NAV_PATH;
