@@ -185,7 +185,7 @@ void trainserver(){
         // if dest exists, get sensor and delay to stop
         // TODO: CHANGE!
         if(train_dest!=255 && got_sensor_path){
-          sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-2];
+          sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-3];
           delay_time = 0;
         }
 
@@ -198,6 +198,7 @@ void trainserver(){
             last_speed[train_id] = 0;
             dsm.train_number = train_id;
             dsm.delay_until = (int)(tsm.arg2) + delay_time;
+
             intended_reply_len = Send(delay_stop_tid, &dsm, sizeof(DelayStopMsg), NULL, 0);
             if(intended_reply_len!=0){
               uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
