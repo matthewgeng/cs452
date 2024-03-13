@@ -51,7 +51,7 @@ LOAD src/kernel/boot/boot.o
  .text.evt      0x0000000000080800      0x7fc src/kernel/asm/exception_vector.o
                 0x0000000000080800                exception_vector
 
-.text           0x0000000000081000     0xffe8
+.text           0x0000000000081000    0x103e8
  *(.text*)
  .text          0x0000000000081000      0x10c src/kernel/data_structures/char_cb.o
                 0x0000000000081000                initialize_charcb
@@ -277,200 +277,201 @@ LOAD src/kernel/boot/boot.o
                 0x000000000008a8c0                sw
                 0x000000000008aa10                switches_setup
                 0x000000000008abd0                switches_server
- .text          0x000000000008ad30     0x5240 src/train/track_data.o
+ .text          0x000000000008ad30     0x563c src/train/track_data.o
                 0x000000000008ad30                init_tracka
                 0x000000000008d940                init_trackb
- .text          0x000000000008ff70      0x91c src/train/traincontrol.o
-                0x000000000008ff70                get_sensor_num
-                0x000000000008ffd0                execute_tr
-                0x00000000000900d0                execute_rv
-                0x0000000000090190                execute_sw
-                0x00000000000902b0                execute_pf
-                0x0000000000090490                execute_nav
-                0x00000000000905e0                execute_pcp
-                0x0000000000090660                executeFunction
- *fill*         0x000000000009088c        0x4 
- .text          0x0000000000090890      0x3d4 src/train/trainserver.o
-                0x0000000000090890                tr
-                0x00000000000908e0                trainserver
- *fill*         0x0000000000090c64        0x4 
- .text          0x0000000000090c68      0x380 src/kernel/asm/context_switching.o
-                0x0000000000090c68                context_switch_to_task
-                0x0000000000090d8c                return_to_kernel_syscall
-                0x0000000000090eb0                return_to_kernel_irq
- .text          0x0000000000090fe8        0x0 src/kernel/asm/exception_vector.o
- .text          0x0000000000090fe8        0x0 src/kernel/boot/boot.o
+ *fill*         0x000000000009036c        0x4 
+ .text          0x0000000000090370      0x91c src/train/traincontrol.o
+                0x0000000000090370                get_sensor_num
+                0x00000000000903d0                execute_tr
+                0x00000000000904d0                execute_rv
+                0x0000000000090590                execute_sw
+                0x00000000000906b0                execute_pf
+                0x0000000000090890                execute_nav
+                0x00000000000909e0                execute_pcp
+                0x0000000000090a60                executeFunction
+ *fill*         0x0000000000090c8c        0x4 
+ .text          0x0000000000090c90      0x3d4 src/train/trainserver.o
+                0x0000000000090c90                tr
+                0x0000000000090ce0                trainserver
+ *fill*         0x0000000000091064        0x4 
+ .text          0x0000000000091068      0x380 src/kernel/asm/context_switching.o
+                0x0000000000091068                context_switch_to_task
+                0x000000000009118c                return_to_kernel_syscall
+                0x00000000000912b0                return_to_kernel_irq
+ .text          0x00000000000913e8        0x0 src/kernel/asm/exception_vector.o
+ .text          0x00000000000913e8        0x0 src/kernel/boot/boot.o
 
-.iplt           0x0000000000090fe8        0x0
- .iplt          0x0000000000090fe8        0x0 src/kernel/data_structures/heap.o
+.iplt           0x00000000000913e8        0x0
+ .iplt          0x00000000000913e8        0x0 src/kernel/data_structures/heap.o
 
-.rodata.str1.8  0x0000000000090fe8     0x1994
+.rodata.str1.8  0x00000000000913e8     0x1994
  .rodata.str1.8
-                0x0000000000090fe8       0x13 src/kernel/data_structures/heap.o
- *fill*         0x0000000000090ffb        0x5 
+                0x00000000000913e8       0x13 src/kernel/data_structures/heap.o
+ *fill*         0x00000000000913fb        0x5 
  .rodata.str1.8
-                0x0000000000091000       0x15 src/kernel/exception.o
- *fill*         0x0000000000091015        0x3 
+                0x0000000000091400       0x15 src/kernel/exception.o
+ *fill*         0x0000000000091415        0x3 
  .rodata.str1.8
-                0x0000000000091018       0x22 src/kernel/interrupt.o
- *fill*         0x000000000009103a        0x6 
+                0x0000000000091418       0x22 src/kernel/interrupt.o
+ *fill*         0x000000000009143a        0x6 
  .rodata.str1.8
-                0x0000000000091040      0x246 src/kernel/k2/gameclient.o
- *fill*         0x0000000000091286        0x2 
+                0x0000000000091440      0x246 src/kernel/k2/gameclient.o
+ *fill*         0x0000000000091686        0x2 
  .rodata.str1.8
-                0x0000000000091288      0x287 src/kernel/k2/gameserver.o
+                0x0000000000091688      0x287 src/kernel/k2/gameserver.o
                                         0x28f (size before relaxing)
- *fill*         0x000000000009150f        0x1 
+ *fill*         0x000000000009190f        0x1 
  .rodata.str1.8
-                0x0000000000091510      0x315 src/kernel/k_handler.o
- *fill*         0x0000000000091825        0x3 
+                0x0000000000091910      0x315 src/kernel/k_handler.o
+ *fill*         0x0000000000091c25        0x3 
  .rodata.str1.8
-                0x0000000000091828      0x150 src/kernel/server/clock.o
+                0x0000000000091c28      0x150 src/kernel/server/clock.o
  .rodata.str1.8
-                0x0000000000091978       0xd0 src/kernel/server/io.o
+                0x0000000000091d78       0xd0 src/kernel/server/io.o
                                          0xd8 (size before relaxing)
  .rodata.str1.8
-                0x0000000000091a48      0x16f src/kernel/server/nameserver.o
- *fill*         0x0000000000091bb7        0x1 
+                0x0000000000091e48      0x16f src/kernel/server/nameserver.o
+ *fill*         0x0000000000091fb7        0x1 
  .rodata.str1.8
-                0x0000000000091bb8      0x261 src/kernel/tasks.o
- *fill*         0x0000000000091e19        0x7 
+                0x0000000000091fb8      0x261 src/kernel/tasks.o
+ *fill*         0x0000000000092219        0x7 
  .rodata.str1.8
-                0x0000000000091e20      0x247 src/train/pathfinding.o
- *fill*         0x0000000000092067        0x1 
+                0x0000000000092220      0x247 src/train/pathfinding.o
+ *fill*         0x0000000000092467        0x1 
  .rodata.str1.8
-                0x0000000000092068       0x2f src/train/reverse.o
- *fill*         0x0000000000092097        0x1 
+                0x0000000000092468       0x2f src/train/reverse.o
+ *fill*         0x0000000000092497        0x1 
  .rodata.str1.8
-                0x0000000000092098       0xd1 src/train/sensors.o
- *fill*         0x0000000000092169        0x7 
+                0x0000000000092498       0xd1 src/train/sensors.o
+ *fill*         0x0000000000092569        0x7 
  .rodata.str1.8
-                0x0000000000092170       0x4a src/train/switches.o
- *fill*         0x00000000000921ba        0x6 
+                0x0000000000092570       0x4a src/train/switches.o
+ *fill*         0x00000000000925ba        0x6 
  .rodata.str1.8
-                0x00000000000921c0      0x47d src/train/track_data.o
- *fill*         0x000000000009263d        0x3 
+                0x00000000000925c0      0x47d src/train/track_data.o
+ *fill*         0x0000000000092a3d        0x3 
  .rodata.str1.8
-                0x0000000000092640      0x1f1 src/train/traincontrol.o
+                0x0000000000092a40      0x1f1 src/train/traincontrol.o
                                         0x201 (size before relaxing)
- *fill*         0x0000000000092831        0x7 
+ *fill*         0x0000000000092c31        0x7 
  .rodata.str1.8
-                0x0000000000092838      0x144 src/train/trainserver.o
+                0x0000000000092c38      0x144 src/train/trainserver.o
 
-.rodata         0x0000000000092980      0x258
- .rodata        0x0000000000092980       0x10 src/kernel/k2/gameserver.o
- .rodata        0x0000000000092990       0x18 src/kernel/peripheral/rpi.o
- .rodata        0x00000000000929a8       0x17 src/kernel/server/clock.o
- *fill*         0x00000000000929bf        0x1 
- .rodata        0x00000000000929c0       0x7e src/kernel/server/io.o
- *fill*         0x0000000000092a3e        0x2 
- .rodata        0x0000000000092a40       0x2d src/kernel/tasks.o
- *fill*         0x0000000000092a6d        0x3 
- .rodata        0x0000000000092a70       0x25 src/train/pathfinding.o
- *fill*         0x0000000000092a95        0x3 
- .rodata        0x0000000000092a98       0x26 src/train/reverse.o
- *fill*         0x0000000000092abe        0x2 
- .rodata        0x0000000000092ac0       0x2d src/train/sensors.o
- *fill*         0x0000000000092aed        0x3 
- .rodata        0x0000000000092af0       0x76 src/train/switches.o
- *fill*         0x0000000000092b66        0x2 
- .rodata        0x0000000000092b68       0x15 src/train/traincontrol.o
- *fill*         0x0000000000092b7d        0x3 
- .rodata        0x0000000000092b80       0x58 src/train/trainserver.o
+.rodata         0x0000000000092d80      0x258
+ .rodata        0x0000000000092d80       0x10 src/kernel/k2/gameserver.o
+ .rodata        0x0000000000092d90       0x18 src/kernel/peripheral/rpi.o
+ .rodata        0x0000000000092da8       0x17 src/kernel/server/clock.o
+ *fill*         0x0000000000092dbf        0x1 
+ .rodata        0x0000000000092dc0       0x7e src/kernel/server/io.o
+ *fill*         0x0000000000092e3e        0x2 
+ .rodata        0x0000000000092e40       0x2d src/kernel/tasks.o
+ *fill*         0x0000000000092e6d        0x3 
+ .rodata        0x0000000000092e70       0x25 src/train/pathfinding.o
+ *fill*         0x0000000000092e95        0x3 
+ .rodata        0x0000000000092e98       0x26 src/train/reverse.o
+ *fill*         0x0000000000092ebe        0x2 
+ .rodata        0x0000000000092ec0       0x2d src/train/sensors.o
+ *fill*         0x0000000000092eed        0x3 
+ .rodata        0x0000000000092ef0       0x76 src/train/switches.o
+ *fill*         0x0000000000092f66        0x2 
+ .rodata        0x0000000000092f68       0x15 src/train/traincontrol.o
+ *fill*         0x0000000000092f7d        0x3 
+ .rodata        0x0000000000092f80       0x58 src/train/trainserver.o
 
-.rela.dyn       0x0000000000092bd8        0x0
- .rela.iplt     0x0000000000092bd8        0x0 src/kernel/data_structures/heap.o
- .rela.text     0x0000000000092bd8        0x0 src/kernel/data_structures/heap.o
+.rela.dyn       0x0000000000092fd8        0x0
+ .rela.iplt     0x0000000000092fd8        0x0 src/kernel/data_structures/heap.o
+ .rela.text     0x0000000000092fd8        0x0 src/kernel/data_structures/heap.o
  .rela.text.boot
-                0x0000000000092bd8        0x0 src/kernel/data_structures/heap.o
-                0x0000000000092be0                . = ALIGN (0x10)
+                0x0000000000092fd8        0x0 src/kernel/data_structures/heap.o
+                0x0000000000092fe0                . = ALIGN (0x10)
 
-.data           0x0000000000092be0       0x94
+.data           0x0000000000092fe0       0x94
  *(.data)
- .data          0x0000000000092be0        0x0 src/kernel/data_structures/char_cb.o
- .data          0x0000000000092be0        0x0 src/kernel/data_structures/heap.o
- .data          0x0000000000092be0        0x0 src/kernel/data_structures/int_cb.o
- .data          0x0000000000092be0        0x0 src/kernel/exception.o
- .data          0x0000000000092be0        0x0 src/kernel/interrupt.o
- .data          0x0000000000092be0        0x0 src/kernel/k2/gameclient.o
- .data          0x0000000000092be0       0x94 src/kernel/k2/gameserver.o
-                0x0000000000092be0                gameserver_name
-                0x0000000000092bf0                move_str
-                0x0000000000092c08                result_str
-                0x0000000000092c28                quit_str
-                0x0000000000092c38                tie_str
-                0x0000000000092c40                lose_str
-                0x0000000000092c48                win_str
-                0x0000000000092c50                scissor_str
-                0x0000000000092c58                paper_str
-                0x0000000000092c60                rock_str
-                0x0000000000092c68                moves
- .data          0x0000000000092c74        0x0 src/kernel/k_handler.o
- .data          0x0000000000092c74        0x0 src/kernel/peripheral/rpi.o
- .data          0x0000000000092c74        0x0 src/kernel/server/clock.o
- .data          0x0000000000092c74        0x0 src/kernel/server/io.o
- .data          0x0000000000092c74        0x0 src/kernel/server/nameserver.o
- .data          0x0000000000092c74        0x0 src/kernel/server/timer.o
- .data          0x0000000000092c74        0x0 src/kernel/syscall.o
- .data          0x0000000000092c74        0x0 src/kernel/taskframe.o
- .data          0x0000000000092c74        0x0 src/kernel/tasks.o
- .data          0x0000000000092c74        0x0 src/kernel/util/assert.o
- .data          0x0000000000092c74        0x0 src/kernel/util/util.o
- .data          0x0000000000092c74        0x0 src/main.o
- .data          0x0000000000092c74        0x0 src/train/pathfinding.o
- .data          0x0000000000092c74        0x0 src/train/reverse.o
- .data          0x0000000000092c74        0x0 src/train/sensors.o
- .data          0x0000000000092c74        0x0 src/train/switches.o
- .data          0x0000000000092c74        0x0 src/train/track_data.o
- .data          0x0000000000092c74        0x0 src/train/traincontrol.o
- .data          0x0000000000092c74        0x0 src/train/trainserver.o
- .data          0x0000000000092c74        0x0 src/kernel/asm/context_switching.o
- .data          0x0000000000092c74        0x0 src/kernel/asm/exception_vector.o
- .data          0x0000000000092c74        0x0 src/kernel/boot/boot.o
+ .data          0x0000000000092fe0        0x0 src/kernel/data_structures/char_cb.o
+ .data          0x0000000000092fe0        0x0 src/kernel/data_structures/heap.o
+ .data          0x0000000000092fe0        0x0 src/kernel/data_structures/int_cb.o
+ .data          0x0000000000092fe0        0x0 src/kernel/exception.o
+ .data          0x0000000000092fe0        0x0 src/kernel/interrupt.o
+ .data          0x0000000000092fe0        0x0 src/kernel/k2/gameclient.o
+ .data          0x0000000000092fe0       0x94 src/kernel/k2/gameserver.o
+                0x0000000000092fe0                gameserver_name
+                0x0000000000092ff0                move_str
+                0x0000000000093008                result_str
+                0x0000000000093028                quit_str
+                0x0000000000093038                tie_str
+                0x0000000000093040                lose_str
+                0x0000000000093048                win_str
+                0x0000000000093050                scissor_str
+                0x0000000000093058                paper_str
+                0x0000000000093060                rock_str
+                0x0000000000093068                moves
+ .data          0x0000000000093074        0x0 src/kernel/k_handler.o
+ .data          0x0000000000093074        0x0 src/kernel/peripheral/rpi.o
+ .data          0x0000000000093074        0x0 src/kernel/server/clock.o
+ .data          0x0000000000093074        0x0 src/kernel/server/io.o
+ .data          0x0000000000093074        0x0 src/kernel/server/nameserver.o
+ .data          0x0000000000093074        0x0 src/kernel/server/timer.o
+ .data          0x0000000000093074        0x0 src/kernel/syscall.o
+ .data          0x0000000000093074        0x0 src/kernel/taskframe.o
+ .data          0x0000000000093074        0x0 src/kernel/tasks.o
+ .data          0x0000000000093074        0x0 src/kernel/util/assert.o
+ .data          0x0000000000093074        0x0 src/kernel/util/util.o
+ .data          0x0000000000093074        0x0 src/main.o
+ .data          0x0000000000093074        0x0 src/train/pathfinding.o
+ .data          0x0000000000093074        0x0 src/train/reverse.o
+ .data          0x0000000000093074        0x0 src/train/sensors.o
+ .data          0x0000000000093074        0x0 src/train/switches.o
+ .data          0x0000000000093074        0x0 src/train/track_data.o
+ .data          0x0000000000093074        0x0 src/train/traincontrol.o
+ .data          0x0000000000093074        0x0 src/train/trainserver.o
+ .data          0x0000000000093074        0x0 src/kernel/asm/context_switching.o
+ .data          0x0000000000093074        0x0 src/kernel/asm/exception_vector.o
+ .data          0x0000000000093074        0x0 src/kernel/boot/boot.o
 
-.igot.plt       0x0000000000092c78        0x0
- .igot.plt      0x0000000000092c78        0x0 src/kernel/data_structures/heap.o
-                0x0000000000092c80                . = ALIGN (0x10)
-                0x0000000000092c80                bss_begin = .
+.igot.plt       0x0000000000093078        0x0
+ .igot.plt      0x0000000000093078        0x0 src/kernel/data_structures/heap.o
+                0x0000000000093080                . = ALIGN (0x10)
+                0x0000000000093080                bss_begin = .
 
-.bss            0x0000000000092c80       0x20
+.bss            0x0000000000093080       0x20
  *(.bss)
- .bss           0x0000000000092c80        0x0 src/kernel/data_structures/char_cb.o
- .bss           0x0000000000092c80        0x0 src/kernel/data_structures/heap.o
- .bss           0x0000000000092c80        0x0 src/kernel/data_structures/int_cb.o
- .bss           0x0000000000092c80        0x0 src/kernel/exception.o
- .bss           0x0000000000092c80        0x0 src/kernel/interrupt.o
- .bss           0x0000000000092c80        0x0 src/kernel/k2/gameclient.o
- .bss           0x0000000000092c80        0x0 src/kernel/k2/gameserver.o
- .bss           0x0000000000092c80        0x0 src/kernel/k_handler.o
- .bss           0x0000000000092c80        0x0 src/kernel/peripheral/rpi.o
- .bss           0x0000000000092c80        0x0 src/kernel/server/clock.o
- .bss           0x0000000000092c80        0x0 src/kernel/server/io.o
- .bss           0x0000000000092c80        0x0 src/kernel/server/nameserver.o
- .bss           0x0000000000092c80        0x0 src/kernel/server/timer.o
- .bss           0x0000000000092c80        0x0 src/kernel/syscall.o
- .bss           0x0000000000092c80        0x0 src/kernel/taskframe.o
- .bss           0x0000000000092c80        0x0 src/kernel/tasks.o
- .bss           0x0000000000092c80        0x0 src/kernel/util/assert.o
- .bss           0x0000000000092c80        0x0 src/kernel/util/util.o
- .bss           0x0000000000092c80       0x20 src/main.o
-                0x0000000000092c80                p_program_start
-                0x0000000000092c88                p_idle_task_total
-                0x0000000000092c90                kf
-                0x0000000000092c98                currentTaskFrame
- .bss           0x0000000000092ca0        0x0 src/train/pathfinding.o
- .bss           0x0000000000092ca0        0x0 src/train/reverse.o
- .bss           0x0000000000092ca0        0x0 src/train/sensors.o
- .bss           0x0000000000092ca0        0x0 src/train/switches.o
- .bss           0x0000000000092ca0        0x0 src/train/track_data.o
- .bss           0x0000000000092ca0        0x0 src/train/traincontrol.o
- .bss           0x0000000000092ca0        0x0 src/train/trainserver.o
- .bss           0x0000000000092ca0        0x0 src/kernel/asm/context_switching.o
- .bss           0x0000000000092ca0        0x0 src/kernel/asm/exception_vector.o
- .bss           0x0000000000092ca0        0x0 src/kernel/boot/boot.o
-                0x0000000000092ca0                bss_end = .
-                0x0000000000092cb0                . = (. + 0x10)
-                0x0000000000092cb0                user_stack_start = .
+ .bss           0x0000000000093080        0x0 src/kernel/data_structures/char_cb.o
+ .bss           0x0000000000093080        0x0 src/kernel/data_structures/heap.o
+ .bss           0x0000000000093080        0x0 src/kernel/data_structures/int_cb.o
+ .bss           0x0000000000093080        0x0 src/kernel/exception.o
+ .bss           0x0000000000093080        0x0 src/kernel/interrupt.o
+ .bss           0x0000000000093080        0x0 src/kernel/k2/gameclient.o
+ .bss           0x0000000000093080        0x0 src/kernel/k2/gameserver.o
+ .bss           0x0000000000093080        0x0 src/kernel/k_handler.o
+ .bss           0x0000000000093080        0x0 src/kernel/peripheral/rpi.o
+ .bss           0x0000000000093080        0x0 src/kernel/server/clock.o
+ .bss           0x0000000000093080        0x0 src/kernel/server/io.o
+ .bss           0x0000000000093080        0x0 src/kernel/server/nameserver.o
+ .bss           0x0000000000093080        0x0 src/kernel/server/timer.o
+ .bss           0x0000000000093080        0x0 src/kernel/syscall.o
+ .bss           0x0000000000093080        0x0 src/kernel/taskframe.o
+ .bss           0x0000000000093080        0x0 src/kernel/tasks.o
+ .bss           0x0000000000093080        0x0 src/kernel/util/assert.o
+ .bss           0x0000000000093080        0x0 src/kernel/util/util.o
+ .bss           0x0000000000093080       0x20 src/main.o
+                0x0000000000093080                p_program_start
+                0x0000000000093088                p_idle_task_total
+                0x0000000000093090                kf
+                0x0000000000093098                currentTaskFrame
+ .bss           0x00000000000930a0        0x0 src/train/pathfinding.o
+ .bss           0x00000000000930a0        0x0 src/train/reverse.o
+ .bss           0x00000000000930a0        0x0 src/train/sensors.o
+ .bss           0x00000000000930a0        0x0 src/train/switches.o
+ .bss           0x00000000000930a0        0x0 src/train/track_data.o
+ .bss           0x00000000000930a0        0x0 src/train/traincontrol.o
+ .bss           0x00000000000930a0        0x0 src/train/trainserver.o
+ .bss           0x00000000000930a0        0x0 src/kernel/asm/context_switching.o
+ .bss           0x00000000000930a0        0x0 src/kernel/asm/exception_vector.o
+ .bss           0x00000000000930a0        0x0 src/kernel/boot/boot.o
+                0x00000000000930a0                bss_end = .
+                0x00000000000930b0                . = (. + 0x10)
+                0x00000000000930b0                user_stack_start = .
 LOAD /u3/cs452/public/xdev/bin/../lib/gcc/aarch64-none-elf/12.3.1/libgcc.a
 LOAD /u3/cs452/public/xdev/bin/../lib/gcc/aarch64-none-elf/12.3.1/../../../../aarch64-none-elf/lib/libg.a
 LOAD /u3/cs452/public/xdev/bin/../lib/gcc/aarch64-none-elf/12.3.1/../../../../aarch64-none-elf/lib/libc.a
@@ -478,7 +479,7 @@ LOAD /u3/cs452/public/xdev/bin/../lib/gcc/aarch64-none-elf/12.3.1/libgcc.a
 OUTPUT(iotest.elf elf64-littleaarch64)
 LOAD linker stubs
 
-.debug_info     0x0000000000000000    0x15371
+.debug_info     0x0000000000000000    0x15398
  .debug_info    0x0000000000000000      0x3cd src/kernel/data_structures/char_cb.o
  .debug_info    0x00000000000003cd      0x558 src/kernel/data_structures/heap.o
  .debug_info    0x0000000000000925      0x3a6 src/kernel/data_structures/int_cb.o
@@ -502,14 +503,14 @@ LOAD linker stubs
  .debug_info    0x0000000000012039      0x484 src/train/reverse.o
  .debug_info    0x00000000000124bd      0x7a4 src/train/sensors.o
  .debug_info    0x0000000000012c61      0x95a src/train/switches.o
- .debug_info    0x00000000000135bb      0x202 src/train/track_data.o
- .debug_info    0x00000000000137bd     0x1049 src/train/traincontrol.o
- .debug_info    0x0000000000014806      0xaf0 src/train/trainserver.o
- .debug_info    0x00000000000152f6       0x29 src/kernel/asm/context_switching.o
- .debug_info    0x000000000001531f       0x29 src/kernel/asm/exception_vector.o
- .debug_info    0x0000000000015348       0x29 src/kernel/boot/boot.o
+ .debug_info    0x00000000000135bb      0x229 src/train/track_data.o
+ .debug_info    0x00000000000137e4     0x1049 src/train/traincontrol.o
+ .debug_info    0x000000000001482d      0xaf0 src/train/trainserver.o
+ .debug_info    0x000000000001531d       0x29 src/kernel/asm/context_switching.o
+ .debug_info    0x0000000000015346       0x29 src/kernel/asm/exception_vector.o
+ .debug_info    0x000000000001536f       0x29 src/kernel/boot/boot.o
 
-.debug_abbrev   0x0000000000000000     0x3dc9
+.debug_abbrev   0x0000000000000000     0x3ddc
  .debug_abbrev  0x0000000000000000      0x1d1 src/kernel/data_structures/char_cb.o
  .debug_abbrev  0x00000000000001d1      0x24c src/kernel/data_structures/heap.o
  .debug_abbrev  0x000000000000041d      0x1ce src/kernel/data_structures/int_cb.o
@@ -533,15 +534,15 @@ LOAD linker stubs
  .debug_abbrev  0x00000000000031b7      0x14b src/train/reverse.o
  .debug_abbrev  0x0000000000003302      0x1a8 src/train/sensors.o
  .debug_abbrev  0x00000000000034aa      0x29d src/train/switches.o
- .debug_abbrev  0x0000000000003747      0x124 src/train/track_data.o
- .debug_abbrev  0x000000000000386b      0x2c7 src/train/traincontrol.o
- .debug_abbrev  0x0000000000003b32      0x25b src/train/trainserver.o
- .debug_abbrev  0x0000000000003d8d       0x14 src/kernel/asm/context_switching.o
- .debug_abbrev  0x0000000000003da1       0x14 src/kernel/asm/exception_vector.o
- .debug_abbrev  0x0000000000003db5       0x14 src/kernel/boot/boot.o
+ .debug_abbrev  0x0000000000003747      0x137 src/train/track_data.o
+ .debug_abbrev  0x000000000000387e      0x2c7 src/train/traincontrol.o
+ .debug_abbrev  0x0000000000003b45      0x25b src/train/trainserver.o
+ .debug_abbrev  0x0000000000003da0       0x14 src/kernel/asm/context_switching.o
+ .debug_abbrev  0x0000000000003db4       0x14 src/kernel/asm/exception_vector.o
+ .debug_abbrev  0x0000000000003dc8       0x14 src/kernel/boot/boot.o
 
 .debug_loclists
-                0x0000000000000000     0x95ed
+                0x0000000000000000     0x96e9
  .debug_loclists
                 0x0000000000000000      0x101 src/kernel/data_structures/char_cb.o
  .debug_loclists
@@ -589,11 +590,11 @@ LOAD linker stubs
  .debug_loclists
                 0x0000000000008572      0x3a7 src/train/switches.o
  .debug_loclists
-                0x0000000000008919       0xef src/train/track_data.o
+                0x0000000000008919      0x1eb src/train/track_data.o
  .debug_loclists
-                0x0000000000008a08      0xaa5 src/train/traincontrol.o
+                0x0000000000008b04      0xaa5 src/train/traincontrol.o
  .debug_loclists
-                0x00000000000094ad      0x140 src/train/trainserver.o
+                0x00000000000095a9      0x140 src/train/trainserver.o
 
 .debug_aranges  0x0000000000000000      0x570
  .debug_aranges
@@ -656,7 +657,7 @@ LOAD linker stubs
                 0x0000000000000540       0x30 src/kernel/boot/boot.o
 
 .debug_rnglists
-                0x0000000000000000     0x1160
+                0x0000000000000000     0x1172
  .debug_rnglists
                 0x0000000000000000       0x2b src/kernel/data_structures/char_cb.o
  .debug_rnglists
@@ -698,13 +699,13 @@ LOAD linker stubs
  .debug_rnglists
                 0x0000000000001098       0x55 src/train/switches.o
  .debug_rnglists
-                0x00000000000010ed       0x19 src/train/track_data.o
+                0x00000000000010ed       0x2b src/train/track_data.o
  .debug_rnglists
-                0x0000000000001106       0x38 src/train/traincontrol.o
+                0x0000000000001118       0x38 src/train/traincontrol.o
  .debug_rnglists
-                0x000000000000113e       0x22 src/train/trainserver.o
+                0x0000000000001150       0x22 src/train/trainserver.o
 
-.debug_line     0x0000000000000000     0xfeb3
+.debug_line     0x0000000000000000    0x100e9
  .debug_line    0x0000000000000000      0x1be src/kernel/data_structures/char_cb.o
  .debug_line    0x00000000000001be      0x355 src/kernel/data_structures/heap.o
  .debug_line    0x0000000000000513      0x1a5 src/kernel/data_structures/int_cb.o
@@ -728,12 +729,12 @@ LOAD linker stubs
  .debug_line    0x0000000000008917      0x127 src/train/reverse.o
  .debug_line    0x0000000000008a3e      0x2ac src/train/sensors.o
  .debug_line    0x0000000000008cea      0x44b src/train/switches.o
- .debug_line    0x0000000000009135     0x62b3 src/train/track_data.o
- .debug_line    0x000000000000f3e8      0x65f src/train/traincontrol.o
- .debug_line    0x000000000000fa47      0x310 src/train/trainserver.o
- .debug_line    0x000000000000fd57       0x62 src/kernel/asm/context_switching.o
- .debug_line    0x000000000000fdb9       0x89 src/kernel/asm/exception_vector.o
- .debug_line    0x000000000000fe42       0x71 src/kernel/boot/boot.o
+ .debug_line    0x0000000000009135     0x64e9 src/train/track_data.o
+ .debug_line    0x000000000000f61e      0x65f src/train/traincontrol.o
+ .debug_line    0x000000000000fc7d      0x310 src/train/trainserver.o
+ .debug_line    0x000000000000ff8d       0x62 src/kernel/asm/context_switching.o
+ .debug_line    0x000000000000ffef       0x89 src/kernel/asm/exception_vector.o
+ .debug_line    0x0000000000010078       0x71 src/kernel/boot/boot.o
 
 .debug_str      0x0000000000000000     0x1a90
  .debug_str     0x0000000000000000      0x15c src/kernel/data_structures/char_cb.o

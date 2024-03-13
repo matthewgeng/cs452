@@ -366,7 +366,7 @@ void path_finding(){
     // memset(track, 0, sizeof(track_node));
 
     // uart_printf(CONSOLE, "\033[30;1H\033[Ktracknode size %u", sizeof(track_node));
-    init_tracka(track);
+    init_trackb(track);
 
     PathMessage pm;
     int tid;
@@ -469,7 +469,7 @@ void path_finding(){
             disable_irqs();
             uart_printf(CONSOLE, "\033[19;1H\033[Kprecompute\r\n");
             SensorPath sp;
-            for(int src = 0; src<80; src++){
+            for(int src = 0; src<70; src++){
                 precompute(src, track, TRACK_MAX, &nextFreeHeapNode, &sp);
                 for(int i = 0; i<sp.num_sensors; i++){
                     uart_printf(CONSOLE, "%d,%u,%u\r\n", src, sp.sensors[i], sp.dists[i]);
