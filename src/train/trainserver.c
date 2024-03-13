@@ -459,9 +459,16 @@ void trainserver(){
             cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 2)) + (new_cur_speed >> 2);
             uart_printf(CONSOLE, "\0337\033[42;1H\033[KCur speed: %d\0338", cur_physical_speed);
 
-        estimated_next_sensor_time = distance_between/cur_physical_speed;
-        // TODO: use puts
-        uart_printf(CONSOLE, "\0337\033[50;1H\033[KEstimated next sensor_time %d \0338", estimated_next_sensor_time);
+
+
+
+        if(estimated_next_sensor_time!=0){
+          // TODO: use puts
+          int time_diff = cur_time-estimated_next_sensor_time;
+          uart_printf(CONSOLE, "\0337\033[50;1H\033[KEstimated next sensor_time %u \0338", estimated_next_sensor_time);
+          uart_printf(CONSOLE, "\0337\033[51;1H\033[KDistance Difference %d \0338", time_diff*cur_physical_speed);
+
+        }
 
         // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server diff new sensor, %d\0338", Time(clock));
         // loc_err_handling(train_location, next_sensors, next_sensors_err);
@@ -495,7 +502,9 @@ void trainserver(){
           uart_printf(CONSOLE, "\0337\033[40;1H\033[Ktrainserver stop 0\0338");
           tr(mio, train_id, 15, last_speed);
           does_reset = 1;
+          estimated_next_sensor_time = 0;
         }else{
+          estimated_next_sensor_time = pcp_dists[tsm.arg1][next_sensors_new[0]]/cur_physical_speed;
           does_reset = loc_err_handling(train_location, next_sensors, next_sensors_err, next_sensors_new);
         }
         
