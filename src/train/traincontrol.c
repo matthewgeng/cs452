@@ -212,16 +212,16 @@ void execute_nav(char *str, char *func_res, int console_tid, int train_server_ti
 
 void execute_go(char *str, char *func_res, int console_tid, int train_server_tid){
 
-    uint8_t train_number = getArgumentTwoDigitNumber(str+4);
+    uint8_t train_number = getArgumentTwoDigitNumber(str+3);
     if(train_number==1000){
       str_cpy_w0(func_res+10, "Invalid train number");
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    if(str[5]==' '){
+    if(str[4]==' '){
+      str += 5;
+    }else if(str[5]==' '){
       str += 6;
-    }else if(str[6]==' '){
-      str += 7;
     }
 
     uint8_t train_speed = getArgumentTwoDigitNumber(str);
@@ -319,11 +319,11 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_pf(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='n' && str[1]=='a' && str[2]=='v' && str[3]==' '){
     execute_nav(str, func_res, console_tid, train_server_tid);
-  }else if(str[0]=='g' && str[1]=='0' && str[2]==' '){
+  }else if(str[0]=='g' && str[1]=='o' && str[2]==' '){
     execute_go(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='t' && str[1]=='r' && str[2]=='a' && str[3]=='c' && str[4]=='k' && str[5]==' '){
     execute_track(str, func_res, console_tid, train_server_tid);
-  }else if(str[0]=='r' && str[1]=='e' && str[2]=='s' && str[3]=='e' && str[3]=='t' && str[4]==' '){
+  }else if(str[0]=='r' && str[1]=='e' && str[2]=='s' && str[3]=='e' && str[4]=='t'){
     execute_switch_reset(str, func_res, console_tid, train_server_tid);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");

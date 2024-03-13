@@ -30,25 +30,33 @@ uint8_t loc_err_handling(int train_location, uint8_t next_sensors[], uint8_t nex
   // if other and next_sensors_err isn't null, reset
   // if other and next_sensors_err is null, populate next_sensors_err
   if(next_sensors[0] == 255){
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 1\0338");
     next_sensors[0] = next_sensors_new[0];
     next_sensors[1] = next_sensors_new[1];
     return 0;
   }else if(train_location == next_sensors[0]){
-    next_sensors[0] = next_sensors_new[0];
-    next_sensors[1] = next_sensors_new[1];
-    return 0;
-  }else if(next_sensors_err[0] != 255 && train_location == next_sensors_err[0]){
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 2\0338");
     next_sensors[0] = next_sensors_new[0];
     next_sensors[1] = next_sensors_new[1];
     next_sensors_err[0] = 255;
     next_sensors_err[1] = 255;
     return 0;
-  }else if(train_location == next_sensors[1] && next_sensors_err[0] == 255){
-    // skipped a sensor
+  }else if(next_sensors_err[0] != 255 && train_location == next_sensors_err[0]){
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 3\0338");
+
     next_sensors[0] = next_sensors_new[0];
     next_sensors[1] = next_sensors_new[1];
+    next_sensors_err[0] = 255;
+    next_sensors_err[1] = 255;
+    return 0;
+  }else if(next_sensors_err[0] == 255){
+    // skipped a sensor
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 4\0338");
+    next_sensors_err[0] = next_sensors_new[0];
+    next_sensors_err[1] = next_sensors_new[1];
     return 0;
   }
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 5\0338");
   return 1;
 }
 
@@ -381,76 +389,77 @@ void trainserver(){
 
         tr(mio, tsm.arg1, tsm.arg2, last_speed);
         demo_started = 1;
+
         }else if(tsm.type==TRAIN_SERVER_RV && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
-        rm.train_number = tsm.arg1;
-        rm.last_speed = last_speed[rm.train_number];
-        intended_reply_len = Send(reverse_tid, &rm, sizeof(ReverseMsg), NULL, 0);
-        if(intended_reply_len!=0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
-        }
+            Reply(tid, NULL, 0);
+            rm.train_number = tsm.arg1;
+            rm.last_speed = last_speed[rm.train_number];
+            intended_reply_len = Send(reverse_tid, &rm, sizeof(ReverseMsg), NULL, 0);
+            if(intended_reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+            }
         }else if(tsm.type==TRAIN_SERVER_SW && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
-        sc.switch_num = tsm.arg1;
-        sc.dir = (char)tsm.arg2;
-        int res = change_switches_cmd(switch_tid, &sc, 1);
-        if(res<0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
-        }
+            Reply(tid, NULL, 0);
+            sc.switch_num = tsm.arg1;
+            sc.dir = (char)tsm.arg2;
+            int res = change_switches_cmd(switch_tid, &sc, 1);
+            if(res<0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
+            }
         }else if(tsm.type==TRAIN_SERVER_SWITCH_RESET && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
-        int res = reset_switches(switch_tid);
-        if(res<0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
-        }
+            Reply(tid, NULL, 0);
+            int res = reset_switches(switch_tid);
+            if(res<0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
+            }
         }else if(tsm.type==TRAIN_SERVER_PF && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
-        pm.type = PATH_PF;
-        pm.arg1 = tsm.arg1;
-        pm.dest = tsm.arg2;
-        int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
-        if(reply_len!=0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver pf cmd unexpected reply\0338");
-        }
-        }else if(tsm.type==TRAIN_SERVER_NAV && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
-        if(tsm.arg1 != train_id){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav unexpected train number\0338");
-            continue;
-        }
-        train_dest = tsm.arg2;
-        pm.type = PATH_NAV;
-        pm.arg1 = train_location;
-        pm.dest = tsm.arg2;
-        int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
-        if(reply_len!=0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
-        }
-        got_sensor_path = 0;
+            Reply(tid, NULL, 0);
+            pm.type = PATH_PF;
+            pm.arg1 = tsm.arg1;
+            pm.dest = tsm.arg2;
+            int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
+            if(reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver pf cmd unexpected reply\0338");
+            }
+            }else if(tsm.type==TRAIN_SERVER_NAV && msg_len==sizeof(TrainServerMsgSimple)){
+            Reply(tid, NULL, 0);
+            if(tsm.arg1 != train_id){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav unexpected train number\0338");
+                continue;
+            }
+            train_dest = tsm.arg2;
+            pm.type = PATH_NAV;
+            pm.arg1 = train_location;
+            pm.dest = tsm.arg2;
+            int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
+            if(reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
+            }
+            got_sensor_path = 0;
         }else if(tsm.type==TRAIN_SERVER_GO && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
+            Reply(tid, NULL, 0);
 
-        train_id = tsm.arg1;
-        tr(mio, tsm.arg1, tsm.arg3, last_speed);
-        demo_started = 1;
+            train_id = tsm.arg1;
+            tr(mio, tsm.arg1, tsm.arg3, last_speed);
+            demo_started = 1;
 
-        train_dest = tsm.arg2;
-        pm.type = PATH_NAV;
-        pm.arg1 = train_location;
-        pm.dest = tsm.arg2;
-        int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
-        if(reply_len!=0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
-        }
-        got_sensor_path = 0;
+            train_dest = tsm.arg2;
+            pm.type = PATH_NAV;
+            pm.arg1 = train_location;
+            pm.dest = tsm.arg2;
+            int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t)+sizeof(uint8_t), NULL, 0);
+            if(reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
+            }
+            got_sensor_path = 0;
         }else if(tsm.type==TRAIN_SERVER_TRACK_CHANGE && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
-        pm.type = PATH_TRACK_CHANGE;
-        pm.arg1 = tsm.arg1;
-        int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint8_t)+sizeof(uint32_t), NULL, 0);
-        if(reply_len!=0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver tarck cmd unexpected reply\0338");
-        }
+            Reply(tid, NULL, 0);
+            pm.type = PATH_TRACK_CHANGE;
+            pm.arg1 = tsm.arg1;
+            int reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint8_t)+sizeof(uint32_t), NULL, 0);
+            if(reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver tarck cmd unexpected reply\0338");
+            }
         }else if(tsm.type==TRAIN_SERVER_NAV_PATH && msg_len==sizeof(TrainServerMsg)){
             //TODO: maybe this should be a reply?
             Reply(tid, NULL, 0);
