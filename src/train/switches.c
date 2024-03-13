@@ -132,6 +132,7 @@ void switches_server(){
         // switch state query
         Reply(tid, switch_states, sizeof(uint8_t)*22);
     }else if(msg_len==1 && ((char *)switch_changes)[0]=='R'){
+      Reply(tid, NULL, 0);
       changed = switches_setup(cout, mio, switch_states, 0);
       if(changed==1){
           update_pathfind(pathfind_tid, &pm, switch_states);

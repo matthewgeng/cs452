@@ -14,6 +14,7 @@ void stop(int marklin_tid, unsigned int trainNumber){
 
 void delay_stop(){
     RegisterAs("delaystop\0");
+    // int cout = WhoIs("cout\0");
     int clock_tid = WhoIs("clock\0");
     int mio = WhoIs("mio\0");
 
@@ -22,8 +23,10 @@ void delay_stop(){
 
     for(;;){
         Receive(&tid, &dsm, sizeof(DelayStopMsg));
+        // uart_printf(CONSOLE, "\0337\033[36;1H\033[Kdelayuntil received %d\0338", Time(clock_tid));
         Reply(tid, NULL, 0);
-        Delay(clock_tid, dsm.delay_until);
+        DelayUntil(clock_tid, dsm.delay_until);
+        // uart_printf(CONSOLE, "\0337\033[36;1H\033[Kdelayuntil stopped %d\0338", Time(clock_tid));
         stop(mio, dsm.train_number);
     }
 }

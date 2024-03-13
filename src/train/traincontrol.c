@@ -321,7 +321,7 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_nav(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='g' && str[1]=='0' && str[2]==' '){
     execute_go(str, func_res, console_tid, train_server_tid);
-  }else if(str[0]=='t' && str[1]=='r' && str[2]=='a' && str[3]=='c' && str[3]=='k' && str[4]==' '){
+  }else if(str[0]=='t' && str[1]=='r' && str[2]=='a' && str[3]=='c' && str[4]=='k' && str[5]==' '){
     execute_track(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='r' && str[1]=='e' && str[2]=='s' && str[3]=='e' && str[3]=='t' && str[4]==' '){
     execute_switch_reset(str, func_res, console_tid, train_server_tid);

@@ -341,7 +341,7 @@ void path_finding(){
             reclaimHeapNode(nextFreeHeapNode, path);
             cur_pos = -2;
         
-        }else if(pm.type==PATH_NEXT_SENSOR){
+        }else if(pm.type==PATH_TRACK_CHANGE){
             if(pm.arg1 == 'a'){
                 init_tracka(track);
             }else if(pm.arg1 == 'b'){

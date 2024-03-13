@@ -52,6 +52,67 @@ uint8_t loc_err_handling(int train_location, uint8_t next_sensors[], uint8_t nex
   return 1;
 }
 
+int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_speed, int terminal_speed, uint32_t distance_between, uint32_t delta) {
+
+    int average_new_speed = (distance_between*1000) / delta; // millimeters per second
+    int new_cur_speed = 0;
+
+    switch (*train_speed_state) {
+        case ACCELERATING:
+
+            if (average_new_speed >= terminal_speed) {
+                new_cur_speed = average_new_speed;
+                *train_speed_state = CONSTANT_SPEED;
+            } else {
+
+                // TODO: weird case due to error or something
+                if (old_speed > new_cur_speed) {
+                    new_cur_speed = old_speed;
+                } else {
+                    // normal case
+                    new_cur_speed = average_new_speed + (average_new_speed - old_speed);
+                }
+                
+            }
+
+            break;
+        case DECELERATING:
+            if (terminal_speed == 0 && average_new_speed == old_speed) {
+                *train_speed_state = STOPPED;
+            } else if (average_new_speed <= terminal_speed || old_speed <= terminal_speed) {
+                *train_speed_state = CONSTANT_SPEED;
+            } else {
+                // TODO: weird case when average speed is greater than the current speed due to some error/turn idk
+                if (old_speed < average_new_speed) {
+                    new_cur_speed = old_speed;
+                } else {
+                    // normal case
+                    new_cur_speed = average_new_speed - (old_speed - average_new_speed);
+                }
+            }
+
+            break;
+        case CONSTANT_SPEED:
+            new_cur_speed = average_new_speed;
+            break;
+
+        case STOPPED:
+            // TODO: handle this state
+            new_cur_speed = 0;
+            old_speed = 0;
+            break;
+
+        default:
+            // TODO: error
+            break;
+    }
+
+    // alpha = 0.5
+    // old_speed = old_speed*(1-alpha) + new_cur_speed*(alpha)
+    int new_speed = (old_speed - (old_speed >> 1)) + (new_cur_speed >> 1);
+    return new_speed;
+}
+
 void trainserver(){
   RegisterAs("trainserver\0");
   int mio = WhoIs("mio\0");
@@ -162,7 +223,6 @@ void trainserver(){
             // uart_printf(CONSOLE, "\0337\033[38;1H\033[KSpeed state: %d, train speed: %d, speed: %d, current sensor: %d, next sensor: %d, \0338", train_speed_state, cur_train_speed, cur_physical_speed, cur_physical_accel, terminal_physical_speed);
             uart_printf(CONSOLE, "\0337\033[38;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d\0338", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed);
 
-
             if(last_triggered_sensor==tsm.arg1){
                 // uint32_t cur_time = sys_time();
                 // uint32_t delta = sys_time_ms((cur_time - last_sensor_time)); // milliseconds
@@ -218,74 +278,28 @@ void trainserver(){
 
                 // cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 1)) + (new_cur_speed >> 1);
             } else if(last_triggered_sensor!=tsm.arg1) {
-
                 train_location = tsm.arg1;
 
-                uint32_t distance_between = sensor_distance_between(track, last_triggered_sensor, tsm.arg1); // train_location <--> tsm.arg1 in millimeters
-                if (distance_between == -1) {
-                    continue;
-                }
-
-                // get time delta
                 uint32_t cur_time = sys_time();
-                uint32_t delta_new = sys_time_ms((cur_time - last_new_sensor_time)); // milliseconds
-                last_new_sensor_time = cur_time;
 
-                int average_new_speed = (distance_between*1000) / delta_new; // millimeters per second
-                int new_cur_speed = 0;
+                // first sensor hit, we shouldn't do any speed calculations
+                // TODO: isn't 255 a valid sensor?
+                if (last_triggered_sensor != 255) {
 
-                switch (train_speed_state) {
-                    case ACCELERATING:
+                    uint32_t distance_between = sensor_distance_between(track, last_triggered_sensor, tsm.arg1); // train_location <--> tsm.arg1 in millimeters
+                    if (distance_between == -1) {
+                        continue;
+                    }
 
-                        if (average_new_speed >= terminal_physical_speed) {
-                            new_cur_speed = average_new_speed;
-                            train_speed_state = CONSTANT_SPEED;
-                        } else {
+                    // get time delta
+                    uint32_t delta_new = sys_time_ms((cur_time - last_new_sensor_time)); // milliseconds
+                    last_new_sensor_time = cur_time;
 
-                            // TODO: weird case due to error or something
-                            if (cur_physical_speed > new_cur_speed) {
-                                new_cur_speed = cur_physical_speed;
-                            } else {
-                                // normal case
-                                new_cur_speed = average_new_speed + (average_new_speed - cur_physical_speed);
-                            }
-                            
-                        }
-
-                        break;
-                    case DECELERATING:
-                        if (terminal_physical_speed == 0 && average_new_speed == terminal_physical_speed) {
-                            train_speed_state = STOPPED;
-                        } else if (average_new_speed <= terminal_physical_speed || cur_physical_speed <= terminal_physical_speed) {
-                            train_speed_state = CONSTANT_SPEED;
-                        } else {
-                            // TODO: weird case when average speed is greater than the current speed due to some error/turn idk
-                            if (cur_physical_speed < average_new_speed) {
-                                new_cur_speed = cur_physical_speed;
-                            } else {
-                                // normal case
-                                new_cur_speed = average_new_speed - (cur_physical_speed - average_new_speed);
-                            }
-                        }
-
-                        break;
-                    case CONSTANT_SPEED:
-                        new_cur_speed = average_new_speed;
-                        break;
-
-                    case STOPPED:
-                        // TODO: handle this state
-                        new_cur_speed = 0;
-                        cur_physical_speed = 0;
-                        break;
-
-                    default:
-                        // TODO: error
-                        break;
+                    // new speed
+                    cur_physical_speed = calculate_new_current_speed(&train_speed_state, cur_physical_speed, terminal_physical_speed, distance_between, delta_new);
                 }
 
-                cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 1)) + (new_cur_speed >> 1);
-
+                // TODO: what if distance was invalid i.e. invalid sensor reading
                 if(estimated_next_sensor_time!=0){
                     // TODO: use puts
                     int time_diff = cur_time-estimated_next_sensor_time;
