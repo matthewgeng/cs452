@@ -49,12 +49,12 @@ int train47_terminal_speed(uint32_t train_speed) {
     }
 }
 
-int train_stopping_distance(uint32_t train_num, uint32_t train_speed) {
+int train_stopping_acceleration(uint32_t train_num, uint32_t train_speed) {
     switch (train_num) {
         case 2:
-            return train2_stopping_distance(train_speed);
+            return train2_stopping_acceleration(train_speed);
         case 47:
-            return train47_stopping_distance(train_speed);
+            return train47_stopping_acceleration(train_speed);
         default:
             // unsupported train
             return -1;          
@@ -62,7 +62,7 @@ int train_stopping_distance(uint32_t train_num, uint32_t train_speed) {
 }
 
 
-int train2_stopping_distance(uint32_t train_speed) {
+int train2_stopping_acceleration(uint32_t train_speed) {
     switch (train_speed) {
         case 0:
             return 0;
@@ -80,7 +80,7 @@ int train2_stopping_distance(uint32_t train_speed) {
     }
 }
 
-int train47_stopping_distance(uint32_t train_speed) {
+int train47_stopping_acceleration(uint32_t train_speed) {
     switch (train_speed) {
         case 0:
             return 0;
