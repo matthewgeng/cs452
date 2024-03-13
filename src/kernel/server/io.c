@@ -566,69 +566,77 @@ static void format_print (int tid, int channel, char *fmt, va_list va ) {
 	}
 }
 
-// static void format_print (int tid, int channel, char *fmt, va_list va ) {
-// 	char bf[12] = {0};
-// 	char ch;
-//     int len;
-//     const int buffer_size = 128;
-//     char buffer[128] = {0};
-//     int i = 0;
+static void new_format_print (int tid, int channel, char *fmt, va_list va ) {
+	char bf[12] = {0};
+	char ch;
+    int len;
+    const int buffer_size = 128;
+    char buffer[128] = {0};
+    int i = 0;
 
-//     while ( ( ch = *(fmt++) )  && i < buffer_size) {
-// 		if ( ch != '%' ){ 
-//             buffer[i] = ch;
-//             i++;
-// 		} else {
-// 			ch = *(fmt++);
-// 			switch( ch ) {
-//                 case 'u':
-//                     len = ui2a( va_arg( va, unsigned int ), 10, bf );
-//                     // Puts( tid, channel, bf );
-//                     memcpy(buffer + i, bf, len);
-//                     i += len;
-//                     break;
-//                 case 'd':
-//                     len = i2a( va_arg( va, int ), bf );
-//                     // Puts( tid, channel, bf );
-//                     memcpy(buffer + i, bf, len);
-//                     i += len;
-//                     break;
-//                 case 'x':
-//                     len = ui2a( va_arg( va, unsigned int ), 16, bf );
-//                     // Puts( tid, channel, bf );
-//                     memcpy(buffer + i, bf, len);
-//                     i += len;
-//                     break;
-//                 case 's':
-//                     char* s = va_arg( va, char* );
-//                     len = str_len(s);
-//                     // Puts( tid, channel, va_arg( va, char* ) );
-//                     memcpy(buffer + i, s, len);
-//                     i += len;
-//                     break;
-//                 case '%':
-//                     // Putc( tid, channel, ch );
-//                     buffer[i] = ch;
-//                     i++;
-//                     break;
-//                 case '\0':
-//                     Puts(tid, channel, buffer);
-//                     return;
-//             }
-//         }
-// 	}
+    while ( ( ch = *(fmt++) )  && i < buffer_size) {
+		if ( ch != '%' ){ 
+            buffer[i] = ch;
+            i++;
+		} else {
+			ch = *(fmt++);
+			switch( ch ) {
+                case 'u':
+                    len = ui2a( va_arg( va, unsigned int ), 10, bf );
+                    // Puts( tid, channel, bf );
+                    memcpy(buffer + i, bf, len);
+                    i += len;
+                    break;
+                case 'd':
+                    len = i2a( va_arg( va, int ), bf );
+                    // Puts( tid, channel, bf );
+                    memcpy(buffer + i, bf, len);
+                    i += len;
+                    break;
+                case 'x':
+                    len = ui2a( va_arg( va, unsigned int ), 16, bf );
+                    // Puts( tid, channel, bf );
+                    memcpy(buffer + i, bf, len);
+                    i += len;
+                    break;
+                case 's':
+                    char* s = va_arg( va, char* );
+                    len = str_len(s);
+                    // Puts( tid, channel, va_arg( va, char* ) );
+                    memcpy(buffer + i, s, len);
+                    i += len;
+                    break;
+                case '%':
+                    // Putc( tid, channel, ch );
+                    buffer[i] = ch;
+                    i++;
+                    break;
+                case '\0':
+                    Puts_len(tid, channel, buffer, i);
+                    return;
+            }
+        }
+	}
 
-//     if (i < buffer_size) {
-//         Puts(tid, channel, buffer);
-//     } else {
-//         uart_printf(CONSOLE, "print >= 128 bytes");
-//         for(;;){}
-//     }
-// }
+    if (i < buffer_size) {
+        Puts_len(tid, channel, buffer, i);
+    } else {
+        uart_printf(CONSOLE, "print >= 128 bytes");
+        for(;;){}
+    }
+}
 
 void printf(int tid, int channel, char *fmt, ... ) {
 	va_list va;
 	va_start(va,fmt);
 	format_print( tid, channel, fmt, va );
+	va_end(va);
+}
+
+
+void new_printf(int tid, int channel, char *fmt, ... ) {
+	va_list va;
+	va_start(va,fmt);
+	new_format_print( tid, channel, fmt, va );
 	va_end(va);
 }

@@ -92,9 +92,7 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
 
         case STOPPED:
             // TODO: handle this state
-            new_cur_speed = 0;
-            old_speed = 0;
-            break;
+            return 0;
 
         default:
             // TODO: error
@@ -191,8 +189,6 @@ void trainserver(){
   int cur_train_speed = 0; // 0 - 14
   int cur_physical_speed = 0; // mm/s 
   uint32_t terminal_physical_speed = 0; // mm/s
-  uint32_t last_sensor = 0; 
-  uint32_t last_sensor_time = 0; // us since last sensor
   uint32_t last_new_sensor_time = 0; // us since last new sensor
   TrainSpeedState train_speed_state = STOPPED; // accelerating, deccelerating, constant speed, stopped?
   int sensor_query_time = -1; 
