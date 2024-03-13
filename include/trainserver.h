@@ -12,6 +12,7 @@ typedef enum {
   TRAIN_SERVER_NAV,
   TRAIN_SERVER_NEW_SENSOR,
   TRAIN_SERVER_NAV_PATH,
+  TRAIN_SERVER_TRACK,
 } train_arg_type;
 
 typedef struct TrainServerMsgSimple{
