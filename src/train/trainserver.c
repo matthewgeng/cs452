@@ -28,25 +28,33 @@ uint8_t loc_err_handling(int train_location, uint8_t next_sensors[], uint8_t nex
   // if other and next_sensors_err isn't null, reset
   // if other and next_sensors_err is null, populate next_sensors_err
   if(next_sensors[0] == 255){
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 1\0338");
     next_sensors[0] = next_sensors_new[0];
     next_sensors[1] = next_sensors_new[1];
     return 0;
   }else if(train_location == next_sensors[0]){
-    next_sensors[0] = next_sensors_new[0];
-    next_sensors[1] = next_sensors_new[1];
-    return 0;
-  }else if(next_sensors_err[0] != 255 && train_location == next_sensors_err[0]){
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 2\0338");
     next_sensors[0] = next_sensors_new[0];
     next_sensors[1] = next_sensors_new[1];
     next_sensors_err[0] = 255;
     next_sensors_err[1] = 255;
     return 0;
-  }else if(train_location == next_sensors[1] && next_sensors_err[0] == 255){
-    // skipped a sensor
+  }else if(next_sensors_err[0] != 255 && train_location == next_sensors_err[0]){
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 3\0338");
+
     next_sensors[0] = next_sensors_new[0];
     next_sensors[1] = next_sensors_new[1];
+    next_sensors_err[0] = 255;
+    next_sensors_err[1] = 255;
+    return 0;
+  }else if(next_sensors_err[0] == 255){
+    // skipped a sensor
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 4\0338");
+    next_sensors_err[0] = next_sensors_new[0];
+    next_sensors_err[1] = next_sensors_new[1];
     return 0;
   }
+    // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kloc 5\0338");
   return 1;
 }
 
@@ -300,7 +308,8 @@ void trainserver(){
       Reply(tid, NULL, 0);
 
       train_id = tsm.arg1;
-      tr(mio, tsm.arg1, tsm.arg3, last_speed);
+      // tr(mio, tsm.arg1, tsm.arg3, last_speed);
+      tr(mio, train_id, 10, last_speed);
       demo_started = 1;
 
       train_dest = tsm.arg2;
