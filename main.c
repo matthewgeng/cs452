@@ -616,7 +616,7 @@ static void measure_a_stop() {
 
 static void measure_accel() {
 
-  int train_to_measure = 47;
+  int train_to_measure = 2;
   int sensor_to_measure = 37;
 
   // int speeds_to_measure[] = {12,14,4,8,12,14};
@@ -687,13 +687,13 @@ static void measure_accel() {
   }
   /*
   Train 47
-  4: 
-  8: 
-  12: 
-  14: 
+  4: 3200
+  8: 3000
+  12: 3150
+  14: 3000
 
   Train 2
-  4: 3300
+  4: 3400
   8: 3300
   12: 3300
   14: 3300
