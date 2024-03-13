@@ -188,6 +188,10 @@ void trainserver(){
     if(tsm.type==TRAIN_SERVER_NEW_SENSOR && msg_len==sizeof(TrainServerMsgSimple)){
       Reply(tid, NULL, 0);
 
+      if(last_triggered_sensor!=tsm.arg1){
+        train_location = tsm.arg1;
+      }
+
       if(demo_started==1){
         // calibration stuff
         // if dest exists, get sensor and delay to stop
@@ -198,7 +202,6 @@ void trainserver(){
         }
 
         if(last_triggered_sensor!=tsm.arg1){
-          train_location = tsm.arg1;
 
           uart_printf(CONSOLE, "\0337\033[35;1H\033[Ksensor to stop %u, %d\0338", sensor_to_stop, Time(clock));
 
@@ -295,6 +298,11 @@ void trainserver(){
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav unexpected train number\0338");
         continue;
       }
+
+      if(train_location<0 || train_location>80){
+          uart_printf(CONSOLE, "\0337\033[30;1H\033[Kcannot identify current train location\0338");
+          continue;
+      }
       train_dest = tsm.arg2;
       pm.type = PATH_NAV;
       pm.arg1 = train_location;
@@ -308,8 +316,11 @@ void trainserver(){
       Reply(tid, NULL, 0);
 
       train_id = tsm.arg1;
-      // tr(mio, tsm.arg1, tsm.arg3, last_speed);
-      tr(mio, train_id, 10, last_speed);
+      if(train_location<0 || train_location>80){
+          uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid current train location\0338");
+          continue;
+      }
+      tr(mio, train_id, tsm.arg3, last_speed);
       demo_started = 1;
 
       train_dest = tsm.arg2;

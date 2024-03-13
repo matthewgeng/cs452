@@ -24,7 +24,8 @@ typedef enum {
   PATH_NAV,
   PATH_NEXT_SENSOR,
   PATH_SWITCH_CHANGE,
-  PATH_TRACK_CHANGE
+  PATH_TRACK_CHANGE,
+  PATH_TRACK_NONE
 } path_arg_type;
 
 typedef struct PathMessage{

@@ -23,6 +23,10 @@ int get_sensor_num(char *str){
   return res;
 }
 
+int is_valid_speed(uint8_t train_speed){
+  return train_speed == 0 || train_speed == 4 || train_speed == 8 || train_speed == 12 || train_speed == 14 || train_speed == 16+0 || train_speed == 16+4 || train_speed == 16+8 || train_speed == 16+12 || train_speed == 16+14;;
+}
+
 void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid){
 
     unsigned int trainNumber, trainSpeed;
@@ -44,6 +48,11 @@ void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid
     trainSpeed = getArgumentTwoDigitNumber(str+trainSpeedStartIndex);
     if(trainSpeed>30){
       str_cpy_w0(func_res+10, "Invalid train speed\0");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    if(is_valid_speed(trainSpeed)==0){
+      str_cpy_w0(func_res+10, "Unsupported train speed\0");
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
@@ -227,6 +236,11 @@ void execute_go(char *str, char *func_res, int console_tid, int train_server_tid
     uint8_t train_speed = getArgumentTwoDigitNumber(str);
     if(train_speed<1 || train_speed>30 || train_speed==15){
       str_cpy_w0(func_res+10, "Invalid train speed");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    if(is_valid_speed(train_speed)==0){
+      str_cpy_w0(func_res+10, "Unsupported train speed\0");
       Puts(console_tid, CONSOLE, func_res);
       return;
     }

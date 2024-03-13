@@ -300,10 +300,6 @@ void path_finding(){
         }else if(pm.type==PATH_NAV){
             Reply(tid, NULL, 0);
             cur_pos = pm.arg1;
-            if(cur_pos<0 || cur_pos>80){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
-                continue;
-            }
             start_sensor = get_start_sensor(cur_pos, num_skip, switch_states, track, &start_dist, &skipped_sensors);
             if(start_sensor<0){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get start node\0338");

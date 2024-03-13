@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 typedef enum {
-  TRAIN_SERVER_NONE,
   TRAIN_SERVER_TR,
   TRAIN_SERVER_RV,
   TRAIN_SERVER_SW,
@@ -14,7 +13,8 @@ typedef enum {
   TRAIN_SERVER_NAV_PATH,
   TRAIN_SERVER_GO,
   TRAIN_SERVER_TRACK_CHANGE,
-  TRAIN_SERVER_SWITCH_RESET
+  TRAIN_SERVER_SWITCH_RESET,
+  TRAIN_SERVER_NONE
 } train_arg_type;
 
 typedef struct TrainServerMsgSimple{
