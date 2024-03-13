@@ -469,7 +469,7 @@ int Getc(int tid, int channel) {
     m.type = GETC;
     m.len = 0;
 
-    int res = Send(tid, &m, sizeof(IOMessage), &r, 1);
+    int res = Send(tid, &m, sizeof(IOType), &r, 1);
     if (res < 0) {
         return -1;
     }

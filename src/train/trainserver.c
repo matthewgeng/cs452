@@ -106,6 +106,40 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
     return new_speed;
 }
 
+void print_estimation(int cout, int sensor_query_time, int predicted_next_sensor_time, int cur_physical_speed){
+
+    char s1[] = "\0337\033[22;1H\033[KTriggered time (ms):                    Predicted triggered time (ms):               \0338";
+    char s2[] = "\0337\033[23;1H\033[K     Time diff (ms):                               Distance diff (mm):          \0338";
+
+    i2a_no0(sensor_query_time*10, s1+33);
+    i2a_no0(predicted_next_sensor_time, s1+84);
+    Puts(cout, 0, s1);
+
+    i2a_no0(sensor_query_time*10-predicted_next_sensor_time, s2+33);
+    i2a_no0((sensor_query_time*10-predicted_next_sensor_time)*(cur_physical_speed)/1000, s2+84);
+    Puts(cout, 0, s2);
+
+    // uart_printf(CONSOLE, "\0337\033[22;1H\033[KTriggered time (ms): %u            Predicted triggered time (ms): %u\0338", sensor_query_time*10, predicted_next_sensor_time);
+    // uart_printf(CONSOLE, "\0337\033[23;1H\033[KTime diff (ms): %d                 Distance diff (mm): %d\0338", sensor_query_time*10-predicted_next_sensor_time, );
+}
+
+void print_sensor(int cout, uint32_t sensor){
+    char s1[] = "\0337\033[21;1H\033[K   Triggered sensor:                    \0338";
+    ui2a_no0(sensor, 10, s1+33);
+    Puts(cout, 0, s1);
+    // uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u\0338", sensor);
+}
+
+void print_sensor_and_prediction(int cout, uint32_t sensor, uint8_t next_sensor, int predicted_next_sensor_time){
+    // uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u         Next sensor: %u         Predicted next trigger time (ms): %u\0338", sensor, next_sensor, predicted_next_sensor_time);
+    // char s1[] = "\0337\033[22;1H\033[KTriggered time (ms):                    Predicted triggered time (ms):               \0338";
+    char s1[] = "\0337\033[21;1H\033[K   Triggered sensor:                                      Next sensor:            Predicted next trigger time (ms):         \0338";
+    ui2a_no0(sensor, 10, s1+33); 
+    ui2a_no0(next_sensor, 10, s1+84);
+    i2a_no0(predicted_next_sensor_time, s1+130);
+    Puts(cout, 0, s1);
+}
+
 void trainserver(){
   RegisterAs("trainserver\0");
   int mio = WhoIs("mio\0");
@@ -306,10 +340,9 @@ void trainserver(){
                 
                 if(predicted_next_sensor_time!=0){
                     // TODO: use puts
-                    uart_printf(CONSOLE, "\0337\033[22;1H\033[KTriggered time (ms): %u            Predicted triggered time (ms): %u\0338", sensor_query_time*10, predicted_next_sensor_time);
-                    uart_printf(CONSOLE, "\0337\033[23;1H\033[KTime diff (ms): %d                 Distance diff (mm): %d\0338", sensor_query_time*10-predicted_next_sensor_time, (sensor_query_time*10-predicted_next_sensor_time)*(cur_physical_speed)/1000);
+                    print_estimation(cout, sensor_query_time, predicted_next_sensor_time, cur_physical_speed);
                 }else{
-                    uart_printf(CONSOLE, "\0337\033[22;1H\033[KPrevious predicted sensor time 0\0338");
+                    Puts(cout, 0, "\0337\033[22;1H\033[KPrevious predicted sensor time 0\0338");
                 }
 
                 if(next_sensor_new == 255){
@@ -319,18 +352,22 @@ void trainserver(){
                     tr(mio, train_id, 15, last_speed);
                     does_reset = 1;
                     predicted_next_sensor_time = 0;
-                    uart_printf(CONSOLE, "\0337\033[30;1H\033[K\0338");
-                    uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u\0338", tsm.arg1);
+                    Puts(cout, 0, "\0337\033[30;1H\033[K\0338");
+                    // uart_printf(CONSOLE, "\0337\033[30;1H\033[K\0338");
+                    print_sensor(cout, tsm.arg1);
+                    // uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u\0338", tsm.arg1);
                 } else if(next_sensor_new == 254){
                     // will hit an exit soon, reverse halt
                     predicted_next_sensor_time = 0;
-                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Knext sensor query failed\0338");
-                    uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u\0338", tsm.arg1);
+                    Puts(cout, 0, "\0337\033[30;1H\033[Knext sensor query failed\0338");
+                    print_sensor(cout, tsm.arg1);
+                    // uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u\0338", tsm.arg1);
                 } else {
                     int next_sensor_distance = sensor_distance_between(track, tsm.arg1, next_sensor_new);
                     predicted_next_sensor_time = (next_sensor_distance/cur_physical_speed)*1000 + sensor_query_time*10;
-                    uart_printf(CONSOLE, "\0337\033[30;1H\033[K\0338");
-                    uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u         Next sensor: %u         Predicted next trigger time (ms): %u\0338", tsm.arg1, next_sensor_new, predicted_next_sensor_time);
+                    Puts(cout, 0, "\0337\033[30;1H\033[K\0338");
+                    print_sensor_and_prediction(cout, tsm.arg1, next_sensor_new, predicted_next_sensor_time);
+                    // uart_printf(CONSOLE, "\0337\033[21;1H\033[KTriggered sensor: %u         Next sensor: %u         Predicted next trigger time (ms): %u\0338", tsm.arg1, next_sensor_new, predicted_next_sensor_time);
 
                     does_reset = loc_err_handling(train_location, next_sensor, next_sensor_err, next_sensor_new);
                 }

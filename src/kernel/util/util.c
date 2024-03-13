@@ -61,6 +61,15 @@ unsigned int i2a( int num, char *bf ) {
 	return ui2a( num, 10, bf );
 }
 
+// signed int to ascii string
+unsigned int i2a_no0( int num, char *bf ) {
+	if( num < 0 ) {
+		num = -num;
+		*bf++ = '-';
+	}
+	return ui2a_no0( num, 10, bf );
+}
+
 // memory
 
 // define our own memset to avoid SIMD instructions emitted from the compiler

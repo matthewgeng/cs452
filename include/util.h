@@ -8,6 +8,7 @@ int a2d(char ch);
 char a2i(char ch, char **src, int base, int *nump);
 unsigned int ui2a(unsigned int num, unsigned int base, char *bf);
 unsigned int i2a(int num, char *bf);
+unsigned int i2a_no0(int num, char *bf);
 unsigned int ui2a_no0( unsigned int num, unsigned int base, char *bf );
 
 // memory
