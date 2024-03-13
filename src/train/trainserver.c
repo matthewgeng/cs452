@@ -249,7 +249,6 @@ void trainserver(){
             demo_started = 0;
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kreset\0338");
           }
-          
         }
         last_triggered_sensor = tsm.arg1;
       }
