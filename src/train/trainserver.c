@@ -180,12 +180,12 @@ void trainserver(){
   int cur_train_speed = 0; // 0 - 14
   int cur_physical_speed = 0; // mm/s 
   int cur_physical_accel = 0; // mm/s^2
-  uint32_t alpha_bit_shift = 2; // multiplty by 0.2 (bitshift once) and 0.8 (bitshift 3)
   uint32_t terminal_physical_speed = 0; // mm/s
   uint32_t last_sensor = 0; 
   uint32_t last_sensor_time = 0; // us since last sensor
   uint32_t last_new_sensor_time = sys_time(); // us since last new sensor
   TrainSpeedState train_speed_state = STOPPED; // accelerating, deccelerating, constant speed, stopped?
+  uint32_t estimated_next_sensor_time = 0; // TODO; not sure if this should be set to 0
 
   int w =0;
 
@@ -247,7 +247,7 @@ void trainserver(){
       if(train_dest!=255 && got_sensor_path){
         sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-2];
         
-        delay_time = 0;
+        // delay_time = 0;
 
         uint32_t stopping_acceleration = train_stopping_acceleration(train_id, cur_train_speed); //mm/s^2
 
@@ -263,6 +263,9 @@ void trainserver(){
                 break;
             }
         }
+
+        // TODO: use puts
+        uart_printf(CONSOLE, "\0337\033[50;1H\033[KEstimated stopping distance %d \0338", stopping_distance);
       }
 
       if(last_triggered_sensor==tsm.arg1){
@@ -321,6 +324,7 @@ void trainserver(){
             cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 2)) + (new_cur_speed >> 2);
         // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server same new sensor, %d\0338", Time(clock));
       } else if(last_triggered_sensor!=tsm.arg1){
+
         train_location = tsm.arg1;
 
         // TODO: get distance between sensors
@@ -331,6 +335,12 @@ void trainserver(){
 
         // get time delta
         uint32_t cur_time = sys_time();
+
+
+        int estimated_actual_sensor_time_diff = estimated_next_sensor_time - cur_time;
+
+        // TODO: use puts
+        uart_printf(CONSOLE, "\0337\033[51;1H\033[KEstimated sensor_time: %d, actual: %d, diff: 5d\0338", estimated_next_sensor_time, cur_time, estimated_actual_sensor_time_diff);
 
         // calculate delta, TODO: not including any other latencies
         // uint32_t delta_last = sys_time_ms((cur_time - last_sensor_time)); // milliseconds
@@ -448,6 +458,10 @@ void trainserver(){
             // int alpha_bit_shift = 2; // multiplty by 0.25 (bitshift twice, 1/4 == divide by 4) and 0.75 (original - original bitshift once)
             cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 2)) + (new_cur_speed >> 2);
             uart_printf(CONSOLE, "\0337\033[42;1H\033[KCur speed: %d\0338", cur_physical_speed);
+
+        estimated_next_sensor_time = distance_between/cur_physical_speed;
+        // TODO: use puts
+        uart_printf(CONSOLE, "\0337\033[50;1H\033[KEstimated next sensor_time %d \0338", estimated_next_sensor_time);
 
         // uart_printf(CONSOLE, "\0337\033[35;1H\033[Ktrain server diff new sensor, %d\0338", Time(clock));
         // loc_err_handling(train_location, next_sensors, next_sensors_err);
