@@ -77,7 +77,7 @@ HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, 
     cur_node->sensor_path.num_sensors = start_node_index;
     heap_push(&heap, cur_node);
 
-    uart_printf(CONSOLE, "\0337\033[17;1H\033[Kswitches setup %u %u\0338", src, dest);
+    // uart_printf(CONSOLE, "\0337\033[17;1H\033[Kswitches setup %u %u\0338", src, dest);
     // for(;;){}
 
     HeapNode *res; 
@@ -105,7 +105,7 @@ HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, 
                 cur_node = heap_pop(&heap);
                 reclaimHeapNode(nextFreeHeapNode, cur_node);
             }
-            uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
+            // uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
             return res;
         }
         if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
@@ -251,7 +251,7 @@ void path_finding(){
 
     RegisterAs("pathfind\0");
 
-    // int cout = WhoIs("cout\0");
+    int cout = WhoIs("cout\0");
     // int mio = WhoIs("mio\0");
     int switch_tid = WhoIs("switch\0");
     // int clock = WhoIs("clock\0");
@@ -313,7 +313,7 @@ void path_finding(){
             Reply(tid, NULL, 0);
             path = dijkstra(pm.arg1, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, 0, 0);
             if(path==NULL){
-                uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
+                Puts(cout, 0, "\0337\033[18;1H\033[KDidn't find a route\0338");
                 continue;
             }
             for(int i = 0; i<path->sensor_path.num_sensors; i++){
@@ -344,30 +344,30 @@ void path_finding(){
                     continue;
                 }
                 start_sensor = get_start_sensor(cur_pos, num_skip, switch_states, track, &start_dist, &skipped_sensors);
-                uart_printf(CONSOLE, "\0337\033[39;1H\033[KStart sensor %d cur pos %d\0338", start_sensor, cur_pos);
+                // uart_printf(CONSOLE, "\0337\033[39;1H\033[KStart sensor %d cur pos %d\0338", start_sensor, cur_pos);
                 // start_sensor = cur_pos;
 
                 if(start_sensor<0){
                     uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get start node\0338");
                     continue;
                 }
-                uart_printf(CONSOLE, "\0337\033[26;1H\033[Kcur, start %d %d\0338", cur_pos, start_sensor);
+                // uart_printf(CONSOLE, "\0337\033[26;1H\033[Kcur, start %d %d\0338", cur_pos, start_sensor);
                 path = dijkstra(start_sensor, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, num_skip, start_dist);
                 if(path==NULL){
                     uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
                     continue;
                 }
-                for(int i = 0; i<num_skip; i++){
-                    path->sensor_path.sensors[i] = skipped_sensors.sensors[i];
-                    path->sensor_path.dists[i] = skipped_sensors.dists[i];
-                }
+                // for(int i = 0; i<num_skip; i++){
+                //     path->sensor_path.sensors[i] = skipped_sensors.sensors[i];
+                //     path->sensor_path.dists[i] = skipped_sensors.dists[i];
+                // }
 
                 // for(int i = 0; i<num_skip; i++){
                 //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K skipped sensor: %u %u\0338", 35+i, skipped_sensors.sensors[i], skipped_sensors.dists[i]);
                 // }
-                for(int i = 0; i<path->sensor_path.num_sensors; i++){
-                    uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
-                }
+                // for(int i = 0; i<path->sensor_path.num_sensors; i++){
+                //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
+                // }
                 // uart_printf(CONSOLE, "\0337\033[19;1H\033[Kswitch changes, %d\0338", path->num_switches);
                 // for(int i = 0; i<path->num_switches; i++){
                 //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[Kswitch, %d %u\0338", 20+i, path->switches[i].switch_num, path->switches[i].dir);

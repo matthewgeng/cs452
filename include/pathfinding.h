@@ -30,7 +30,7 @@ typedef enum {
 typedef struct PathMessage{
     path_arg_type type; //'P' arg1 is sensor, 'T' arg1 is train
     uint32_t arg1;
-    uint8_t dest;
+    uint32_t dest;
     char switches[22];
 } PathMessage;
 
