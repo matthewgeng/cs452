@@ -232,7 +232,9 @@ void trainserver(){
                         distance_between_sensors = sensor_distance_between(track, last_triggered_sensor, tsm.arg1); // train_location <--> tsm.arg1 in millimeters
                         if (distance_between_sensors == -1) {
                             
-                        }{
+                        } else {
+
+
                             // get time delta
                             uint32_t delta_new = sensor_query_time - last_new_sensor_time; // ticks
                             cur_physical_speed = calculate_new_current_speed(&train_speed_state, cur_physical_speed, terminal_physical_speed, distance_between_sensors, delta_new, offset);
