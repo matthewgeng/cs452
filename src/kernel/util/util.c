@@ -54,11 +54,13 @@ unsigned int ui2a_no0( unsigned int num, unsigned int base, char *bf ) {
 
 // signed int to ascii string
 unsigned int i2a( int num, char *bf ) {
+	int negative_sign = 0;
 	if( num < 0 ) {
 		num = -num;
 		*bf++ = '-';
+		negative_sign = 1;
 	}
-	return ui2a( num, 10, bf );
+	return negative_sign + ui2a( num, 10, bf );
 }
 
 // signed int to ascii string
