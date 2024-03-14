@@ -179,7 +179,8 @@ void clock(){
             }else if(msg[0]=='d'){
                 if(msglen!=5){
                     uart_printf(CONSOLE, "\x1b[Invalid delay request to clock server\x1b[0m\r\n");
-                    for(;;){}
+                    Reply(tid, (char*)&tick, sizeof(tick));
+                    // for(;;){}
                 }
                 // uint32_t delay = char_array_to_time(msg+1);
                 uint32_t delay = *(uint32_t*)(msg+1);
@@ -195,7 +196,8 @@ void clock(){
             }else if(msg[0]=='u'){
                 if(msglen!=5){
                     uart_printf(CONSOLE, "\x1b[Invalid delay_until request to clock server\x1b[0m\r\n");
-                    for(;;){}
+                    Reply(tid, (char*)&tick, sizeof(tick));
+                    // for(;;){}
                 }
                 uint32_t time = *(uint32_t*)(msg+1);
 
