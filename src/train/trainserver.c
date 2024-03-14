@@ -62,8 +62,8 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
 
                 // TODO: weird case due to error or something
                 if (old_speed > average_new_speed) {
-                    // new_cur_speed = old_speed;
-                    new_cur_speed = average_new_speed;
+                    new_cur_speed = old_speed;
+                    // new_cur_speed = average_new_speed;
                 } else {
                     // normal case
                     new_cur_speed = average_new_speed + (average_new_speed - old_speed);
@@ -106,11 +106,14 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
     // old_speed = old_speed*(1-alpha) + new_cur_speed*(alpha)
     int new_speed = (old_speed - (old_speed >> 1)) + (new_cur_speed >> 1);
     // new_speed -= 50;
-    new_speed = new_speed * offset / 100;
+    // if (*train_speed_state == CONSTANT_SPEED) {
+        new_speed = new_speed * offset / 100;
+    // }
     // uart_printf(CONSOLE, "\0337\033[30;1H\033[Knew speed state: %d, avg speed: %u, new speed: %u\0338", train_speed_state, average_new_speed, new_cur_speed);
     return new_speed;
 }
 
+// void print_estimation(int cout, int sensor_query_time, int predicted_next_sensor_time, int cur_physical_speed){
 void print_estimation(int cout, int sensor_query_time, int last_new_sensor_time, uint32_t last_distance_between_sensors, int predicted_next_sensor_time){
 
     char s1[] = "\0337\033[22;1H\033[KTriggered time (ms):                    Predicted triggered time (ms):               \0338";
@@ -121,7 +124,8 @@ void print_estimation(int cout, int sensor_query_time, int last_new_sensor_time,
     Puts(cout, 0, s1);
 
     i2a_no0(sensor_query_time*10-predicted_next_sensor_time, s2+33);
-    i2a_no0((sensor_query_time*10-predicted_next_sensor_time)*(last_distance_between_sensors/(sensor_query_time, last_new_sensor_time))/1000, s2+84);
+    // i2a_no0((sensor_query_time*10-predicted_next_sensor_time)*(cur_physical_speed)/1000, s2+84);
+    i2a_no0((sensor_query_time*10-predicted_next_sensor_time)*(last_distance_between_sensors/(sensor_query_time*10 - last_new_sensor_time*10)), s2+84);
     Puts(cout, 0, s2);
 
     // uart_printf(CONSOLE, "\0337\033[22;1H\033[KTriggered time (ms): %u            Predicted triggered time (ms): %u\0338", sensor_query_time*10, predicted_next_sensor_time);
@@ -191,8 +195,8 @@ void trainserver(){
 
   int cur_train_speed = 0; // 0 - 14
   int cur_physical_speed = 0; // mm/s 
-  uint32_t distance_between_sensors;
-  uint32_t last_distance_between_sensors;
+  uint32_t distance_between_sensors = 0;
+  uint32_t last_distance_between_sensors = 0;
   uint32_t terminal_physical_speed = 0; // mm/s
   uint32_t last_new_sensor_time = 0; // us since last new sensor
   TrainSpeedState train_speed_state = STOPPED; // accelerating, deccelerating, constant speed, stopped?
@@ -294,6 +298,7 @@ void trainserver(){
                 
                 if(unexpected_sensor==0 && predicted_next_sensor_time!=0){
                     // TODO: use puts
+                    // print_estimation(cout, sensor_query_time, last_new_sensor_time, last_distance_between_sensors, predicted_next_sensor_time);
                     print_estimation(cout, sensor_query_time, last_new_sensor_time, last_distance_between_sensors, predicted_next_sensor_time);
 
                     // if (offset % 2 == 1) {
