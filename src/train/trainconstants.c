@@ -337,13 +337,13 @@ int train_velocity_offset(uint32_t train_num, uint32_t train_speed) {
                 case 0:
                     return 100;
                 case 4:
-                    return 86;
+                    return 215;
                 case 8:
-                    return 80;
+                    return 290;
                 case 12:
-                    return 87;
+                    return 210;
                 case 14:
-                    return 84;
+                    return 210;
                 default:
                     // unsupported speed
                     return -1;      

@@ -107,7 +107,7 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
     int new_speed = (old_speed - (old_speed >> 1)) + (new_cur_speed >> 1);
     // new_speed -= 50;
     // if (*train_speed_state == CONSTANT_SPEED) {
-        new_speed = new_speed * offset / 100;
+        // new_speed = new_speed * offset / 100;
     // }
     // uart_printf(CONSOLE, "\0337\033[30;1H\033[Knew speed state: %d, avg speed: %u, new speed: %u\0338", train_speed_state, average_new_speed, new_cur_speed);
     return new_speed;
@@ -207,7 +207,7 @@ void trainserver(){
   int sensor_query_time = -1; 
   int predicted_next_sensor_time = 0; // TODO; not sure if this should be set to 0
 
-  uint32_t offset = 0;
+  uint32_t offset = 100;
 
   int w =0;
 
@@ -244,13 +244,17 @@ void trainserver(){
                         }
                     }
 
-                    new_printf(cout, 0, "\0337\033[18;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d, TEST %d\0338", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed, -1);
+                    // new_printf(cout, 0, "\0337\033[18;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d, TEST %d\0338", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed, -1);
+                    uart_printf(CONSOLE, "\0337\033[18;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d, TEST %d\0338", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed, -1);
 
 
                     if(train_dest!=255 && got_sensor_path){
                             // sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-2];
                         
-                        uint32_t stopping_acceleration = train_stopping_acceleration(train_id, cur_train_speed); //mm/s^2
+                        // new_printf(cout, 0, "\0337\033[16;1H\033[K offset %u\0338", offset);
+                        uart_printf(CONSOLE, "\0337\033[16;1H\033[K offset %u\0338", offset);
+
+                        uint32_t stopping_acceleration = train_stopping_acceleration(train_id, cur_train_speed) *  offset / 100; //mm/s^2
 
                         // (Vf)^2 = (Vo)^2 + 2ad
                         uint32_t stopping_distance = (cur_physical_speed*cur_physical_speed)/(2*stopping_acceleration); // mm
@@ -264,13 +268,16 @@ void trainserver(){
 
                                 delay_time = (stopping_distance_difference*100)/cur_physical_speed; // 10ms for system ticks
                                 // delay_time = 0;
-                                new_printf(cout, 0, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
+                                // new_printf(cout, 0, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
+                                uart_printf(CONSOLE, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
+                                 
                                 break;
                             }
                         }
 
                         // TODO: use puts
-                        new_printf(cout, 0, "\0337\033[61;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
+                        // new_printf(cout, 0, "\0337\033[61;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
+                        uart_printf(CONSOLE, "\0337\033[61;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
                     }
 
                     // TODO: what if distance was invalid i.e. invalid sensor reading
@@ -375,9 +382,9 @@ void trainserver(){
 
                     offset = 0;
 
-                    new_printf(cout, 0, "\0337\033[42;1H\033[Kreset\0338");
+                    Puts(cout, 0, "\0337\033[42;1H\033[Kreset\0338");
                 }else{
-                    new_printf(cout, 0, "\0337\033[42;1H\033[K\0338");
+                    Puts(cout, 0, "\0337\033[42;1H\033[K\0338");
                 }
                 last_new_sensor_time = sensor_query_time;
             }
@@ -445,6 +452,9 @@ void trainserver(){
             if(tsm.arg1 != train_id){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav unexpected train number\0338");
                 continue;
+            }
+            if(tsm.arg3!=0){
+                offset = tsm.arg3;
             }
             // offset = tsm.arg3;
             train_dest = tsm.arg2;

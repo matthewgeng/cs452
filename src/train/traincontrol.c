@@ -207,7 +207,7 @@ void execute_nav(char *str, char *func_res, int console_tid, int train_server_ti
       return;
     }
 
-    uint32_t offset = 92;
+    uint32_t offset = 0;
 
     if(str[2]!='\0' && str[3]!='\0'){
       
