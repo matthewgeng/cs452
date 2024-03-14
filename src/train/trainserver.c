@@ -355,7 +355,7 @@ void trainserver(){
                     // TODO: use puts
                     print_estimation(cout, sensor_query_time, predicted_next_sensor_time, cur_physical_speed);
 
-                }else{
+                } else{
                     // Puts(cout, 0, "\0337\033[22;1H\033[KPrevious predicted sensor time 0\0338");
                 }
 
@@ -380,9 +380,12 @@ void trainserver(){
                     print_sensor_and_prediction(cout, tsm.arg1, next_sensor_new, predicted_next_sensor_time);
 
                     does_reset = loc_err_handling(train_location, next_sensor, next_sensor_err, next_sensor_new);
+                    
                 }
-                
-                uart_printf(CONSOLE, "\0337\033[18;1H\033[KNext sensors: %u %u\0338", next_sensor, next_sensor_err);
+                uart_printf(CONSOLE, "\0337\033[18;1H\033[K this %d\0338", train_location);
+                uart_printf(CONSOLE, "\0337\033[19;1H\033[K next %u, next_sensor %u, next_sensor_err %u\0338", next_sensor_new, next_sensor, next_sensor_err);
+
+                // uart_printf(CONSOLE, "\0337\033[18;1H\033[KNext sensors: %u %u\0338", next_sensor, next_sensor_err);
                 if(does_reset){
                     tr(mio, train_id, 0, last_speed);
                     train_dest = 255;
@@ -399,28 +402,29 @@ void trainserver(){
             }
             last_triggered_sensor = tsm.arg1;
         // }
-    } else if(tsm.type==TRAIN_SERVER_TR){
-        Reply(tid, NULL, 0);
-        train_id = tsm.arg1;
+        } else if(tsm.type==TRAIN_SERVER_TR){
+            Reply(tid, NULL, 0);
+            train_id = tsm.arg1;
 
-        // uart_printf(CONSOLE, "\0337\033[30;1H\033[KTrain command received train: %u, last speed: %u, speed: %u\0338", tsm.arg1, last_speed[tsm.arg1], tsm.arg2);
-        // set current train speed
-        cur_train_speed = tsm.arg2;
+            // uart_printf(CONSOLE, "\0337\033[30;1H\033[KTrain command received train: %u, last speed: %u, speed: %u\0338", tsm.arg1, last_speed[tsm.arg1], tsm.arg2);
+            // set current train speed
+            cur_train_speed = tsm.arg2;
 
-        // TODO: set terminal speed
-        terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg2);
+            // TODO: set terminal speed
+            offset = train_velocity_offset(tsm.arg1, tsm.arg2);
+            terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg2);
 
-        // set train state
-        // other states should be managed by sensor data processing to avoid errors when we go from 0 to 14, then 
-        // before acceleration is done, we set the train speed to 14 again (should not be a constant_speed state)
-        if (last_speed[tsm.arg1] < tsm.arg2) {
-            train_speed_state = ACCELERATING;
-        } else if (last_speed[tsm.arg1] > tsm.arg2) {
-            train_speed_state = DECELERATING;
-        }
+            // set train state
+            // other states should be managed by sensor data processing to avoid errors when we go from 0 to 14, then 
+            // before acceleration is done, we set the train speed to 14 again (should not be a constant_speed state)
+            if (last_speed[tsm.arg1] < tsm.arg2) {
+                train_speed_state = ACCELERATING;
+            } else if (last_speed[tsm.arg1] > tsm.arg2) {
+                train_speed_state = DECELERATING;
+            }
 
-        tr(mio, tsm.arg1, tsm.arg2, last_speed);
-        demo_started = 1;
+            tr(mio, tsm.arg1, tsm.arg2, last_speed);
+            demo_started = 1;
 
         }else if(tsm.type==TRAIN_SERVER_RV && msg_len==sizeof(TrainServerMsgSimple)){
             Reply(tid, NULL, 0);
@@ -459,7 +463,7 @@ void trainserver(){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav unexpected train number\0338");
                 continue;
             }
-            offset = tsm.arg3;
+            // offset = tsm.arg3;
             train_dest = tsm.arg2;
             pm.type = PATH_NAV;
             pm.arg1 = train_location;
@@ -476,6 +480,8 @@ void trainserver(){
             Reply(tid, NULL, 0);
 
             cur_train_speed = tsm.arg3;
+            
+            offset = train_velocity_offset(tsm.arg1, tsm.arg2);
             terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg3);
             if (last_speed[tsm.arg1] < tsm.arg3) {
                 train_speed_state = ACCELERATING;

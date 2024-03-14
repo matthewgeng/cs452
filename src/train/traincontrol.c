@@ -340,6 +340,40 @@ void execute_switch_reset(char *str, char *func_res, int console_tid, int train_
     Puts(console_tid, CONSOLE, func_res);
 }
 
+void execute_set_sensor(char *str, char *func_res, int console_tid, int train_server_tid){
+
+    int clock = WhoIs("clock");
+    
+    int sensor = get_sensor_num(str+3);
+    if(sensor==-1){
+      str_cpy_w0(func_res+10, "Invalid sensor char 1");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }else if(sensor==-2){
+      str_cpy_w0(func_res+10, "Invalid sensor num 1");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    // if(sensor<0 || sensor >79){
+    //   str_cpy_w0(func_res+10, "Invalid sensor number");
+    //   Puts(console_tid, CONSOLE, func_res);
+    //   return;
+    // }
+
+    TrainServerMsgSimple tsm;
+    tsm.type = TRAIN_SERVER_NEW_SENSOR;
+    tsm.arg1 = sensor;
+    tsm.arg2 = Time(clock);
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+    if(reply_len!=0){
+      str_cpy_w0(func_res+10, "switch reset invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+    str_cpy_w0(func_res+10, "Senser set");
+    Puts(console_tid, CONSOLE, func_res);
+}
+
 void executeFunction(int console_tid, int train_server_tid, char *str){  
   char last_fun[30];
   str_cpy(last_fun, "\033[11;1H\033[K");
@@ -365,6 +399,8 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_track(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='r' && str[1]=='e' && str[2]=='s' && str[3]=='e' && str[4]=='t'){
     execute_switch_reset(str, func_res, console_tid, train_server_tid);
+  }else if(str[0]=='s' && str[1]=='s' && str[2]==' '){
+    execute_set_sensor(str, func_res, console_tid, train_server_tid);
   }else{
     str_cpy_w0(func_res+10, "Unknown function");
     Puts(console_tid, CONSOLE, func_res);
