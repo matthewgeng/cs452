@@ -303,6 +303,44 @@ int train47_stopping_acceleration(uint32_t train_speed) {
     }
 }
 
+int train_velocity_offset(uint32_t train_num, uint32_t train_speed) {
+    switch (train_num) {
+        case 2:
+            switch (train_speed){
+                case 0:
+                    return 100;
+                case 4:
+                    return 84;
+                case 8:
+                    return 88;
+                case 12:
+                    return 84;
+                case 14:
+                    return 86;
+                default:
+                    // unsupported speed
+                    return -1;      
+            }
+        default:
+            // train 47 or others
+            switch (train_speed){
+                case 0:
+                    return 100;
+                case 4:
+                    return 86;
+                case 8:
+                    return 78;
+                case 12:
+                    return 86;
+                case 14:
+                    return 86;
+                default:
+                    // unsupported speed
+                    return -1;      
+            }
+    }
+}
+
 int sensor_distance_between(char track, uint32_t src_sensor, uint32_t dest_sensor) {
     switch (track){
         case 'a':

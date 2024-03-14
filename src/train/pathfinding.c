@@ -214,15 +214,6 @@ int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_
     return -2;
 }
 
-HeapNode *pathfind(int src, int dest, int switch_tid, track_node track[], HeapNode **nextFreeHeapNode, uint8_t num_skip, uint16_t start_dist){
-
-    HeapNode *setup = dijkstra(src, dest, track, TRACK_MAX, nextFreeHeapNode, num_skip, start_dist);
-    if(setup==NULL){
-        uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
-    }
-    return setup;
-}
-
 void path_finding(){
 
     RegisterAs("pathfind\0");
