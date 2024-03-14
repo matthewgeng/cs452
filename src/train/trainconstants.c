@@ -279,7 +279,7 @@ int train2_stopping_acceleration(uint32_t train_speed) {
 }
 
 int train47_stopping_acceleration(uint32_t train_speed) {
-    
+
     switch (train_speed) {
 
         case 0:
@@ -339,11 +339,11 @@ int train_velocity_offset(uint32_t train_num, uint32_t train_speed) {
                 case 4:
                     return 86;
                 case 8:
-                    return 78;
+                    return 80;
                 case 12:
-                    return 86;
+                    return 87;
                 case 14:
-                    return 86;
+                    return 84;
                 default:
                     // unsupported speed
                     return -1;      
