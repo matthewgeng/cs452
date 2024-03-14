@@ -61,8 +61,9 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
             } else {
 
                 // TODO: weird case due to error or something
-                if (old_speed > new_cur_speed) {
-                    new_cur_speed = old_speed;
+                if (old_speed > average_new_speed) {
+                    // new_cur_speed = old_speed;
+                    new_cur_speed = average_new_speed;
                 } else {
                     // normal case
                     new_cur_speed = average_new_speed + (average_new_speed - old_speed);
@@ -80,6 +81,7 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
                 // TODO: weird case when average speed is greater than the current speed due to some error/turn idk
                 if (old_speed < average_new_speed) {
                     new_cur_speed = old_speed;
+                    // new_cur_speed = average_new_speed;
                 } else {
                     // normal case
                     new_cur_speed = average_new_speed - (old_speed - average_new_speed);
@@ -209,61 +211,7 @@ void trainserver(){
         // if(demo_started==1){
             // uart_printf(CONSOLE, "\0337\033[38;1H\033[KSpeed state: %d, train speed: %d, speed: %d, current sensor: %d, next sensor: %d, \0338", train_speed_state, cur_train_speed, cur_physical_speed, cur_physical_accel, terminal_physical_speed);
 
-            if(last_triggered_sensor==tsm.arg1){
-                // uint32_t cur_time = sys_time();
-                // uint32_t delta = sys_time_ms((cur_time - last_sensor_time)); // milliseconds
-                // last_sensor_time = cur_time;
-
-                // // TODO: verify all branches lead to setting new cur speed
-                // int new_cur_speed = 0;
-
-                // // calculate new speed with accel
-                // switch (train_speed_state) {
-                //     case ACCELERATING:
-                //         // TODO:
-
-                //         break;
-                //     case DECELERATING:
-                //         new_cur_speed = (cur_physical_speed - (cur_physical_accel)*delta);
-
-                //         // TODO: weird case, this shouldn't happen unless our accel is negative which shouldn't happen as well
-                //         if (new_cur_speed >= cur_physical_speed) {
-                //             new_cur_speed = cur_physical_speed;
-                //         }
-
-                //         if (terminal_physical_speed == 0 && new_cur_speed <= terminal_physical_speed) {
-                //             train_speed_state = STOPPED;
-                //             new_cur_speed = 0;
-                //             cur_physical_accel = 0;
-                //             cur_physical_speed = 0;
-                //         } else if (new_cur_speed <= terminal_physical_speed) {
-                //             train_speed_state = CONSTANT_SPEED;
-                //             cur_physical_accel = 0;
-                //         } else {
-                //             cur_physical_accel = (cur_physical_speed - new_cur_speed)*1000/delta;
-                //         }
-
-                //         uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, delta: %d, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, delta, train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
-                //         // uart_printf(CONSOLE, "\0337\033[%u;1H\033[KSlowing down got same sensor, state: %d, speed %d, new_speed: %d, accel: %d\0338", w + 47, train_speed_state, cur_physical_speed, new_cur_speed, cur_physical_accel);
-                //         break;
-                //     case CONSTANT_SPEED:
-                //         cur_physical_accel = 0;
-                //         break;
-
-                //     case STOPPED:
-                //         // TODO: handle this state
-                //         new_cur_speed = 0;
-                //         cur_physical_accel = 0;
-                //         cur_physical_speed = 0;
-                //         break;
-
-                //     default:
-                //         // TODO: error
-                //         break;
-                // }
-
-                // cur_physical_speed = (cur_physical_speed - (cur_physical_speed >> 1)) + (new_cur_speed >> 1);
-            } else if(last_triggered_sensor!=tsm.arg1) {
+            if(last_triggered_sensor!=tsm.arg1) {
                 train_location = tsm.arg1;
 
                 uint8_t unexpected_sensor = next_sensor!=255 && tsm.arg1!=next_sensor;
@@ -287,7 +235,7 @@ void trainserver(){
                         }
                     }
 
-                    uart_printf(CONSOLE, "\0337\033[20;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d\0338", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed);
+                    new_printf(cout, 0, "\0337\033[20;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d\0338", train_speed_state, cur_train_speed, cur_physical_speed, terminal_physical_speed);
 
 
                     if(train_dest!=255 && got_sensor_path){
@@ -307,13 +255,13 @@ void trainserver(){
 
                                 delay_time = (stopping_distance_difference*100)/cur_physical_speed; // 10ms for system ticks
                                 // delay_time = 0;
-                                uart_printf(CONSOLE, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
+                                new_printf(cout, 0, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
                                 break;
                             }
                         }
 
                         // TODO: use puts
-                        uart_printf(CONSOLE, "\0337\033[61;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
+                        new_printf(cout, 0, "\0337\033[61;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
                     }
 
                     // TODO: what if distance was invalid i.e. invalid sensor reading
@@ -347,13 +295,13 @@ void trainserver(){
                     // TODO: use puts
                     print_estimation(cout, sensor_query_time, predicted_next_sensor_time, cur_physical_speed);
 
-                    if (offset % 2 == 1) {
-                        int adjustment_factor = distance_between_sensors/((sensor_query_time - last_new_sensor_time)/100) - cur_physical_speed;
+                    // if (offset % 2 == 1) {
+                    //     int adjustment_factor = distance_between_sensors/((sensor_query_time - last_new_sensor_time)/100) - cur_physical_speed;
 
-                        cur_physical_speed -= adjustment_factor;
+                    //     cur_physical_speed -= adjustment_factor;
 
-                        uart_printf(CONSOLE, "\0337\033[35;1H\033[Kadjustment factor: %d, old speed: %d, new speed: %d\0338", adjustment_factor, cur_physical_speed + adjustment_factor, cur_physical_speed);
-                    }
+                    //     uart_printf(CONSOLE, "\0337\033[35;1H\033[Kadjustment factor: %d, old speed: %d, new speed: %d\0338", adjustment_factor, cur_physical_speed + adjustment_factor, cur_physical_speed);
+                    // }
                 }else{
                     // Puts(cout, 0, "\0337\033[22;1H\033[KPrevious predicted sensor time 0\0338");
                 }
@@ -417,9 +365,9 @@ void trainserver(){
 
                     offset = 0;
 
-                    uart_printf(CONSOLE, "\0337\033[42;1H\033[Kreset\0338");
+                    new_printf(cout, 0, "\0337\033[42;1H\033[Kreset\0338");
                 }else{
-                    uart_printf(CONSOLE, "\0337\033[42;1H\033[K\0338");
+                    new_printf(cout, 0, "\0337\033[42;1H\033[K\0338");
                 }
                 last_new_sensor_time = sensor_query_time;
             }

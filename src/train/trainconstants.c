@@ -167,6 +167,9 @@ int pcp_dists_b[80][80] = {
 };
 
 int train_terminal_speed(uint32_t train_num, uint32_t train_speed) {
+    if (train_speed >= 16) {
+        train_speed -=16;
+    }
     switch (train_num) {
         case 2:
             return train2_terminal_speed(train_speed);
@@ -229,6 +232,9 @@ int train47_terminal_speed(uint32_t train_speed) {
 }
 
 int train_stopping_acceleration(uint32_t train_num, uint32_t train_speed) {
+    if (train_speed >= 16) {
+        train_speed -=16;
+    }
     switch (train_num) {
         case 2:
             return train2_stopping_acceleration(train_speed);
@@ -273,6 +279,7 @@ int train2_stopping_acceleration(uint32_t train_speed) {
 }
 
 int train47_stopping_acceleration(uint32_t train_speed) {
+    
     switch (train_speed) {
 
         case 0:
@@ -304,6 +311,9 @@ int train47_stopping_acceleration(uint32_t train_speed) {
 }
 
 int train_velocity_offset(uint32_t train_num, uint32_t train_speed) {
+    if (train_speed >= 16) {
+        train_speed -=16;
+    }
     switch (train_num) {
         case 2:
             switch (train_speed){

@@ -185,7 +185,7 @@ int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_
             sensor_path->dists[num_sensors] = *dist;
             num_sensors += 1;
             if(num_sensors==num_skip){
-                uart_printf(CONSOLE, "\0337\033[50;1H\033[Kget start node %d\0338", start_sensor);
+                // uart_printf(CONSOLE, "\0337\033[50;1H\033[Kget start node %d\0338", start_sensor);
                 return start_sensor;
             }
             *dist = *dist + cur_track_node->edge[0].dist;

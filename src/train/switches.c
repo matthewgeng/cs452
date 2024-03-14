@@ -82,7 +82,7 @@ uint8_t switches_setup(int cout, int mio, char switch_states[], uint8_t initial_
   // 18 switches + 4 centre ones
   int nums[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,153,154,155,156};
 //   char dirs[] = "CCCCCSSCCCCCCCCCCCCSSC";
-  char dirs[] = "CCCCCSSCCCCCSCCCSCCSSC";
+  char dirs[] = "CCCCCSSCCSCCSCCSSCCSSC";
   uint8_t changed = 0;
   for(int i = 0; i<22; i++){
     if(initial_run==0 && switch_states[i]==dirs[i]){
