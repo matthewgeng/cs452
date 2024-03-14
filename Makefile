@@ -10,7 +10,7 @@ OBJDUMP:=$(XBINDIR)/$(TRIPLE)-objdump
 WARNINGS=-Wall -Wextra -Wpedantic -Wno-unused-const-variable
 CFLAGS:=-g -pipe -static $(WARNINGS) -ffreestanding -nostartfiles\
 	-mcpu=$(ARCH) -static-pie -mstrict-align -fno-builtin -mgeneral-regs-only -O3\
-	-Iinclude/ -Xlinker # -Map=output.map #(for memory mapping)
+	-Iinclude/ #-Xlinker # -Map=output.map #(for memory mapping)
 
 # Source files and include dirs
 rwildcard=$(foreach d,$(wildcard $1*),$(call rwildcard,$d/,$2) $(filter $(subst *,%,$2),$d))

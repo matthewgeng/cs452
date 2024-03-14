@@ -32,6 +32,8 @@ void reverse(){
         cmd[0] = 0;
         cmd[1] = train_number;
         Puts_len(marklin_tid, MARKLIN, cmd, 2);
+        // TODO: appropriately handle when speeds are > 16
+
         if(last_speed<=10){
           Delay(clock, 500);
         }else{
