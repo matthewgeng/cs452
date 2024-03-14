@@ -214,6 +214,39 @@ int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_
     return -2;
 }
 
+int get_next_sensor(uint8_t src, char switch_states[], track_node track[], uint16_t *dist){
+    track_node *cur_track_node;
+    int start_sensor = src;
+    *dist = 0;
+
+    int branch_index;
+    uint8_t dir = 0;
+    while(cur_track_node->type!=NODE_SENSOR || start_sensor==src){
+        cur_track_node = track + start_sensor;
+        if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
+            *dist = *dist + cur_track_node->edge[0].dist;
+            start_sensor = cur_track_node->edge[0].dest - track;
+        }else if(cur_track_node->type == NODE_BRANCH){
+            branch_index = cur_track_node->num-1;
+            if(branch_index>=152) branch_index -= 134;
+            if(switch_states[branch_index]=='S') dir = 0;
+            else if(switch_states[branch_index]=='C')dir = 1;
+            else{
+                // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown switch v %u %u %s %u\0338", cur_track_node->num, switch_states[branch_index], switch_states, switch_states[19]);
+                return -3;
+            } 
+
+            *dist = *dist + cur_track_node->edge[dir].dist;
+            start_sensor = cur_track_node->edge[dir].dest - track;
+        }else if(cur_track_node->type == NODE_EXIT){
+            return -1;
+        }else{
+            return -2;
+        }
+    }
+    return start_sensor;
+}
+
 void path_finding(){
 
     RegisterAs("pathfind\0");

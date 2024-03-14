@@ -63,7 +63,7 @@ int WhoIs(const char *name){
         for(;;){}
     }
     if(tid==160){
-        uart_printf(CONSOLE, "\x1b[31mtid not set\x1b[0m\r\n");
+        uart_printf(CONSOLE, "\x1b[31mtid not set %s\x1b[0m\r\n", name);
         for(;;){}
     }
     return (int)tid;

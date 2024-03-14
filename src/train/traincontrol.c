@@ -344,13 +344,9 @@ void execute_set_sensor(char *str, char *func_res, int console_tid, int train_se
 
     int clock = WhoIs("clock");
     
-    int sensor = get_sensor_num(str+3);
-    if(sensor==-1){
-      str_cpy_w0(func_res+10, "Invalid sensor char 1");
-      Puts(console_tid, CONSOLE, func_res);
-      return;
-    }else if(sensor==-2){
-      str_cpy_w0(func_res+10, "Invalid sensor num 1");
+    uint8_t sensor = getArgumentTwoDigitNumber(str+3);
+    if(sensor==1000){
+      str_cpy_w0(func_res+10, "Invalid sensor");
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
