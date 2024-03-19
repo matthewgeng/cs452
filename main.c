@@ -444,11 +444,12 @@ static void measure_v_straight() {
 
 static void measure_v_loop() {
 
-  int train_to_measure = 2;
+  int train_to_measure = 58;
   int sensor_to_measure = 60;
 
-  int speeds_to_measure[] = {12,14,4,8,12,14};
-  int num_loops = 2;
+  // int speeds_to_measure[] = {12,14,4,8,12,14};
+  int speeds_to_measure[] = {14,13,12,11,10,9,8,7,6,5,4,3};
+  int num_loops = 4;
   int loop_count = -1;
   int start_time;
   int speeds_index = 0;
@@ -482,7 +483,7 @@ static void measure_v_loop() {
                   int time_diff = (time-start_time)/1000; // unit ms
                   outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[%u;1H\033[Kspeed: %d, time: %d", speeds_index+30, speeds_to_measure[speeds_index], time_diff);
 
-                  if(speeds_index>=4){
+                  if(speeds_index>=12){
                     tr(train_to_measure, 0);
                   }else{
                     loop_count = -1;
@@ -524,8 +525,8 @@ static void measure_v_loop() {
 
 static void measure_a_stop() {
 
-  int train_to_measure = 47;
-  int sensor_to_measure = 76;
+  int train_to_measure = 54;
+  int sensor_to_measure = 28;
 
   // int speeds_to_measure[] = {12,14,4,8,12,14};
   int num_loops = 1;
@@ -552,15 +553,15 @@ static void measure_a_stop() {
             lastSensorTriggered = sensorNum;
 
             if(sensorNum==sensor_to_measure){
-              loop_count += 1;
-              if(loop_count==0){
-                  start_time = time;
-                  outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[18;1H\033[Kstart time: %d",time);
+              // loop_count += 1;
+              // if(loop_count==0){
+              //     start_time = time;
+              //     outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[18;1H\033[Kstart time: %d",time);
 
-              }else if(loop_count==num_loops){
-                loop_count = -1;
+              // }else if(loop_count==num_loops){
+                // loop_count = -1;
                 tr(train_to_measure, 0);
-              }
+              // }
               outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE,  "\033[19;1H\033[Ktime: %d",time);
               outputBufEnd = printfToBuffer(outputBuf, outputBufEnd, OUTPUT_BUFFER_SIZE, "\033[20;1H\033[Knum loop: %d",loop_count);
             }
@@ -711,14 +712,14 @@ void switchesSetup(){
   sw(7, 'S');
   sw(8, 'C');
   sw(9, 'C');
-  sw(10, 'S');
+  sw(10, 'C');
   sw(11, 'C');
   sw(12, 'C');
   sw(13, 'S');
   sw(14, 'C');
   sw(15, 'C');
   sw(16, 'S');
-  sw(17, 'S');
+  sw(17, 'C');
   sw(18, 'S');
   sw(153, 'C');
   sw(154, 'S');
@@ -796,7 +797,9 @@ int kmain() {
   time = 0;
   // lastTime = 0;
   // measure_v_straight();
-  measure_accel();
+  // measure_accel();
+  // measure_v_loop();
+  measure_a_stop();
 
   // exit to boot loader
   return 0;
