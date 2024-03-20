@@ -13,14 +13,14 @@
 #include "io.h"
 #include "cb.h"
 
-void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
+void tr(int marklin_tid, TrainState* ts){
   char cmd[3];
-  cmd[0] = trainSpeed;
-  cmd[1] = trainNumber;
+  cmd[0] = ts->cur_train_speed;
+  cmd[1] = ts->train_id;
   cmd[2] = 0;
   Puts_len(marklin_tid, MARKLIN, cmd, 2);
 
-  last_speed[trainNumber] = trainSpeed;
+  ts->last_speed = ts->cur_train_speed;
 }
 
 
@@ -155,13 +155,18 @@ void train_states_init(TrainState* trains, uint8_t num_trains) {
         ts->last_speed = 0;
         ts->train_dest = 255;
         ts->train_location = -1;
-        ts->train_sensor_path;
+        ts->train_nav_path;
         ts->got_sensor_path = 0;
         ts->sensor_to_stop = 25;;
         ts->delay_time;
-        ts->next_sensor = 255;
-        ts->next_sensor_err = 255;
-        ts->next_sensor_new = 253;
+        ts->new_sensor_new;
+
+        ts->new_sensor;
+        ts->new_sensor.next_sensor = 255;
+
+        ts->new_sensor_err;
+        ts->new_sensor_err.next_sensor = 255;
+
         ts->last_triggered_sensor = 255;
         ts->does_reset = 0;
         ts->cur_train_speed = 0;
@@ -173,26 +178,45 @@ void train_states_init(TrainState* trains, uint8_t num_trains) {
         ts->train_speed_state = STOPPED;
         ts->sensor_query_time = -1;
         ts->predicted_next_sensor_time = 0;
-        // ts->next = NULL;
-        // if (i + 1 < num_trains) {
-            // ts->next = trains + i + 1;
-        // }
+        ts->next = NULL;
+        if (i + 1 < num_trains) {
+            ts->next = trains + i + 1;
+        }
     }
 }
 
-// TrainState* getNextFreeTrainState(TrainState** ts) {
-//     if(*ts==NULL){
-//         return NULL;
-//     }
-//     TrainState *free = *ts;
-//     *ts = (*ts)->next;
-//     return free;
-// }
+TrainState* getNextFreeTrainState(TrainState** ts) {
+    if(*ts==NULL){
+        return NULL;
+    }
+    TrainState *free = *ts;
+    *ts = (*ts)->next;
+    return free;
+}
 
-// void reclaimTrainState(TrainState** nextFreeTrainState, TrainState* ts) {
-//     ts->next = *nextFreeTrainState;
-//     *nextFreeTrainState = ts;
-// }
+void reclaimTrainState(TrainState** nextFreeTrainState, TrainState* ts) {
+    ts->next = *nextFreeTrainState;
+    *nextFreeTrainState = ts;
+}
+
+TrainState* getTrainState(uint32_t train_id, TrainState** current_trains,  TrainState** next_free_train_state) {
+
+    // not a current train and no more trains available --> continue
+    if (train_id > 100 || current_trains[train_id] == NULL && *next_free_train_state == NULL) {
+        return NULL;
+    }
+
+    if (current_trains[train_id] != NULL) {
+        uart_printf(CONSOLE, "\0337\033[45;1H\033[K active train state\0338");
+        return current_trains[train_id];
+    } else {
+        TrainState* ts = getNextFreeTrainState(next_free_train_state);
+        uart_printf(CONSOLE, "\0337\033[45;1H\033[K new train state\0338");
+        ts->train_id = train_id;
+        current_trains[train_id] = ts;
+        return ts;
+    }
+}
 
 void trainserver(){
   RegisterAs("trainserver\0");
@@ -220,18 +244,20 @@ void trainserver(){
 
     // train state data
     TrainState train_states[MAX_NUM_TRAINS];
-    train_states_init(train_states, MAX_NUM_TRAINS);
-    TrainState* train_state_buffer[MAX_NUM_TRAINS];
+    train_states_init(&train_states, MAX_NUM_TRAINS);
+    TrainState* next_free_train_state = train_states;
+    
+    // TrainState* train_state_buffer[MAX_NUM_TRAINS] = {NULL};
 
-    // train state buffer for allocating trains
-    cb train_cb;
-    cb_init(&train_cb, train_state_buffer, MAX_NUM_TRAINS, sizeof(TrainState), 0);
-    for (int i = 0; i < MAX_NUM_TRAINS; i++) {
-        cb_push_back(&train_cb, &train_states[i]);
-    }
+    // // train state buffer for allocating trains
+    // cb train_cb;
+    // cb_init(&train_cb, (void*)train_state_buffer, MAX_NUM_TRAINS, sizeof(TrainState*), 0);
+    // for (int i = 0; i < MAX_NUM_TRAINS; i++) {
+    //     cb_push_back(&train_cb, (void*)&train_states[i]);
+    // }
 
     // train accessor hashmap + array
-    TrainState* trains[100];
+    TrainState* trains[100] = {NULL};
 
     // to be replace below
   uint32_t last_speed[100];
@@ -297,7 +323,6 @@ void trainserver(){
                         // get time delta
                         uint32_t delta_new = sensor_query_time - last_new_sensor_time; // ticks
                         cur_physical_speed = calculate_new_current_speed(&train_speed_state, cur_physical_speed, terminal_physical_speed, distance_between_sensors, delta_new, offset);
-                
                     }
                 }
 
@@ -350,7 +375,6 @@ void trainserver(){
                 }
             }
 
-
             pm.type = PATH_NEXT_SENSOR;
             pm.arg1 = train_location;
             intended_reply_len = Send(pathfind_tid, &pm, sizeof(path_arg_type)+sizeof(uint32_t), &new_sensor_new, sizeof(NewSensorInfo));
@@ -401,28 +425,28 @@ void trainserver(){
         }
     } else if(tsm.type==TRAIN_SERVER_TR){
         Reply(tid, NULL, 0);
-        train_id = tsm.arg1;
 
-        // uart_printf(CONSOLE, "\0337\033[30;1H\033[KTrain command received train: %u, last speed: %u, speed: %u\0338", tsm.arg1, last_speed[tsm.arg1], tsm.arg2);
-        // set current train speed
-        cur_train_speed = tsm.arg2;
+        TrainState* ts = getTrainState(tsm.arg1, trains, &next_free_train_state);
+        if (ts == NULL) {
+            // TODO: show error
+            continue;
+        }
 
-        // TODO: set terminal speed
-        offset = train_velocity_offset(tsm.arg1, tsm.arg2);
-        terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg2);
+        ts->cur_train_speed = tsm.arg2;
+        ts->offset = train_velocity_offset(tsm.arg1, tsm.arg2);
+        ts->terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg2);
 
         // set train state
         // other states should be managed by sensor data processing to avoid errors when we go from 0 to 14, then 
         // before acceleration is done, we set the train speed to 14 again (should not be a constant_speed state)
-        if (last_speed[tsm.arg1] < tsm.arg2) {
-            train_speed_state = ACCELERATING;
-        } else if (last_speed[tsm.arg1] > tsm.arg2) {
-            train_speed_state = DECELERATING;
+        if (ts->last_speed < tsm.arg2) {
+            ts->train_speed_state = ACCELERATING;
+        } else if (ts->last_speed> tsm.arg2) {
+            ts->train_speed_state = DECELERATING;
         }
+        uart_printf(CONSOLE, "\0337\033[45;1H\033[K tr id: %d, tr speed: %d \0338", ts->train_id, ts->cur_train_speed);
 
-        tr(mio, tsm.arg1, tsm.arg2, last_speed);
-        demo_started = 1;
-
+        tr(mio, ts);
     }else if(tsm.type==TRAIN_SERVER_RV && msg_len==sizeof(TrainServerMsgSimple)){
         Reply(tid, NULL, 0);
         rm.train_number = tsm.arg1;
@@ -479,21 +503,24 @@ void trainserver(){
     }else if(tsm.type==TRAIN_SERVER_GO && msg_len==sizeof(TrainServerMsgSimple)){
         Reply(tid, NULL, 0);
 
-        cur_train_speed = tsm.arg3;
+        TrainState* ts = getTrainState(tsm.arg1, trains, &next_free_train_state);
+        if (ts == NULL) {
+            // TODO: show error
+            continue;
+        }
         
-        offset = train_velocity_offset(tsm.arg1, tsm.arg2);
-        terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg3);
-        if (last_speed[tsm.arg1] < tsm.arg3) {
-            train_speed_state = ACCELERATING;
-        } else if (last_speed[tsm.arg1] > tsm.arg3) {
-            train_speed_state = DECELERATING;
+        ts->cur_train_speed = tsm.arg2;
+        ts->offset = train_velocity_offset(tsm.arg1, tsm.arg3);
+        ts->terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg3);
+        if (ts->last_speed < tsm.arg3) {
+            ts->train_speed_state = ACCELERATING;
+        } else if (ts->last_speed> tsm.arg3) {
+            ts->train_speed_state = DECELERATING;
         }
 
-        train_id = tsm.arg1;
-        tr(mio, tsm.arg1, tsm.arg3, last_speed);
-        demo_started = 1;
+        tr(mio, ts);
+        ts->train_dest = tsm.arg2;
 
-        train_dest = tsm.arg2;
         pm.type = PATH_NAV;
         pm.arg1 = train_location;
         pm.dest = tsm.arg2;
@@ -501,7 +528,7 @@ void trainserver(){
         if(reply_len!=0){
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
         }
-        got_sensor_path = 0;
+        ts->got_sensor_path = 0;
     }else if(tsm.type==TRAIN_SERVER_TRACK_CHANGE && msg_len==sizeof(TrainServerMsgSimple)){
         Reply(tid, NULL, 0);
         pm.type = PATH_TRACK_CHANGE;

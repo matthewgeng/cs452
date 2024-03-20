@@ -8,8 +8,6 @@ typedef struct DelayStopMsg{
     int delay_until;
 } DelayStopMsg;
 
-void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]);
 void delay_stop();
-
 
 #endif

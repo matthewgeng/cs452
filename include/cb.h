@@ -18,7 +18,6 @@ void cb_init(cb* cb, void* buffer, size_t capacity, size_t item_size, int overwr
 int cb_full(cb* cb);
 int cb_empty(cb* cb);
 void cb_push_back(cb* cb,  void* item);
-void cb_push_back_many(cb* cb,  void* items);
 void cb_pop_front(cb* cb, void* item);
 
 #endif

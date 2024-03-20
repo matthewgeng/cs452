@@ -62,12 +62,6 @@ void cb_push_back(cb* cb, void* item) {
     cb->count +=1;
 }
 
-void cb_push_back_many(cb* cb,  void* items, uint32_t len) {
-    for (int i = 0; i < len; i++) {
-        cb_push_back(cb, items + i);
-    }
-}
-
 void cb_pop_front(cb* cb, void* item) {
     if (cb->count == 0) {
         // todo
