@@ -44,7 +44,7 @@ int heap_node_cmp(HeapNode *n1, HeapNode *n2) {
     return 0;
 }
 
-HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, HeapNode **nextFreeHeapNode, uint8_t start_node_index, uint16_t start_dist){
+HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, HeapNode **nextFreeHeapNode){
 
     //TODO: start pathfinding maybe 2/3 sensors after so the train doesn't go off course
     /* 
@@ -72,9 +72,9 @@ HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, 
 
     cur_node = getNextFreeHeapNode(nextFreeHeapNode);
     cur_node->node_index = src;
-    cur_node->dist = start_dist;
+    cur_node->dist = 0;
     cur_node->num_switches = 0;
-    cur_node->sensor_path.num_sensors = start_node_index;
+    cur_node->sensor_path.num_sensors = 0;
     heap_push(&heap, cur_node);
 
     // uart_printf(CONSOLE, "\0337\033[17;1H\033[Kswitches setup %u %u\0338", src, dest);
@@ -170,81 +170,81 @@ HeapNode *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, 
     return NULL;
 }
 
-int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_node track[], uint16_t *dist, SensorPath *sensor_path){
+// int get_start_sensor(uint8_t src, uint8_t num_skip, char switch_states[], track_node track[], uint16_t *dist, SensorPath *sensor_path){
+//     track_node *cur_track_node;
+//     int start_sensor = src;
+//     *dist = 0;
+//     uint8_t num_sensors = 0;
+
+//     int branch_index;
+//     uint8_t dir = 0;
+//     while(1){
+//         cur_track_node = track + start_sensor;
+//         if(cur_track_node->type==NODE_SENSOR && start_sensor!=src){
+//             sensor_path->sensors[num_sensors] = start_sensor;
+//             sensor_path->dists[num_sensors] = *dist;
+//             num_sensors += 1;
+//             if(num_sensors==num_skip){
+//                 // uart_printf(CONSOLE, "\0337\033[50;1H\033[Kget start node %d\0338", start_sensor);
+//                 return start_sensor;
+//             }
+//             *dist = *dist + cur_track_node->edge[0].dist;
+//             start_sensor = cur_track_node->edge[0].dest - track;
+//         }else if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
+//             *dist = *dist + cur_track_node->edge[0].dist;
+//             start_sensor = cur_track_node->edge[0].dest - track;
+//         }else if(cur_track_node->type == NODE_BRANCH){
+//             branch_index = cur_track_node->num-1;
+//             if(branch_index>=152) branch_index -= 134;
+//             if(switch_states[branch_index]=='S') dir = 0;
+//             else if(switch_states[branch_index]=='C')dir = 1;
+//             else{
+//                 // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown switch v %u %u %s %u\0338", cur_track_node->num, switch_states[branch_index], switch_states, switch_states[19]);
+//                 return -3;
+//             } 
+
+//             *dist = *dist + cur_track_node->edge[dir].dist;
+//             start_sensor = cur_track_node->edge[dir].dest - track;
+//         }else if(cur_track_node->type == NODE_EXIT){
+//             return -1;
+//         }else{
+//             return -2;
+//         }
+//     }
+//     return -2;
+// }
+
+int get_next_sensor(uint8_t src, char switch_states[], track_node track[], int *switch_err_sensor){
     track_node *cur_track_node;
-    int start_sensor = src;
-    *dist = 0;
-    uint8_t num_sensors = 0;
+    int cur_sensor = src;
 
     int branch_index;
     uint8_t dir = 0;
-    while(1){
-        cur_track_node = track + start_sensor;
-        if(cur_track_node->type==NODE_SENSOR && start_sensor!=src){
-            sensor_path->sensors[num_sensors] = start_sensor;
-            sensor_path->dists[num_sensors] = *dist;
-            num_sensors += 1;
-            if(num_sensors==num_skip){
-                // uart_printf(CONSOLE, "\0337\033[50;1H\033[Kget start node %d\0338", start_sensor);
-                return start_sensor;
+    cur_track_node = track + cur_sensor;
+    while(cur_track_node->type!=NODE_SENSOR || cur_sensor==src){
+        if((cur_track_node->type == NODE_SENSOR && cur_sensor==src) || cur_track_node->type == NODE_MERGE){
+            cur_sensor = cur_track_node->edge[0].dest - track;
+        }else if(cur_track_node->type == NODE_BRANCH){
+            branch_index = cur_track_node->num-1;
+            if(branch_index>=152) branch_index -= 134;
+            if(switch_states[branch_index]=='S') dir = 0;
+            else if(switch_states[branch_index]=='C')dir = 1;
+            else{
+                // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown switch v %u %u %s %u\0338", cur_track_node->num, switch_states[branch_index], switch_states, switch_states[19]);
+                return -3;
+            } 
+            if(switch_err_sensor!=NULL){
+                *switch_err_sensor = cur_track_node->edge[1-dir].dest - track;
             }
-            *dist = *dist + cur_track_node->edge[0].dist;
-            start_sensor = cur_track_node->edge[0].dest - track;
-        }else if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
-            *dist = *dist + cur_track_node->edge[0].dist;
-            start_sensor = cur_track_node->edge[0].dest - track;
-        }else if(cur_track_node->type == NODE_BRANCH){
-            branch_index = cur_track_node->num-1;
-            if(branch_index>=152) branch_index -= 134;
-            if(switch_states[branch_index]=='S') dir = 0;
-            else if(switch_states[branch_index]=='C')dir = 1;
-            else{
-                // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown switch v %u %u %s %u\0338", cur_track_node->num, switch_states[branch_index], switch_states, switch_states[19]);
-                return -3;
-            } 
-
-            *dist = *dist + cur_track_node->edge[dir].dist;
-            start_sensor = cur_track_node->edge[dir].dest - track;
+            cur_sensor = cur_track_node->edge[dir].dest - track;
         }else if(cur_track_node->type == NODE_EXIT){
             return -1;
         }else{
             return -2;
         }
+        cur_track_node = track + cur_sensor;
     }
-    return -2;
-}
-
-int get_next_sensor(uint8_t src, char switch_states[], track_node track[], uint16_t *dist){
-    track_node *cur_track_node;
-    int start_sensor = src;
-    *dist = 0;
-
-    int branch_index;
-    uint8_t dir = 0;
-    while(cur_track_node->type!=NODE_SENSOR || start_sensor==src){
-        cur_track_node = track + start_sensor;
-        if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
-            *dist = *dist + cur_track_node->edge[0].dist;
-            start_sensor = cur_track_node->edge[0].dest - track;
-        }else if(cur_track_node->type == NODE_BRANCH){
-            branch_index = cur_track_node->num-1;
-            if(branch_index>=152) branch_index -= 134;
-            if(switch_states[branch_index]=='S') dir = 0;
-            else if(switch_states[branch_index]=='C')dir = 1;
-            else{
-                // uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown switch v %u %u %s %u\0338", cur_track_node->num, switch_states[branch_index], switch_states, switch_states[19]);
-                return -3;
-            } 
-
-            *dist = *dist + cur_track_node->edge[dir].dist;
-            start_sensor = cur_track_node->edge[dir].dest - track;
-        }else if(cur_track_node->type == NODE_EXIT){
-            return -1;
-        }else{
-            return -2;
-        }
-    }
-    return start_sensor;
+    return cur_sensor;
 }
 
 void path_finding(){
@@ -270,15 +270,12 @@ void path_finding(){
     int tid;
     int intended_send_len;
     int intended_reply_len;
-    int num_switch_changes;
     int switch_num;
 
     int res;
     int cur_pos = -2;
     int start_sensor;
-    uint16_t start_dist;
-    uint8_t num_skip = 1;
-    SensorPath skipped_sensors;
+    int next_sensors[3];
     
     char switch_states[23];
     switch_states[22] = '\0';
@@ -291,7 +288,7 @@ void path_finding(){
 
     TrainServerMsg tsm;
     tsm.type = TRAIN_SERVER_NAV_PATH;
-    uint8_t next_sensor;
+    // uint8_t next_sensor;
 
     HeapNode heap_nodes[150];
     HeapNode *nextFreeHeapNode = heap_nodes;
@@ -311,7 +308,7 @@ void path_finding(){
         }else if(pm.type==PATH_PF){
 
             Reply(tid, NULL, 0);
-            path = dijkstra(pm.arg1, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, 0, 0);
+            path = dijkstra(pm.arg1, pm.dest, track, TRACK_MAX, &nextFreeHeapNode);
             if(path==NULL){
                 Puts(cout, 0, "\0337\033[18;1H\033[KDidn't find a route\0338");
                 continue;
@@ -343,7 +340,7 @@ void path_finding(){
                     uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
                     continue;
                 }
-                start_sensor = get_start_sensor(cur_pos, num_skip, switch_states, track, &start_dist, &skipped_sensors);
+                start_sensor = get_next_sensor(cur_pos, switch_states, track, NULL);
                 // uart_printf(CONSOLE, "\0337\033[39;1H\033[KStart sensor %d cur pos %d\0338", start_sensor, cur_pos);
                 // start_sensor = cur_pos;
 
@@ -352,7 +349,7 @@ void path_finding(){
                     continue;
                 }
                 // uart_printf(CONSOLE, "\0337\033[26;1H\033[Kcur, start %d %d\0338", cur_pos, start_sensor);
-                path = dijkstra(start_sensor, pm.dest, track, TRACK_MAX, &nextFreeHeapNode, num_skip, start_dist);
+                path = dijkstra(start_sensor, pm.dest, track, TRACK_MAX, &nextFreeHeapNode);
                 if(path==NULL){
                     uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
                     continue;
@@ -396,17 +393,12 @@ void path_finding(){
             }
         }else if(pm.type==PATH_NEXT_SENSOR){
             cur_pos = pm.arg1;
-            res = get_start_sensor(cur_pos, 1, switch_states, track, &start_dist, &skipped_sensors);
+            next_sensors[2] = -3;
+            next_sensors[0] = get_next_sensor(cur_pos, switch_states, track, next_sensors+2);
+            next_sensors[1] = get_next_sensor(next_sensors[0], switch_states, track, NULL);
             // uart_printf(CONSOLE, "\0337\033[35;1H\033[Knext sensor %u %d\0338", cur_pos, res);
-            if(res==-1){
-                next_sensor = 255; // will hit an exit next;
-            }else if(res==-2){
-                next_sensor = 254;
-            }else{
-                next_sensor = res;
-            }
             // uart_printf(CONSOLE, "\0337\033[20;1H\033[KNext sensor: %u %u\0338", skipped_sensors.sensors[0], skipped_sensors.sensors[1]);
-            Reply(tid, &next_sensor, sizeof(uint8_t));
+            Reply(tid, next_sensors, sizeof(int)*3);
         }else{
             Reply(tid, NULL, 0);
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Kunknown pathfind command\0338");
