@@ -9,7 +9,9 @@
 #include "util.h"
 #include "timer.h"
 #include "trainconstants.h"
+#include "constants.h"
 #include "io.h"
+#include "cb.h"
 
 void tr(int marklin_tid, unsigned int trainNumber, unsigned int trainSpeed, uint32_t last_speed[]){
   char cmd[3];
@@ -153,6 +155,53 @@ void print_sensor_and_prediction(int cout, uint32_t sensor, uint8_t next_sensor,
     Puts(cout, 0, s2);
 }
 
+void train_states_init(TrainState* trains, uint8_t num_trains) {
+    for (int i = 0; i < num_trains; i++) {
+        TrainState* ts  = trains + i;
+
+        ts->train_id;
+        ts->last_speed = 0;
+        ts->train_dest = 255;
+        ts->train_location = -1;
+        ts->train_sensor_path;
+        ts->got_sensor_path = 0;
+        ts->sensor_to_stop = 25;;
+        ts->delay_time;
+        ts->next_sensor = 255;
+        ts->next_sensor_err = 255;
+        ts->next_sensor_new = 253;
+        ts->last_triggered_sensor = 255;
+        ts->does_reset = 0;
+        ts->cur_train_speed = 0;
+        ts->cur_physical_speed = 0;
+        ts->distance_between_sensors = 0;
+        ts->last_distance_between_sensors = 0;
+        ts->terminal_physical_speed = 0;
+        ts->last_new_sensor_time = 0;
+        ts->train_speed_state = STOPPED;
+        ts->sensor_query_time = -1;
+        ts->predicted_next_sensor_time = 0;
+        // ts->next = NULL;
+        // if (i + 1 < num_trains) {
+            // ts->next = trains + i + 1;
+        // }
+    }
+}
+
+// TrainState* getNextFreeTrainState(TrainState** ts) {
+//     if(*ts==NULL){
+//         return NULL;
+//     }
+//     TrainState *free = *ts;
+//     *ts = (*ts)->next;
+//     return free;
+// }
+
+// void reclaimTrainState(TrainState** nextFreeTrainState, TrainState* ts) {
+//     ts->next = *nextFreeTrainState;
+//     *nextFreeTrainState = ts;
+// }
+
 void trainserver(){
   RegisterAs("trainserver\0");
   int mio = WhoIs("mio\0");
@@ -173,11 +222,31 @@ void trainserver(){
   PathMessage pm;
   SwitchChange sc;
   DelayStopMsg dsm;
+  char track = 'a';
+  uint32_t offset = 100;
 
+
+    // train state data
+    TrainState train_states[MAX_NUM_TRAINS];
+    train_states_init(train_states, MAX_NUM_TRAINS);
+    TrainState* train_state_buffer[MAX_NUM_TRAINS];
+
+    // train state buffer for allocating trains
+    cb train_cb;
+    cb_init(&train_cb, train_state_buffer, MAX_NUM_TRAINS, sizeof(TrainState), 0);
+    for (int i = 0; i < MAX_NUM_TRAINS; i++) {
+        cb_push_back(&train_cb, &train_states[i]);
+    }
+
+    // train accessor hashmap + array
+    TrainState* trains[100];
+
+    // to be replace below
   uint32_t last_speed[100];
   for(int i = 0; i<100; i++){
     last_speed[i] = 0;
   }
+
   uint8_t train_id;
   uint8_t train_dest = 255;
   int train_location = -1;
@@ -192,10 +261,8 @@ void trainserver(){
   uint8_t next_sensor_new = 253;
   uint8_t last_triggered_sensor = 255;
   uint8_t does_reset = 0;
-  char track = 'a';
 
   uint8_t demo_started = 0;
-  // char next_sensor_str = "\0337\033[18;1H\033[KNext sensor:   \0338";
 
   int cur_train_speed = 0; // 0 - 14
   int cur_physical_speed = 0; // mm/s 
@@ -206,10 +273,6 @@ void trainserver(){
   TrainSpeedState train_speed_state = STOPPED; // accelerating, deccelerating, constant speed, stopped?
   int sensor_query_time = -1; 
   int predicted_next_sensor_time = 0; // TODO; not sure if this should be set to 0
-
-  uint32_t offset = 100;
-
-  int w =0;
 
   for(;;){
     msg_len = Receive(&tid, &tsm, sizeof(TrainServerMsg));
