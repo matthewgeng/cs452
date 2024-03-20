@@ -3,20 +3,27 @@
 
 #include "switches.h"
 
+typedef struct NewSensorInfo{
+  int next_sensor;
+  int next_next_sensor;
+  int next_sensor_switch_err;
+  int switch_after_next_sensor;
+} NewSensorInfo;
+
 typedef struct SensorPath{
   uint8_t num_sensors;
   uint8_t sensors[40];
   uint16_t dists[40];
 } SensorPath;
 
-typedef struct HeapNode {
+typedef struct NavPath {
   uint8_t node_index;
   uint32_t dist;
   SwitchChange switches[22];
   uint8_t num_switches;
   SensorPath sensor_path;
-  struct HeapNode *next;
-} HeapNode;
+  struct NavPath *next;
+} NavPath;
 
 
 typedef enum {
