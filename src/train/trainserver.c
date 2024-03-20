@@ -163,7 +163,7 @@ void trainserver(){
 
   ReverseMsg rm;
   PathMessage pm;
-  SwitchChange sc;
+  SwitchChange scs[2];
   DelayStopMsg dsm;
 
   uint32_t last_speed[100];
@@ -174,11 +174,11 @@ void trainserver(){
   uint8_t train_dest = 255;
   int train_location = -1;
 
-  NavPath train_nav_path;
+  SensorPath train_sensor_path;
+  uint8_t cur_sensor_index;
   uint8_t got_sensor_path = 0;
   uint8_t sensor_to_stop = 255;
   int delay_time;
-  uint8_t next_nav_switch_change;
 
   NewSensorInfo new_sensor_new;
   NewSensorInfo new_sensor;
@@ -221,9 +221,9 @@ void trainserver(){
 
             if(unexpected_sensor){
                 // TODO: use puts
-                Puts(cout, 0, "\0337\033[45;1H\033[KUnexpected sensor trigger\0338");
+                Puts(cout, 0, "\0337\033[33;1H\033[KUnexpected sensor trigger\0338");
             }else{
-                Puts(cout, 0, "\0337\033[45;1H\033[K\0338");
+                Puts(cout, 0, "\0337\033[33;1H\033[K\0338");
                 // first sensor hit, we shouldn't do any speed calculations
                 if (last_triggered_sensor != 255) {
                     
@@ -248,7 +248,6 @@ void trainserver(){
 
                     // (Vf)^2 = (Vo)^2 + 2ad
                     uint32_t stopping_distance = (cur_physical_speed*cur_physical_speed)/(2*stopping_acceleration); // mm
-                    SensorPath train_sensor_path = train_nav_path.sensor_path;
                     int last_index = train_sensor_path.num_sensors-1;
                     for (int i = last_index; i >= 0; i--) {
                         if (train_sensor_path.dists[last_index] - train_sensor_path.dists[i] > stopping_distance) {
@@ -265,9 +264,26 @@ void trainserver(){
                         }
                     }
 
-                    // TODO: use puts
                     new_printf(cout, 0, "\0337\033[61;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
-                    // uart_printf(CONSOLE, "\0337\033[61;1H\033[KEstimated stopping distance %d, sensor to stop %d \0338", stopping_distance, sensor_to_stop);
+                
+
+                    if(train_sensor_path.scs[0][cur_sensor_index].switch_num!=255){
+                        memcpy(scs, train_sensor_path.scs[0] + cur_sensor_index, sizeof(SwitchChange));
+                        int num_scs = 1;
+                        if(train_sensor_path.scs[1][cur_sensor_index].switch_num!=255){
+                            num_scs = 2;
+                            memcpy(scs+1, train_sensor_path.scs[1] + cur_sensor_index, sizeof(SwitchChange));
+                        }
+                        
+                        new_printf(cout, 0, "\0337\033[67;1H\033[Ksensor: %u, switch to change: %u %u, num_scs: %u\0338", train_sensor_path.sensors[cur_sensor_index], scs[0].switch_num, scs[0].dir, num_scs);
+
+                        int res = change_switches_cmd(switch_tid, scs, num_scs);
+                        if(res<0){
+                            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
+                        }
+                    }
+                    
+                    cur_sensor_index += 1;
                 }
 
                 // TODO: what if distance was invalid i.e. invalid sensor reading
@@ -280,7 +296,6 @@ void trainserver(){
                     if(intended_reply_len!=0){
                         (CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
                     }
-                    // tr(mio, train_id, 0, last_speed);
                     train_dest = 255;
                     sensor_to_stop = 255;
                     got_sensor_path = 0;
@@ -319,19 +334,6 @@ void trainserver(){
             loc_err_handling(train_location, &new_sensor, &new_sensor_err, &new_sensor_new, &last_triggered_sensor);
             new_printf(cout, 0,  "\0337\033[66;1H\033[Knew_sensor: %u, new_sensor_err: %u, last trig: %u\0338", new_sensor.next_sensor, new_sensor_err.next_sensor, last_triggered_sensor);
 
-            if(unexpected_sensor==0){
-                new_printf(cout, 0, "\0337\033[67;1H\033[Knum_switches: %u, next_switch_ind: %u, next_switch: %u, upcoming_switch: %u\0338", train_nav_path.num_switches, next_nav_switch_change, train_nav_path.switches[next_nav_switch_change].switch_num, new_sensor.switch_after_next_sensor);
-                if(train_nav_path.num_switches>next_nav_switch_change && train_nav_path.switches[next_nav_switch_change].switch_num==new_sensor.switch_after_next_sensor){
-                    // new_printf(cout, 0, "\0337\033[67;1H\033[Kswitch chang: %u\0338", train_nav_path.switches[next_nav_switch_change]);
-                    sc.switch_num = train_nav_path.switches[next_nav_switch_change].switch_num;
-                    sc.dir = train_nav_path.switches[next_nav_switch_change].dir;
-                    int res = change_switches_cmd(switch_tid, &sc, 1);
-                    if(res<0){
-                        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
-                    }
-                    next_nav_switch_change += 1;
-                }
-            }
             
             last_new_sensor_time = sensor_query_time;
             last_distance_between_sensors = distance_between_sensors;
@@ -370,9 +372,9 @@ void trainserver(){
         }
     }else if(tsm.type==TRAIN_SERVER_SW && msg_len==sizeof(TrainServerMsgSimple)){
         Reply(tid, NULL, 0);
-        sc.switch_num = tsm.arg1;
-        sc.dir = (char)tsm.arg2;
-        int res = change_switches_cmd(switch_tid, &sc, 1);
+        scs[0].switch_num = tsm.arg1;
+        scs[0].dir = (char)tsm.arg2;
+        int res = change_switches_cmd(switch_tid, scs, 1);
         if(res<0){
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
         }
@@ -450,28 +452,42 @@ void trainserver(){
     }else if(tsm.type==TRAIN_SERVER_NAV_PATH && msg_len==sizeof(TrainServerMsg)){
         //TODO: maybe this should be a reply?
         Reply(tid, NULL, 0);
-        memcpy(&train_nav_path, tsm.data, sizeof(NavPath));
+        memcpy(&train_sensor_path, tsm.data, sizeof(SensorPath));
         // SensorPath *sp = tsm.data;
 
-        for(int i = 0; i<train_nav_path.sensor_path.num_sensors; i++){
-            uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, train_nav_path.sensor_path.sensors[i], train_nav_path.sensor_path.dists[i]);
+        cur_sensor_index = 0;
+        uart_printf(CONSOLE, "\0337\033[%u;1H\033[K initial sc: %u %u\0338", 39, train_sensor_path.initial_scs[0].switch_num, train_sensor_path.initial_scs[0].dir);
+        for(int i = 0; i<train_sensor_path.num_sensors; i++){
+            uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u, dist: %u, reverse: %u, switch: %u %u\0338", 40+i, train_sensor_path.sensors[i], train_sensor_path.dists[i], train_sensor_path.does_reverse[i], train_sensor_path.scs[0][i].switch_num, train_sensor_path.scs[0][i].dir);
         }
-        uart_printf(CONSOLE, "\0337\033[%u;1H\033[K num_switches: %u \0338", 30, train_nav_path.num_switches );
-        for(int i = 0; i<train_nav_path.num_switches; i++){
-            uart_printf(CONSOLE, "\0337\033[%u;1H\033[K switch: %u, dir: %u\0338", 31+i, train_nav_path.switches[i].switch_num, train_nav_path.switches[i].dir );
-        }
+        // uart_printf(CONSOLE, "\0337\033[%u;1H\033[K num_switches: %u \0338", 30, train_nav_path.num_switches );
+        // for(int i = 0; i<train_nav_path.num_switches; i++){
+        //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K switch: %u, dir: %u\0338", 31+i, train_nav_path.switches[i].switch_num, train_nav_path.switches[i].dir );
+        // }
 
         // if first switch is upcoming, change it now
-        if(train_nav_path.num_switches>0 && train_nav_path.switches[0].switch_num==new_sensor.switch_after_next_sensor){
-            sc.switch_num = train_nav_path.switches[0].switch_num;
-            sc.dir = train_nav_path.switches[0].dir;
-            int res = change_switches_cmd(switch_tid, &sc, 1);
+        // if(train_nav_path.num_switches>0 && train_nav_path.switches[0].switch_num==new_sensor.switch_after_next_sensor){
+        //     sc.switch_num = train_nav_path.switches[0].switch_num;
+        //     sc.dir = train_nav_path.switches[0].dir;
+        //     int res = change_switches_cmd(switch_tid, &sc, 1);
+        //     if(res<0){
+        //         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
+        //     }
+        //     next_nav_switch_change = 1;
+        // }else{
+        //     next_nav_switch_change = 0;
+        // }
+        if(train_sensor_path.initial_scs[0].switch_num!=255){
+            memcpy(scs, train_sensor_path.initial_scs, sizeof(SwitchChange));
+            int num_scs = 1;
+            if(train_sensor_path.initial_scs[1].switch_num!=255){
+                num_scs = 2;
+                memcpy(scs+1, train_sensor_path.initial_scs+1, sizeof(SwitchChange));
+            }
+            int res = change_switches_cmd(switch_tid, scs, num_scs);
             if(res<0){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
             }
-            next_nav_switch_change = 1;
-        }else{
-            next_nav_switch_change = 0;
         }
 
         /* 

@@ -15,7 +15,6 @@ NavPath *hns_init(NavPath hns[], size_t size){
         }else{
             hns[i].next = NULL;
         }
-        hns[i].num_switches = 0;
         hns[i].sensor_path.num_sensors = 0;
     }
     return hns;
@@ -29,7 +28,6 @@ NavPath *getNextFreeHeapNode(NavPath **nextFreeHeapNode){
     return hn;
 }
 void reclaimHeapNode(NavPath **nextFreeHeapNode, NavPath *hn){
-    hn->num_switches = 0;
     hn->sensor_path.num_sensors = 0;
     hn->next = *nextFreeHeapNode;
     *nextFreeHeapNode = hn;
@@ -73,8 +71,9 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, N
     cur_node = getNextFreeHeapNode(nextFreeHeapNode);
     cur_node->node_index = src;
     cur_node->dist = 0;
-    cur_node->num_switches = 0;
     cur_node->sensor_path.num_sensors = 0;
+    cur_node->sensor_path.initial_scs[0].switch_num = 255;
+    cur_node->sensor_path.initial_scs[1].switch_num = 255;
     heap_push(&heap, cur_node);
 
     // uart_printf(CONSOLE, "\0337\033[17;1H\033[Kswitches setup %u %u\0338", src, dest);
@@ -92,9 +91,11 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, N
         cur_dist = cur_node->dist;
 
         cur_track_node = track + cur_node->node_index;
-        if(cur_node->node_index != src && cur_track_node->type == NODE_SENSOR){
+        if(cur_track_node->type == NODE_SENSOR){
             cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = cur_node->node_index;
             cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
+            cur_node->sensor_path.scs[0][cur_node->sensor_path.num_sensors].switch_num = 255;
+            cur_node->sensor_path.scs[1][cur_node->sensor_path.num_sensors].switch_num = 255;
             cur_node->sensor_path.num_sensors += 1;
         }
 
@@ -133,26 +134,43 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, N
                     next_node->dist = new_dist;
                     next_node->node_index = new_dest;
                     next_node->sensor_path.num_sensors = cur_node->sensor_path.num_sensors;
-                    for(int i = 0; i<cur_node->sensor_path.num_sensors; i++){
-                        next_node->sensor_path.sensors[i] = cur_node->sensor_path.sensors[i];
-                        next_node->sensor_path.dists[i] = cur_node->sensor_path.dists[i];
-                    }
+                    memcpy(&(next_node->sensor_path.initial_scs), &(cur_node->sensor_path.initial_scs), sizeof(SwitchChange)*2);
+                    memcpy(&(next_node->sensor_path.sensors), &(cur_node->sensor_path.sensors), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
+                    memcpy(&(next_node->sensor_path.dists), &(cur_node->sensor_path.dists), sizeof(uint16_t)*cur_node->sensor_path.num_sensors);
+                    memcpy(&(next_node->sensor_path.does_reverse), &(cur_node->sensor_path.does_reverse), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
+                    memcpy(&(next_node->sensor_path.scs[0]), &(cur_node->sensor_path.scs[0]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
+                    memcpy(&(next_node->sensor_path.scs[1]), &(cur_node->sensor_path.scs[1]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
+                    // for(int u = 0; u<cur_node->sensor_path.num_sensors; u++){
+                    //     next_node->sensor_path.sensors[u] = cur_node->sensor_path.sensors[u];
+                    //     next_node->sensor_path.dists[i] = cur_node->sensor_path.dists[i];
+                    // }
 
-                    for(int i = 0; i<cur_node->num_switches; i++){
-                        next_node->switches[i].switch_num=cur_node->switches[i].switch_num;
-                        next_node->switches[i].dir=cur_node->switches[i].dir;
-                    } 
-                    next_node->switches[cur_node->num_switches].switch_num = cur_track_node->num;
-                    next_node->switches[cur_node->num_switches].dir = dirs[i];
-                    next_node->num_switches = cur_node->num_switches + 1;
+                    // for(int i = 0; i<cur_node->num_switches; i++){
+                    //     next_node->switches[i].switch_num=cur_node->switches[i].switch_num;
+                    //     next_node->switches[i].dir=cur_node->switches[i].dir;
+                    // }
+                    SwitchChange *sc_to_change;
+                    if(cur_node->sensor_path.num_sensors==1){
+                        sc_to_change = next_node->sensor_path.initial_scs;
+                    }else{
+                        sc_to_change = next_node->sensor_path.scs[0] + (next_node->sensor_path.num_sensors-2);
+                    }
+                    sc_to_change->switch_num = cur_track_node->num;
+                    sc_to_change->dir = dirs[i];
+
+                    sc_to_change = next_node->sensor_path.scs[1] + (next_node->sensor_path.num_sensors-1);;
                     if(cur_track_node->num == 156 && i==1){
-                        next_node->switches[next_node->num_switches].switch_num = 155;
-                        next_node->switches[next_node->num_switches].dir = 'S';
-                        next_node->num_switches += 1;
+                        sc_to_change->switch_num = 155;
+                        sc_to_change->dir = 'S';
+                        // next_node->switches[next_node->num_switches].switch_num = 155;
+                        // next_node->switches[next_node->num_switches].dir = 'S';
+                        // next_node->num_switches += 1;
                     }else if(cur_track_node->num == 154 && i==1){
-                        next_node->switches[next_node->num_switches].switch_num = 153;
-                        next_node->switches[next_node->num_switches].dir = 'S';
-                        next_node->num_switches += 1;
+                        sc_to_change->switch_num = 153;
+                        sc_to_change->dir = 'S';
+                        // next_node->switches[next_node->num_switches].switch_num = 153;
+                        // next_node->switches[next_node->num_switches].dir = 'S';
+                        // next_node->num_switches += 1;
                     }
                     heap_push(&heap, next_node);
                 }else{
@@ -367,7 +385,7 @@ void path_finding(){
 
             // change_switches_cmd(switch_tid, path->switches, path->num_switches);
             //TODO: maybe make this send size also dynamic depending on num of sensors
-            memcpy(tsm.data, path, sizeof(NavPath));
+            memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
 
             intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
             if(intended_reply_len!=0){
