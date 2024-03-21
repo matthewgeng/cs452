@@ -98,16 +98,31 @@ void add_to_sensor_path(NavPath *cur_node, uint8_t sensor, uint16_t dist, uint8_
     cur_node->sensor_path.sensors[num_sensors] = sensor;
     cur_node->sensor_path.dists[num_sensors] = dist;
     cur_node->sensor_path.does_reverse[num_sensors] = reverse;
-    cur_node->sensor_path.speeds[cur_node->sensor_path.num_sensors] = 255;
+    // cur_node->sensor_path.speeds[num_sensors] = 255;
     cur_node->sensor_path.scs[0][num_sensors].switch_num = 255;
     cur_node->sensor_path.scs[1][num_sensors].switch_num = 255;
-    if(reverse==1 && num_sensors>1){
-        cur_node->sensor_path.speeds[num_sensors-2] = 4;
-    }
-    if(num_sensors>0 && cur_node->sensor_path.does_reverse[num_sensors-1]==1){
-        cur_node->sensor_path.speeds[cur_node->sensor_path.num_sensors] = 14;
-    }
     cur_node->sensor_path.num_sensors += 1;
+}
+
+void get_speeds_from_reverse(NavPath *cur_node){
+    for(int i = 0; i<cur_node->sensor_path.num_sensors; i++){
+        cur_node->sensor_path.speeds[i] = 255;
+        if(i==0 && cur_node->sensor_path.does_reverse[0]==0 && cur_node->sensor_path.does_reverse[1]==0){
+            cur_node->sensor_path.speeds[0] = 14;
+        }
+        if(i>0 && cur_node->sensor_path.does_reverse[i-1]==1){
+            cur_node->sensor_path.speeds[i] = 14;
+        }
+        if(i+2<cur_node->sensor_path.num_sensors && cur_node->sensor_path.does_reverse[i+2]==1){
+            cur_node->sensor_path.speeds[i] = 8;
+        }
+        if(i+1<cur_node->sensor_path.num_sensors && cur_node->sensor_path.does_reverse[i+1]==1){
+            cur_node->sensor_path.speeds[i] = 4;
+        }
+        if(i==cur_node->sensor_path.num_sensors-1){
+            cur_node->sensor_path.speeds[i] = 255;
+        }
+    }
 }
 
 NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, char switch_states[], NavPath **nextFreeHeapNode){
@@ -130,6 +145,8 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
     }
     min_dist[src] = 0;
 
+    uint16_t reverse_cost = 400;
+
     int new_dist;
     int new_dest;
     int cur_dist;
@@ -147,15 +164,16 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
     cur_track_node = track + src;
     cur_node = getNextFreeHeapNode(nextFreeHeapNode);
     cur_node->node_index = cur_track_node->reverse - track;
-    cur_node->dist = 0;
+    cur_node->dist = reverse_cost;
     cur_node->sensor_path.num_sensors = 0;
     cur_node->sensor_path.initial_scs[0].switch_num = 255;
     cur_node->sensor_path.initial_scs[1].switch_num = 255;
 
-    // add_to_sensor_path(cur_node, src, 0, 1);
-    cur_node->sensor_path.sensors[0] = src;
-    cur_node->sensor_path.dists[0] = 0;
-    cur_node->sensor_path.does_reverse[0] = 1;
+    add_to_sensor_path(cur_node, src, 0, 1);
+    // cur_node->sensor_path.sensors[0] = src;
+    // cur_node->sensor_path.dists[0] = 0;
+    // cur_node->sensor_path.does_reverse[0] = 1;
+    // cur_node->sensor_path.num_sensors += 1;
     heap_push(&heap, cur_node);
 
     // uart_printf(CONSOLE, "\0337\033[35;1H\033[Kreverse: %u\0338", cur_node->node_index);
@@ -173,13 +191,13 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
         cur_track_node = track + cur_node->node_index;
         if(cur_track_node->type == NODE_SENSOR){
 
-            // add_to_sensor_path(cur_node, cur_node->node_index, cur_node->dist, 0);
-            cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = cur_node->node_index;
-            cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
-            cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors] = 0;
-            cur_node->sensor_path.scs[0][cur_node->sensor_path.num_sensors].switch_num = 255;
-            cur_node->sensor_path.scs[1][cur_node->sensor_path.num_sensors].switch_num = 255;
-            cur_node->sensor_path.num_sensors += 1;
+            add_to_sensor_path(cur_node, cur_node->node_index, cur_node->dist, 0);
+            // cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = cur_node->node_index;
+            // cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
+            // cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors] = 0;
+            // cur_node->sensor_path.scs[0][cur_node->sensor_path.num_sensors].switch_num = 255;
+            // cur_node->sensor_path.scs[1][cur_node->sensor_path.num_sensors].switch_num = 255;
+            // cur_node->sensor_path.num_sensors += 1;
         }
 
         // uart_printf(CONSOLE, "\0337\033[%u;1H\033[Knext node, %d, sensor[0]: %u\0338", 15+tmp_count, cur_node->node_index, cur_node->sensor_path.sensors[0]);
@@ -188,6 +206,7 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
         if(cur_node->node_index == dest){
             // for(;;){}
             res = cur_node;
+            get_speeds_from_reverse(res);
             while(heap.length!=0){
                 cur_node = heap_pop(&heap);
                 reclaimHeapNode(nextFreeHeapNode, cur_node);
@@ -196,21 +215,21 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
             return res;
         }else if((cur_track_node->reverse-track) == dest){
             cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors-1] = 1;
+            // if(cur_node->sensor_path.num_sensors>2){
+            //     cur_node->sensor_path.speeds[cur_node->sensor_path.num_sensors-3] = 4;
+            // }
 
             // add_to_sensor_path(cur_node, dest, cur_node->dist, 0);
-            cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = dest;
-            cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
-            cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors] = 0;
-            cur_node->sensor_path.scs[0][cur_node->sensor_path.num_sensors].switch_num = 255;
-            cur_node->sensor_path.scs[1][cur_node->sensor_path.num_sensors].switch_num = 255;
-            cur_node->sensor_path.num_sensors += 1;
-
-            res = cur_node;
-            while(heap.length!=0){
-                cur_node = heap_pop(&heap);
-                reclaimHeapNode(nextFreeHeapNode, cur_node);
-            }
-            return res;
+            // cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = dest;
+            // cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
+            // cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors] = 0;
+            // cur_node->sensor_path.scs[0][cur_node->sensor_path.num_sensors].switch_num = 255;
+            // cur_node->sensor_path.scs[1][cur_node->sensor_path.num_sensors].switch_num = 255;
+            // cur_node->sensor_path.num_sensors += 1;
+            cur_node->node_index = dest;
+            cur_node->dist += reverse_cost;
+            heap_push(&heap, cur_node);
+            continue;
         }
         
         if(cur_track_node->type == NODE_SENSOR){
@@ -240,15 +259,16 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
             uint16_t dist_bt_sensors;
             uint8_t next_sensor = get_next_sensor(prev_sensor, switch_states, track, NULL, NULL, &dist_bt_sensors);
             if(next_sensor==dest){
-                // add_to_sensor_path(next_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 0);
-                next_node->sensor_path.sensors[next_node->sensor_path.num_sensors] = next_sensor;
-                next_node->sensor_path.dists[next_node->sensor_path.num_sensors] = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors;
-                next_node->sensor_path.does_reverse[next_node->sensor_path.num_sensors] = 0;
-                next_node->sensor_path.scs[0][next_node->sensor_path.num_sensors].switch_num = 255;
-                next_node->sensor_path.scs[1][next_node->sensor_path.num_sensors].switch_num = 255;
-                next_node->sensor_path.num_sensors += 1;
+                add_to_sensor_path(next_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 0);
+                // next_node->sensor_path.sensors[next_node->sensor_path.num_sensors] = next_sensor;
+                // next_node->sensor_path.dists[next_node->sensor_path.num_sensors] = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors;
+                // next_node->sensor_path.does_reverse[next_node->sensor_path.num_sensors] = 0;
+                // next_node->sensor_path.scs[0][next_node->sensor_path.num_sensors].switch_num = 255;
+                // next_node->sensor_path.scs[1][next_node->sensor_path.num_sensors].switch_num = 255;
+                // next_node->sensor_path.num_sensors += 1;
                 
                 res = next_node;
+                get_speeds_from_reverse(res);
                 while(heap.length!=0){
                     cur_node = heap_pop(&heap);
                     reclaimHeapNode(nextFreeHeapNode, cur_node);
@@ -257,17 +277,16 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
                 return res;
             }
 
-            // add_to_sensor_path(cur_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 1);
-            next_node->sensor_path.sensors[next_node->sensor_path.num_sensors] = next_sensor;
-            next_node->sensor_path.dists[next_node->sensor_path.num_sensors] = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors;
-            next_node->sensor_path.does_reverse[next_node->sensor_path.num_sensors] = 1;
-            next_node->sensor_path.scs[0][next_node->sensor_path.num_sensors].switch_num = 255;
-            next_node->sensor_path.scs[1][next_node->sensor_path.num_sensors].switch_num = 255;
-            
+            add_to_sensor_path(next_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 1);
+            // next_node->sensor_path.sensors[next_node->sensor_path.num_sensors] = next_sensor;
+            // next_node->sensor_path.dists[next_node->sensor_path.num_sensors] = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors;
+            // next_node->sensor_path.does_reverse[next_node->sensor_path.num_sensors] = 1;
+            // next_node->sensor_path.scs[0][next_node->sensor_path.num_sensors].switch_num = 255;
+            // next_node->sensor_path.scs[1][next_node->sensor_path.num_sensors].switch_num = 255;
+            // next_node->sensor_path.num_sensors += 1;
 
             new_dest = (track+next_sensor)->reverse - track;
-            new_dist = next_node->sensor_path.dists[next_node->sensor_path.num_sensors];
-            next_node->sensor_path.num_sensors += 1;
+            new_dist = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+reverse_cost;
 
             if(min_dist[new_dest] > new_dist){
                 min_dist[new_dest] = new_dist;
@@ -374,6 +393,8 @@ void path_finding(){
 
     // uart_printf(CONSOLE, "\033[30;1H\033[Ktracknode size %u", sizeof(track_node));
     init_tracka(track);
+
+    // uint8_t edge_available[TRACK_MAX][2];
 
     PathMessage pm;
     int tid;

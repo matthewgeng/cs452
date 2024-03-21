@@ -265,7 +265,7 @@ void k4(){
     printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
 
     Create(6, &console_time);
-    Create(6, &reverse);
+    Create(4, &reverse);
     Create(4, &switches_server);
     Create(1, &sensor_update);
     // Create(4, &trainserver);
