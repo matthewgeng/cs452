@@ -8,15 +8,17 @@ typedef struct NewSensorInfo{
   int next_next_sensor;
   int next_sensor_switch_err;
   int switch_after_next_sensor;
+  int reverse_sensor;
 } NewSensorInfo;
 
 typedef struct SensorPath{
   uint8_t num_sensors;
   SwitchChange initial_scs[2];
-  uint8_t sensors[40];
-  uint16_t dists[40];
-  uint8_t does_reverse[40];
-  SwitchChange scs[2][40];
+  uint8_t sensors[20];
+  uint16_t dists[20];
+  uint8_t speeds[20];
+  uint8_t does_reverse[20];
+  SwitchChange scs[2][20];
 } SensorPath;
 
 typedef struct NavPath {
