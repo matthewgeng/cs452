@@ -21,7 +21,7 @@ void sensor_update(){
   initialize_intcb(&sensor_cb, sensors, 12, 1);
 
   int new_sensor_triggered = 0;
-  char sensors_str[] = "\033[8;1H\033[KMost recent sensors:                                                           ";
+  char sensors_str[] = "\033[8;40H\033[KMost recent sensors:                                                           ";
   int sensors_str_index;
 
   // TODO: assuming only 1 new sensor per query rn

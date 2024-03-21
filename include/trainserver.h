@@ -30,7 +30,7 @@ typedef struct TrainServerMsg{
     uint32_t arg1;
     uint32_t arg2;
     uint32_t arg3;
-    char data[300];
+    char data[350];
 } TrainServerMsg;
 
 typedef enum {
@@ -45,13 +45,15 @@ typedef struct TrainState {
     uint32_t last_speed;
     uint8_t train_dest;
     int train_location;
-    NavPath train_nav_path;
+    SensorPath train_sensor_path;
+    uint8_t cur_sensor_index;
     uint8_t got_sensor_path;
     uint8_t sensor_to_stop;
     int delay_time;
     uint8_t next_nav_switch_change;
-    NewSensorInfo new_sensor_new;
-    NewSensorInfo new_sensor;
+    NewSensorInfo new_sensor; // correct new data from pathfinder after a sensor trigger
+
+    NewSensorInfo new_sensor_new; // raw new data from pathfinder after a sensor trigger
     NewSensorInfo new_sensor_err;
 
     uint8_t last_triggered_sensor;
@@ -66,6 +68,8 @@ typedef struct TrainState {
     int sensor_query_time; 
     int predicted_next_sensor_time; // TODO; not sure if this should be set to 0
     uint32_t offset;
+    uint32_t train_print_start_row;
+    uint32_t train_print_start_col;
     struct TrainState* next;
 } TrainState;
 

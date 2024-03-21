@@ -73,7 +73,7 @@ void console_out() {
     int tid;
     // circular buffer 
     // TODO: make constant a variable
-    char raw_buffer[512];
+    char raw_buffer[1024];
     CharCB buffer;
     initialize_charcb(&buffer, raw_buffer, sizeof(raw_buffer), 0);
     // message struct
@@ -583,31 +583,31 @@ static void new_format_print (int tid, int channel, char *fmt, va_list va ) {
 			switch( ch ) {
                 case 'u':
                     len = ui2a( va_arg( va, unsigned int ), 10, bf );
-                    // Puts( tid, channel, bf );
                     memcpy(buffer + i, bf, len);
                     i += len;
                     break;
                 case 'd':
                     len = i2a( va_arg( va, int ), bf );
-                    // Puts( tid, channel, bf );
                     memcpy(buffer + i, bf, len);
                     i += len;
                     break;
+                case 'c':
+                    char c = va_arg( va, int );
+                    buffer[i] = c;
+                    i += 1;
+                    break;
                 case 'x':
                     len = ui2a( va_arg( va, unsigned int ), 16, bf );
-                    // Puts( tid, channel, bf );
                     memcpy(buffer + i, bf, len);
                     i += len;
                     break;
                 case 's':
                     char* s = va_arg( va, char* );
                     len = str_len(s);
-                    // Puts( tid, channel, va_arg( va, char* ) );
                     memcpy(buffer + i, s, len);
                     i += len;
                     break;
                 case '%':
-                    // Putc( tid, channel, ch );
                     buffer[i] = ch;
                     i++;
                     break;

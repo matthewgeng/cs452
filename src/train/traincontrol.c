@@ -372,12 +372,12 @@ void execute_set_sensor(char *str, char *func_res, int console_tid, int train_se
 
 void executeFunction(int console_tid, int train_server_tid, char *str){  
   char last_fun[30];
-  str_cpy(last_fun, "\033[11;1H\033[K");
+  str_cpy(last_fun, "\033[14;1H\033[K");
   str_cpy_w0(last_fun+10, str);
   Puts(console_tid, CONSOLE, last_fun);
 
   char func_res[50];
-  str_cpy(func_res, "\033[12;1H\033[K");
+  str_cpy(func_res, "\033[15;1H\033[K");
 
   if(str[0]=='t' && str[1]=='r' && str[2]==' '){
     execute_tr(str, func_res, console_tid, train_server_tid);

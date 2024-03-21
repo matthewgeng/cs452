@@ -171,14 +171,66 @@ int train_terminal_speed(uint32_t train_num, uint32_t train_speed) {
         train_speed -=16;
     }
     switch (train_num) {
+        case 1:
+            return train1_terminal_speed(train_speed);
         case 2:
             return train2_terminal_speed(train_speed);
         case 47:
             return train47_terminal_speed(train_speed);
+        case 54:
+            return train54_terminal_speed(train_speed);
+        // TODO:
+        case 55:
+            return train54_terminal_speed(train_speed);
+        case 58:
+            return train58_terminal_speed(train_speed);
+        case 77:
+            return train77_terminal_speed(train_speed);
         default:
             // unsupported train
-            return train47_terminal_speed(train_speed);       
+            return -1;       
     }
+}
+
+int train1_terminal_speed(uint32_t train_speed) {
+    int speed = 0;
+    switch (train_speed) {
+        case 0:
+            speed = 0;
+            break;
+        // TODO: no speeds < 6 (too slow)
+        case 6:
+            speed = 101;
+            break;
+        case 7:
+            speed = 184;
+            break;
+        case 8:
+            speed = 237;
+            break;
+        case 9:
+            speed = 300;
+            break;
+        case 10:
+            speed = 361;
+            break;
+        case 11:
+            speed = 431;
+            break;
+        case 12:
+            speed = 488;
+            break;
+        case 13:
+            speed = 558;
+            break;
+        case 14:
+            speed = 594;
+            break;
+        default:
+            // unsupported speed
+            return -1;          
+    }
+    return speed;
 }
 
 int train2_terminal_speed(uint32_t train_speed) {
@@ -187,17 +239,40 @@ int train2_terminal_speed(uint32_t train_speed) {
         case 0:
             speed = 0;
             break;
+        // TODO: no speeds < 4 (too slow)
         case 4:
-            speed = 170;
+            speed = 166;
+            break;
+        case 5:
+            speed = 222;
+            break;
+        case 6:
+            speed = 272;
+            break;
+        case 7:
+            speed = 330;
             break;
         case 8:
             speed = 382;
             break;
+        case 9:
+            speed = 436;
+            break;
+        case 10:
+            speed = 491;
+            break;
+        case 11:
+            speed = 542;
+            break;
         case 12:
-            speed = 598;
+            speed = 590;
+            break;
+        case 13:
+            speed = 605;
             break;
         case 14:
-            speed = 630;
+            // speed = 630; // old speed calculation from first measurements
+            speed = 583;
             break;
         default:
             // unsupported speed
@@ -231,21 +306,177 @@ int train47_terminal_speed(uint32_t train_speed) {
     return speed;
 }
 
+int train54_terminal_speed(uint32_t train_speed) {
+    int speed = 0;
+    switch (train_speed) {
+        case 0:
+            speed = 0;
+            break;
+        // TODO: no speeds < 4 (too slow)
+        case 4:
+            speed = 174;
+            break;
+        case 5:
+            speed = 231;
+            break;
+        case 6:
+            speed = 285;
+            break;
+        case 7:
+            speed = 344;
+            break;
+        case 8:
+            speed = 385;
+            break;
+        case 9:
+            speed = 431;
+            break;
+        case 10:
+            speed = 480;
+            break;
+        case 11:
+            speed = 533;
+            break;
+        case 12:
+            speed = 555;
+            break;
+        case 13:
+            speed = 533;
+            break;
+        case 14:
+            speed = 521;
+            break;
+        default:
+            // unsupported speed
+            return -1;          
+    }
+    return speed;
+}
+
+int train58_terminal_speed(uint32_t train_speed) {
+    int speed = 0;
+    switch (train_speed) {
+        case 0:
+            speed = 0;
+            break;
+        // TODO: no speeds < 6 (too slow)
+        case 6:
+            speed = 120;
+            break;
+        case 7:
+            speed = 171;
+            break;
+        case 8:
+            speed = 222;
+            break;
+        case 9:
+            speed = 279;
+            break;
+        case 10:
+            speed = 336;
+            break;
+        case 11:
+            speed = 411;
+            break;
+        case 12:
+            speed = 476;
+            break;
+        case 13:
+            speed = 545;
+            break;
+        case 14:
+            speed = 533;
+            break;
+        default:
+            // unsupported speed
+            return -1;          
+    }
+    return speed;
+}
+
+int train77_terminal_speed(uint32_t train_speed) {
+    int speed = 0;
+    switch (train_speed) {
+        case 0:
+            speed = 0;
+            break;
+        // TODO: no speeds < 6 (too slow)
+        case 6:
+            speed = 158;
+            break;
+        case 7:
+            speed = 208;
+            break;
+        case 8:
+            speed = 261;
+            break;
+        case 9:
+            speed = 315;
+            break;
+        case 10:
+            speed = 377;
+            break;
+        case 11:
+            speed = 444;
+            break;
+        case 12:
+            speed = 507;
+            break;
+        case 13:
+            speed = 575;
+            break;
+        case 14:
+            speed = 611;
+            break;
+        default:
+            // unsupported speed
+            return -1;          
+    }
+    return speed;
+}
+
 int train_stopping_acceleration(uint32_t train_num, uint32_t train_speed) {
     if (train_speed >= 16) {
         train_speed -=16;
     }
+    // TODO: we should only have 1 speed for stopping acceleration
     switch (train_num) {
+        // case 1:
+        //     return train1_stopping_acceleration(train_speed);
         case 2:
             return train2_stopping_acceleration(train_speed);
         case 47:
             return train47_stopping_acceleration(train_speed);
+        // case 54:
+        //     return train54_stopping_acceleration(train_speed);
+        // case 58:
+        //     return train58_stopping_acceleration(train_speed);
+        // case 77:
+        //     return train77_stopping_acceleration(train_speed);
         default:
             // unsupported train
-            return train47_stopping_acceleration(train_speed);
+            return -1;
     }
 }
 
+int train1_stopping_acceleration(uint32_t train_speed) {
+    switch (train_speed) {
+        case 0:
+            return 0;
+        case 4:
+            return 24;
+        case 8:
+            return 77;
+        case 12:
+            return 112;
+        case 14:
+            return 111;
+
+        default:
+            // unsupported speed
+            return -1;          
+    }
+}
 
 int train2_stopping_acceleration(uint32_t train_speed) {
     switch (train_speed) {
@@ -260,17 +491,6 @@ int train2_stopping_acceleration(uint32_t train_speed) {
             return 112;
         case 14:
             return 111;
-
-        // case 0:
-        //     return 0;
-        // case 4:
-        //     return 42;
-        // case 8:
-        //     return 116;
-        // case 12:
-        //     return 183;
-        // case 14:
-        //     return 200;
 
         default:
             // unsupported speed
@@ -292,17 +512,6 @@ int train47_stopping_acceleration(uint32_t train_speed) {
             return 115;
         case 14:
             return 107;
-
-        // case 0:
-        //     return 0;
-        // case 4:
-        //     return 69;
-        // case 8:
-        //     return 131;
-        // case 12:
-        //     return 172;
-        // case 14:
-        //     return 165;
 
         default:
             // unsupported speed
@@ -360,6 +569,103 @@ int sensor_distance_between(char track, uint32_t src_sensor, uint32_t dest_senso
         case 'b':
         case 'B':
             return pcp_dists_b[src_sensor][dest_sensor];
+        default:
+            return -1;
+    }
+}
+
+int starting_sensor_for_train(char track, uint32_t train_id) {
+    // TODO: print starting sensors out
+    switch (track) {
+        case 'a':
+        case 'A':
+            switch (train_id){
+                case 1:
+                    // A11
+                    return 10;
+                case 2:
+                    // B7
+                    return 22;
+                case 54:
+                    // B11
+                    return 26;
+                case 55:
+                    // B11
+                    return 24;
+                case 58:
+                    // B9
+                    return 24;
+                case 77:
+                    // A16
+                    return 15;
+                default:
+                    // unsupported train
+                    return -1;      
+            }
+
+        case 'b':
+        case 'B':
+            // train 47 or others
+            switch (train_id){
+                // TODO: select starting sensors for trains
+                case 1:
+                case 2:
+                case 54:
+                case 58:
+                case 77:
+                default:
+                    // unsupported train
+                    return -1;      
+            }
+        default:
+            return -1;
+    }
+}
+
+int starting_next_sensor_for_train(char track, uint32_t train_id) {
+    // TODO: print starting sensors out
+    switch (track) {
+        case 'a':
+        case 'A':
+            switch (train_id){
+                case 1:
+                    // A11 --> C7
+                    return 38;
+                case 2:
+                    // B7 --> A10
+                    return 9;
+                case 54:
+                    // B11 --> A8
+                    return 7;
+                case 55:
+                    // TODO: find a different place
+                    // B9 --> A5
+                    return 4;
+                case 58:
+                    // B9 --> A5
+                    return 4;
+                case 77:
+                    // A16 --> C13
+                    return 44;
+                default:
+                    // unsupported train
+                    return -1;      
+            }
+
+        case 'b':
+        case 'B':
+            // train 47 or others
+            switch (train_id){
+                // TODO: select starting sensors for trains
+                case 1:
+                case 2:
+                case 54:
+                case 58:
+                case 77:
+                default:
+                    // unsupported train
+                    return -1;      
+            }
         default:
             return -1;
     }
