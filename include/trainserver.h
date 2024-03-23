@@ -23,6 +23,7 @@ typedef struct TrainServerMsgSimple{
     uint32_t arg1;
     uint32_t arg2;
     uint32_t arg3;
+    // TODO: will need to add a new arg for 3 sensors
 } TrainServerMsgSimple;
 
 typedef struct TrainServerMsg{
@@ -30,6 +31,7 @@ typedef struct TrainServerMsg{
     uint32_t arg1;
     uint32_t arg2;
     uint32_t arg3;
+    // TODO: will need to add a new arg for 3 sensors
     char data[350];
 } TrainServerMsg;
 
@@ -56,14 +58,15 @@ typedef struct TrainState {
     NewSensorInfo new_sensor_new; // raw new data from pathfinder after a sensor trigger
     NewSensorInfo new_sensor_err;
 
+    int reversed;
     uint8_t last_triggered_sensor;
     uint8_t does_reset;
     int cur_train_speed; // 0 - 14
     int cur_physical_speed; // mm/s o
-    uint32_t distance_between_sensors;
-    uint32_t last_distance_between_sensors;
+    int distance_between_sensors;
+    int last_distance_between_sensors;
     uint32_t terminal_physical_speed; // mm/s
-    uint32_t last_new_sensor_time; // us since last new sensor
+    int last_new_sensor_time; // us since last new sensor
     TrainSpeedState train_speed_state; // accelerating, deccelerating, constant speed, stopped?
     int sensor_query_time; 
     int predicted_next_sensor_time; // TODO; not sure if this should be set to 0

@@ -19,6 +19,7 @@ size_t decrement_intcb(size_t capacity, size_t v);
 void push_intcb(IntCB *cb, int v);
 int pop_intcb(IntCB *cb);
 int is_empty_intcb(IntCB *cb);
+int is_full_intcb(IntCB *cb);
 // void iter_elements_backwards(IntCB *cb, void (*function)(), ...);
 
 #endif

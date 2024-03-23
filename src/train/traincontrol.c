@@ -355,11 +355,21 @@ void execute_set_sensor(char *str, char *func_res, int console_tid, int train_se
     //   Puts(console_tid, CONSOLE, func_res);
     //   return;
     // }
+    uint8_t second_sensor = 255;
+
+    // first num was a single digit
+    if(str[4] == ' ' && str[5]!='\0'){
+      second_sensor = getArgumentTwoDigitNumber(str + 5);
+    // first num was a double digit
+    } else if(str[5] == ' ' && str[6]!='\0'){
+      second_sensor = getArgumentTwoDigitNumber(str + 6);
+    }
 
     TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_NEW_SENSOR;
     tsm.arg1 = sensor;
-    tsm.arg2 = Time(clock);
+    tsm.arg2 = second_sensor;
+    tsm.arg3 = Time(clock);
     int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "switch reset invalid rpllen");
