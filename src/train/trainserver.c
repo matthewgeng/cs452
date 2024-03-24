@@ -223,8 +223,8 @@ void trainserver(){
         if(last_triggered_sensor!=tsm.arg1) {
             train_location = tsm.arg1;
 
-            uint8_t do_recalculate_speed = new_sensor.next_sensor!=255 && tsm.arg1==new_sensor.next_sensor;
-            uint8_t expected_sensor = new_sensor.next_sensor==255 || tsm.arg1==new_sensor.next_sensor || tsm.arg1==new_sensor.next_next_sensor || tsm.arg1==new_sensor.next_sensor_switch_err || tsm.arg1==new_sensor_err.next_sensor || (train_is_reversing && tsm.arg1==new_sensor.reverse_sensor);
+            uint8_t do_recalculate_speed = (new_sensor.next_sensor!=255 && tsm.arg1==new_sensor.next_sensor) || (train_is_reversing && tsm.arg1==new_sensor.reverse_sensor);
+            uint8_t expected_sensor = new_sensor.next_sensor==255 || tsm.arg1==new_sensor.next_sensor || tsm.arg1==new_sensor.next_next_sensor || tsm.arg1==new_sensor.next_sensor_switch_err || tsm.arg1==new_sensor_err.next_sensor;
 
             if(expected_sensor){
                 Puts(cout, 0, "\0337\033[33;1H\033[K\0338");
@@ -251,27 +251,33 @@ void trainserver(){
                     uint32_t stopping_acceleration = train_stopping_acceleration(train_id, cur_train_speed) *  offset / 100; //mm/s^2
 
                     // (Vf)^2 = (Vo)^2 + 2ad
-                    uint32_t stopping_distance = (cur_physical_speed*cur_physical_speed)/(2*stopping_acceleration); // mm
-                    int last_index = train_sensor_path.num_sensors-1;
-                    for (int i = last_index; i >= 0; i--) {
-                        if (train_sensor_path.dists[last_index] - train_sensor_path.dists[i] > stopping_distance) {
+                    if(train_sensor_path.does_reverse[cur_sensor_index]==1){
+                        cur_physical_speed = 0;
+                        train_speed_state = STOPPED;
+                        sensor_to_stop = train_sensor_path.sensors[train_sensor_path.num_sensors-1];
+                    }else{
+                        uint32_t stopping_distance = (cur_physical_speed*cur_physical_speed)/(2*stopping_acceleration); // mm
+                        int last_index = train_sensor_path.num_sensors-1;
+                        for (int i = last_index; i >= 0; i--) {
+                            // if(train_sensor_path.does_reverse[i]==1){
+                            //     sensor_to_stop = train_sensor_path.sensors[(i+last_index+1)/2];
+                            //     delay_time = 0;
+                            //     new_printf(cout, 0, "\0337\033[60;1H\033[KStop after reverse: sensor to stop: %d\0338", sensor_to_stop);
+                                
+                            //     break;
+                            // }
+                            if (train_sensor_path.dists[last_index] - train_sensor_path.dists[i] > stopping_distance) {
 
-                            sensor_to_stop = train_sensor_path.sensors[i];
-                            uint32_t stopping_distance_difference = (train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]) - stopping_distance;
+                                sensor_to_stop = train_sensor_path.sensors[i];
+                                uint32_t stopping_distance_difference = (train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]) - stopping_distance;
 
-                            delay_time = (stopping_distance_difference*100)/cur_physical_speed; // 10ms for system ticks
-                            // delay_time = 0;
-                            new_printf(cout, 0, "\0337\033[60;1H\033[KEstimated stopping distance %d, sensor to stop %d, delay_time %d\0338", stopping_distance, sensor_to_stop, delay_time );
-                            // uart_printf(CONSOLE, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
-                              
-                            break;
-                        }
-                        if(train_sensor_path.does_reverse[i]==1){
-                            sensor_to_stop = train_sensor_path.sensors[(i+last_index+1)/2];
-                            delay_time = 0;
-                            new_printf(cout, 0, "\0337\033[60;1H\033[KStop after reverse: sensor to stop: %d\0338", sensor_to_stop);
-                            
-                            break;
+                                delay_time = (stopping_distance_difference*100)/cur_physical_speed; // 10ms for system ticks
+                                // delay_time = 0;
+                                new_printf(cout, 0, "\0337\033[60;1H\033[KEstimated stopping distance %d, sensor to stop %d, delay_time %d\0338", stopping_distance, sensor_to_stop, delay_time );
+                                // uart_printf(CONSOLE, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
+                                
+                                break;
+                            }
                         }
                     }
 

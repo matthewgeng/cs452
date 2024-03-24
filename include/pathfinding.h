@@ -3,6 +3,8 @@
 
 #include "switches.h"
 
+#define reverse_slow_index 5
+
 typedef struct NewSensorInfo{
   int next_sensor;
   int next_next_sensor;
@@ -24,6 +26,8 @@ typedef struct SensorPath{
 typedef struct NavPath {
   uint8_t node_index;
   uint32_t dist;
+  uint16_t used_segments[50];
+  uint8_t num_segments;
   SensorPath sensor_path;
   struct NavPath *next;
 } NavPath;

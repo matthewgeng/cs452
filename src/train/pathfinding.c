@@ -16,6 +16,7 @@ NavPath *hns_init(NavPath hns[], size_t size){
             hns[i].next = NULL;
         }
         hns[i].sensor_path.num_sensors = 0;
+        hns[i].num_segments = 0;
     }
     return hns;
 }
@@ -29,6 +30,7 @@ NavPath *getNextFreeHeapNode(NavPath **nextFreeHeapNode){
 }
 void reclaimHeapNode(NavPath **nextFreeHeapNode, NavPath *hn){
     hn->sensor_path.num_sensors = 0;
+    hn->num_segments = 0;
     hn->next = *nextFreeHeapNode;
     *nextFreeHeapNode = hn;
 }
@@ -125,6 +127,31 @@ void get_speeds_from_reverse(NavPath *cur_node){
     }
 }
 
+void copy_node(NavPath *next_node, NavPath *cur_node){
+
+    next_node->sensor_path.num_sensors = cur_node->sensor_path.num_sensors;
+    memcpy(&(next_node->sensor_path.initial_scs), &(cur_node->sensor_path.initial_scs), sizeof(SwitchChange)*2);
+    memcpy(&(next_node->sensor_path.sensors), &(cur_node->sensor_path.sensors), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
+    memcpy(&(next_node->sensor_path.dists), &(cur_node->sensor_path.dists), sizeof(uint16_t)*cur_node->sensor_path.num_sensors);
+    memcpy(&(next_node->sensor_path.does_reverse), &(cur_node->sensor_path.does_reverse), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
+    memcpy(&(next_node->sensor_path.scs[0]), &(cur_node->sensor_path.scs[0]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
+    memcpy(&(next_node->sensor_path.scs[1]), &(cur_node->sensor_path.scs[1]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
+    next_node->num_segments = cur_node->num_segments;
+    memcpy(&(next_node->used_segments), &(cur_node->used_segments), sizeof(uint16_t)*cur_node->num_segments);
+}
+
+void add_used_segment(NavPath *cur_node, track_node *track, uint8_t node, uint8_t edge){
+    cur_node->used_segments[cur_node->num_segments] = node*2+edge;
+    uint8_t this_reverse = (track+node)->reverse - track;
+    uint8_t next_reverse = (track+node)->edge[edge].dest->reverse - track;
+    uint8_t reverse_edge = 0;
+    if(((track+next_reverse)->edge[1].dest-track)==this_reverse){
+        reverse_edge = 1;
+    }
+    cur_node->used_segments[cur_node->num_segments+1] = next_reverse*2+reverse_edge;
+    cur_node->num_segments += 2;
+}
+
 NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, char switch_states[], NavPath **nextFreeHeapNode){
 
     //TODO: start pathfinding maybe 2/3 sensors after so the train doesn't go off course
@@ -159,6 +186,7 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
     cur_node->sensor_path.num_sensors = 0;
     cur_node->sensor_path.initial_scs[0].switch_num = 255;
     cur_node->sensor_path.initial_scs[1].switch_num = 255;
+    cur_node->num_segments = 0;
     heap_push(&heap, cur_node);
 
     cur_track_node = track + src;
@@ -166,14 +194,11 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
     cur_node->node_index = cur_track_node->reverse - track;
     cur_node->dist = reverse_cost;
     cur_node->sensor_path.num_sensors = 0;
+    add_to_sensor_path(cur_node, src, 0, 1);
+    cur_node->num_segments = 0;
+    add_used_segment(cur_node, track, src, 0);
     cur_node->sensor_path.initial_scs[0].switch_num = 255;
     cur_node->sensor_path.initial_scs[1].switch_num = 255;
-
-    add_to_sensor_path(cur_node, src, 0, 1);
-    // cur_node->sensor_path.sensors[0] = src;
-    // cur_node->sensor_path.dists[0] = 0;
-    // cur_node->sensor_path.does_reverse[0] = 1;
-    // cur_node->sensor_path.num_sensors += 1;
     heap_push(&heap, cur_node);
 
     // uart_printf(CONSOLE, "\0337\033[35;1H\033[Kreverse: %u\0338", cur_node->node_index);
@@ -188,20 +213,13 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
         cur_node = heap_pop(&heap);
         cur_dist = cur_node->dist;
 
+        // uart_printf(CONSOLE, "\0337\033[%u;1H\033[Knext node, %d, num seg: %u, num_seg[0]: %u\0338", 15+tmp_count, cur_node->node_index, cur_node->num_segments, cur_node->used_segments[0]);
+        // tmp_count += 1;
+        
         cur_track_node = track + cur_node->node_index;
         if(cur_track_node->type == NODE_SENSOR){
-
             add_to_sensor_path(cur_node, cur_node->node_index, cur_node->dist, 0);
-            // cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = cur_node->node_index;
-            // cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
-            // cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors] = 0;
-            // cur_node->sensor_path.scs[0][cur_node->sensor_path.num_sensors].switch_num = 255;
-            // cur_node->sensor_path.scs[1][cur_node->sensor_path.num_sensors].switch_num = 255;
-            // cur_node->sensor_path.num_sensors += 1;
         }
-
-        // uart_printf(CONSOLE, "\0337\033[%u;1H\033[Knext node, %d, sensor[0]: %u\0338", 15+tmp_count, cur_node->node_index, cur_node->sensor_path.sensors[0]);
-        // tmp_count += 1;
 
         if(cur_node->node_index == dest){
             // for(;;){}
@@ -214,99 +232,76 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
             // uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
             return res;
         }else if((cur_track_node->reverse-track) == dest){
+            add_used_segment(cur_node, track, cur_node->node_index, 0);
             cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors-1] = 1;
-            // if(cur_node->sensor_path.num_sensors>2){
-            //     cur_node->sensor_path.speeds[cur_node->sensor_path.num_sensors-3] = 4;
-            // }
-
-            // add_to_sensor_path(cur_node, dest, cur_node->dist, 0);
-            // cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors] = dest;
-            // cur_node->sensor_path.dists[cur_node->sensor_path.num_sensors] = cur_node->dist;
-            // cur_node->sensor_path.does_reverse[cur_node->sensor_path.num_sensors] = 0;
-            // cur_node->sensor_path.scs[0][cur_node->sensor_path.num_sensors].switch_num = 255;
-            // cur_node->sensor_path.scs[1][cur_node->sensor_path.num_sensors].switch_num = 255;
-            // cur_node->sensor_path.num_sensors += 1;
             cur_node->node_index = dest;
             cur_node->dist += reverse_cost;
             heap_push(&heap, cur_node);
             continue;
         }
         
-        if(cur_track_node->type == NODE_SENSOR){
+        if(cur_track_node->type == NODE_SENSOR || cur_track_node->type == NODE_MERGE){
+        // if(cur_track_node->type == NODE_SENSOR){
             new_dist = cur_dist + cur_track_node->edge[0].dist;
             new_dest = cur_track_node->edge[0].dest - track;
             if(min_dist[new_dest] > new_dist){
                 min_dist[new_dest] = new_dist;
+                add_used_segment(cur_node, track, cur_node->node_index, 0);
                 cur_node->dist = new_dist;
                 cur_node->node_index = new_dest;
                 heap_push(&heap, cur_node);
             }else{
                 reclaimHeapNode(nextFreeHeapNode, cur_node);
             }
-        }else if(cur_track_node->type == NODE_MERGE){
-            NavPath *next_node;
-            next_node = getNextFreeHeapNode(nextFreeHeapNode);
-            memcpy(&(next_node->sensor_path.initial_scs), &(cur_node->sensor_path.initial_scs), sizeof(SwitchChange)*2);
-            memcpy(&(next_node->sensor_path.sensors), &(cur_node->sensor_path.sensors), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
-            memcpy(&(next_node->sensor_path.dists), &(cur_node->sensor_path.dists), sizeof(uint16_t)*cur_node->sensor_path.num_sensors);
-            memcpy(&(next_node->sensor_path.does_reverse), &(cur_node->sensor_path.does_reverse), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
-            memcpy(&(next_node->sensor_path.scs[0]), &(cur_node->sensor_path.scs[0]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
-            memcpy(&(next_node->sensor_path.scs[1]), &(cur_node->sensor_path.scs[1]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
-            next_node->sensor_path.num_sensors = cur_node->sensor_path.num_sensors;
+        // }else if(cur_track_node->type == NODE_MERGE){
+        //     NavPath *next_node;
+        //     next_node = getNextFreeHeapNode(nextFreeHeapNode);
+        //     copy_node(next_node, cur_node);
 
-            // TODO: maybe don't need to go to next sensor to reverse if close
-            uint8_t prev_sensor = cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors-1];
-            uint16_t dist_bt_sensors;
-            uint8_t next_sensor = get_next_sensor(prev_sensor, switch_states, track, NULL, NULL, &dist_bt_sensors);
-            if(next_sensor==dest){
-                add_to_sensor_path(next_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 0);
-                // next_node->sensor_path.sensors[next_node->sensor_path.num_sensors] = next_sensor;
-                // next_node->sensor_path.dists[next_node->sensor_path.num_sensors] = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors;
-                // next_node->sensor_path.does_reverse[next_node->sensor_path.num_sensors] = 0;
-                // next_node->sensor_path.scs[0][next_node->sensor_path.num_sensors].switch_num = 255;
-                // next_node->sensor_path.scs[1][next_node->sensor_path.num_sensors].switch_num = 255;
-                // next_node->sensor_path.num_sensors += 1;
+        //     // TODO: maybe don't need to go to next sensor to reverse if close
+        //     uint8_t prev_sensor = cur_node->sensor_path.sensors[cur_node->sensor_path.num_sensors-1];
+        //     uint16_t dist_bt_sensors;
+        //     uint8_t next_sensor = get_next_sensor(prev_sensor, switch_states, track, NULL, NULL, &dist_bt_sensors);
+        //     add_used_segment(next_node, track, cur_node->node_index, 0);
+        //     if(next_sensor==dest){
+        //         add_to_sensor_path(next_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 0);
                 
-                res = next_node;
-                get_speeds_from_reverse(res);
-                while(heap.length!=0){
-                    cur_node = heap_pop(&heap);
-                    reclaimHeapNode(nextFreeHeapNode, cur_node);
-                }
-                // uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
-                return res;
-            }
+        //         res = next_node;
+        //         get_speeds_from_reverse(res);
+        //         while(heap.length!=0){
+        //             cur_node = heap_pop(&heap);
+        //             reclaimHeapNode(nextFreeHeapNode, cur_node);
+        //         }
+        //         // uart_printf(CONSOLE, "\0337\033[18;1H\033[Kswitches setup done %u %u %d\0338", src, dest, res->num_switches);
+        //         return res;
+        //     }
 
-            add_to_sensor_path(next_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 1);
-            // next_node->sensor_path.sensors[next_node->sensor_path.num_sensors] = next_sensor;
-            // next_node->sensor_path.dists[next_node->sensor_path.num_sensors] = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors;
-            // next_node->sensor_path.does_reverse[next_node->sensor_path.num_sensors] = 1;
-            // next_node->sensor_path.scs[0][next_node->sensor_path.num_sensors].switch_num = 255;
-            // next_node->sensor_path.scs[1][next_node->sensor_path.num_sensors].switch_num = 255;
-            // next_node->sensor_path.num_sensors += 1;
+        //     add_to_sensor_path(next_node, next_sensor, next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+dist_bt_sensors, 1);
 
-            new_dest = (track+next_sensor)->reverse - track;
-            new_dist = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+reverse_cost;
+        //     add_used_segment(next_node, track, next_sensor, 0);
+        //     new_dest = (track+next_sensor)->reverse - track;
+        //     new_dist = next_node->sensor_path.dists[next_node->sensor_path.num_sensors-1]+reverse_cost;
 
-            if(min_dist[new_dest] > new_dist){
-                min_dist[new_dest] = new_dist;
-                next_node->dist = new_dist;
-                next_node->node_index = new_dest;
-                heap_push(&heap, next_node);
-            }else{
-                reclaimHeapNode(nextFreeHeapNode, next_node);
-            }
+        //     if(min_dist[new_dest] > new_dist){
+        //         min_dist[new_dest] = new_dist;
+        //         next_node->dist = new_dist;
+        //         next_node->node_index = new_dest;
+        //         heap_push(&heap, next_node);
+        //     }else{
+        //         reclaimHeapNode(nextFreeHeapNode, next_node);
+        //     }
 
-            new_dist = cur_dist + cur_track_node->edge[0].dist;
-            new_dest = cur_track_node->edge[0].dest - track;
-            if(min_dist[new_dest] > new_dist){
-                min_dist[new_dest] = new_dist;
-                cur_node->dist = new_dist;
-                cur_node->node_index = new_dest;
-                heap_push(&heap, cur_node);
-            }else{
-                reclaimHeapNode(nextFreeHeapNode, cur_node);
-            }
+        //     new_dist = cur_dist + cur_track_node->edge[0].dist;
+        //     new_dest = cur_track_node->edge[0].dest - track;
+        //     if(min_dist[new_dest] > new_dist){
+        //         min_dist[new_dest] = new_dist;
+        //         add_used_segment(cur_node, track, cur_node->node_index, 0);
+        //         cur_node->dist = new_dist;
+        //         cur_node->node_index = new_dest;
+        //         heap_push(&heap, cur_node);
+        //     }else{
+        //         reclaimHeapNode(nextFreeHeapNode, cur_node);
+        //     }
         }else if(cur_track_node->type == NODE_BRANCH){
             NavPath **hns[2];
             hns[0] = getNextFreeHeapNode(nextFreeHeapNode);
@@ -318,24 +313,11 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
                 next_node = hns[i];
                 if(min_dist[new_dest] > new_dist){
                     min_dist[new_dest] = new_dist;
+                    copy_node(next_node, cur_node);
+                    add_used_segment(next_node, track, cur_node->node_index, i);
                     next_node->dist = new_dist;
                     next_node->node_index = new_dest;
-                    next_node->sensor_path.num_sensors = cur_node->sensor_path.num_sensors;
-                    memcpy(&(next_node->sensor_path.initial_scs), &(cur_node->sensor_path.initial_scs), sizeof(SwitchChange)*2);
-                    memcpy(&(next_node->sensor_path.sensors), &(cur_node->sensor_path.sensors), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
-                    memcpy(&(next_node->sensor_path.dists), &(cur_node->sensor_path.dists), sizeof(uint16_t)*cur_node->sensor_path.num_sensors);
-                    memcpy(&(next_node->sensor_path.does_reverse), &(cur_node->sensor_path.does_reverse), sizeof(uint8_t)*cur_node->sensor_path.num_sensors);
-                    memcpy(&(next_node->sensor_path.scs[0]), &(cur_node->sensor_path.scs[0]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
-                    memcpy(&(next_node->sensor_path.scs[1]), &(cur_node->sensor_path.scs[1]), sizeof(SwitchChange)*cur_node->sensor_path.num_sensors);
-                    // for(int u = 0; u<cur_node->sensor_path.num_sensors; u++){
-                    //     next_node->sensor_path.sensors[u] = cur_node->sensor_path.sensors[u];
-                    //     next_node->sensor_path.dists[i] = cur_node->sensor_path.dists[i];
-                    // }
 
-                    // for(int i = 0; i<cur_node->num_switches; i++){
-                    //     next_node->switches[i].switch_num=cur_node->switches[i].switch_num;
-                    //     next_node->switches[i].dir=cur_node->switches[i].dir;
-                    // }
                     SwitchChange *sc_to_change;
                     if(cur_node->sensor_path.num_sensors==1){
                         sc_to_change = next_node->sensor_path.initial_scs;
@@ -349,15 +331,9 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, track_node *track, int track_len, c
                     if(cur_track_node->num == 156 && i==1){
                         sc_to_change->switch_num = 155;
                         sc_to_change->dir = 'S';
-                        // next_node->switches[next_node->num_switches].switch_num = 155;
-                        // next_node->switches[next_node->num_switches].dir = 'S';
-                        // next_node->num_switches += 1;
                     }else if(cur_track_node->num == 154 && i==1){
                         sc_to_change->switch_num = 153;
                         sc_to_change->dir = 'S';
-                        // next_node->switches[next_node->num_switches].switch_num = 153;
-                        // next_node->switches[next_node->num_switches].dir = 'S';
-                        // next_node->num_switches += 1;
                     }
                     heap_push(&heap, next_node);
                 }else{
@@ -394,7 +370,7 @@ void path_finding(){
     // uart_printf(CONSOLE, "\033[30;1H\033[Ktracknode size %u", sizeof(track_node));
     init_tracka(track);
 
-    // uint8_t edge_available[TRACK_MAX][2];
+    uint8_t edge_available[TRACK_MAX][2];
 
     PathMessage pm;
     int tid;
@@ -443,6 +419,11 @@ void path_finding(){
                 Puts(cout, 0, "\0337\033[18;1H\033[KDidn't find a route\0338");
                 continue;
             }
+            new_printf(cout, 0, "\033[24;0Hnum segments:%u", path->num_segments);
+            // new_printf(cout, 0, "\0337\033[25;0H\033[K");
+            for(int i = 0; i<path->num_segments; i++){
+                new_printf(cout, 0, "\033[%u;1H%u", 25+i, path->used_segments[i]);
+            }
 
             // uart_printf(CONSOLE, "\0337\033[%u;1H\033[K initial sc: %u %u\0338", 39, path->sensor_path.initial_scs[0].switch_num, path->sensor_path.initial_scs[0].dir);
             // for(int i = 0; i<path->sensor_path.num_sensors; i++){
@@ -476,6 +457,10 @@ void path_finding(){
                 uart_printf(CONSOLE, "\0337\033[18;1H\033[KDidn't find a route\0338");
                 continue;
             }
+
+            // for(int i = 0; i<path->num_segments; i++){
+            //     new_printf(cout, 0, "\033[%u;1H%u", 25+i, path->used_segments[i]);
+            // }
 
             // for(int i = 0; i<path->sensor_path.num_sensors; i++){
             //     uart_printf(CONSOLE, "\0337\033[%u;1H\033[K sensor: %u %u\0338", 40+i, path->sensor_path.sensors[i], path->sensor_path.dists[i]);
