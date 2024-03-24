@@ -32,11 +32,11 @@ void sensor_update(){
   int intended_reply_len;
   TrainServerMsgSimple tsm;
   tsm.type = TRAIN_SERVER_NEW_SENSOR;
+    int new_sensor_triggered = 0;
 
   for(;;){
     // uart_printf(CONSOLE, "\033[30;1Hstart %d", time);
     Putc(mio, MARKLIN, 0x85);
-    last_sensor_triggered = -1;
     memset(triggered_sensors, -1, MAX_NUM_TRIGGERED_SENSORS);
 
     for(int i = 0; i<10; i++){
@@ -47,15 +47,19 @@ void sensor_update(){
           if(sensorNum!=last_sensor_triggered){
             if (is_full_intcb(&triggered_sensor_cb)) {
                 // > 2 sensors got triggered in one query, shouldn't happen unless we have more than 2 trains
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[K> %d sensors triggered in one query %d \0338", sensorNum, MAX_NUM_TRIGGERED_SENSORS);
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[K> %d sensors triggered in one query %d \0338", MAX_NUM_TRIGGERED_SENSORS);
             }
+            // uart_printf(CONSOLE, "\0337\033[%d;1H\033[K pushing sensor %d \0338", 31 + i, sensor_cb.count, triggered_sensor_cb.count);
             push_intcb(&sensor_cb, sensorNum);
             push_intcb(&triggered_sensor_cb, sensorNum);
+            new_sensor_triggered = 1;
             last_sensor_triggered = sensorNum;
           }
         }
       }
     }
+
+    // uart_printf(CONSOLE, "\0337\033[31;1H\033[K sensor cb size %d, triggerd cb size %d\0338", sensor_cb.count, triggered_sensor_cb.count);
     
     // send whenever we get a sensor
     if(!is_empty_intcb(&triggered_sensor_cb)){
@@ -75,7 +79,7 @@ void sensor_update(){
         }
     }
     
-    if(last_sensor_triggered!=-1){
+    if(new_sensor_triggered==1){
       // update the console output whenever we get a *new* sensor
         sensors_str_index = 31;
         int cb_count = 0;
@@ -101,6 +105,7 @@ void sensor_update(){
         }
         sensors_str[sensors_str_index] = '\0';
         Puts(cout, CONSOLE, sensors_str);
+        new_sensor_triggered = 0;
     }
     time += 10;
     DelayUntil(clock_tid, time);

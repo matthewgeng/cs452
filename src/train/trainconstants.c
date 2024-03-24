@@ -166,6 +166,30 @@ int pcp_dists_b[80][80] = {
         {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 679, -1, -1, 686, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 880, 201, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0},
 };
 
+// TODO: measurements for other track
+int train_min_speed(uint32_t train_num) {
+    switch (train_num) {
+        case 1:
+            return 6;
+        case 2:
+            return 4;
+        case 47:
+            return 4;
+        case 54:
+            return 4;
+        // TODO:
+        case 55:
+            return 4;
+        case 58:
+            return 6;
+        case 77:
+            return 6;
+        default:
+            // unsupported train
+            return -1;       
+    }
+}
+
 int train_terminal_speed(uint32_t train_num, uint32_t train_speed) {
     if (train_speed >= 16) {
         train_speed -=16;

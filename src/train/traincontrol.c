@@ -27,6 +27,7 @@ uint8_t is_valid_speed(uint32_t train_speed){
   return train_speed == 0 || train_speed == 4 || train_speed == 8 || train_speed == 12 || train_speed == 14 || train_speed == 16+0 || train_speed == 16+4 || train_speed == 16+8 || train_speed == 16+12 || train_speed == 16+14;
 }
 
+// TODO: validate train numbers are supported
 void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid){
 
     unsigned int trainNumber, trainSpeed;

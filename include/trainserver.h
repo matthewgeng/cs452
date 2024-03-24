@@ -65,6 +65,7 @@ typedef struct TrainState {
     int cur_physical_speed; // mm/s o
     int distance_between_sensors;
     int last_distance_between_sensors;
+    int minimum_moving_train_speed;
     uint32_t terminal_physical_speed; // mm/s
     int last_new_sensor_time; // us since last new sensor
     TrainSpeedState train_speed_state; // accelerating, deccelerating, constant speed, stopped?
@@ -73,6 +74,7 @@ typedef struct TrainState {
     uint32_t offset;
     uint32_t train_print_start_row;
     uint32_t train_print_start_col;
+    int active;
     struct TrainState* next;
 } TrainState;
 
