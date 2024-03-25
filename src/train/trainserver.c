@@ -671,6 +671,7 @@ void trainserver(){
 
                     pm.type = PATH_NEXT_SENSOR;
                     pm.arg1 = ts->train_location;
+                    pm.arg2 = ts->train_id;
                     intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), &(ts->new_sensor_new), sizeof(NewSensorInfo));
                     
                     if(intended_reply_len!=sizeof(NewSensorInfo)){

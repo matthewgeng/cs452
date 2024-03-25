@@ -365,6 +365,8 @@ void execute_set_sensor(char *str, char *func_res, int console_tid, int train_se
     } else if(str[5] == ' ' && str[6]!='\0'){
       second_sensor = getArgumentTwoDigitNumber(str + 6);
     }
+    str_cpy_w0(func_res+10, "Sensor set");
+    Puts(console_tid, CONSOLE, func_res);
 
     TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_NEW_SENSOR;
@@ -377,8 +379,6 @@ void execute_set_sensor(char *str, char *func_res, int console_tid, int train_se
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    str_cpy_w0(func_res+10, "Senser set");
-    Puts(console_tid, CONSOLE, func_res);
 }
 
 void executeFunction(int console_tid, int train_server_tid, char *str){  
