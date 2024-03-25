@@ -52,6 +52,10 @@ int is_empty_intcb(IntCB *cb){
     return cb->count==0;
 }
 
+int is_full_intcb(IntCB *cb){
+    return cb->count==cb->capacity;
+}
+
 int pop_intcb(IntCB *cb){
     if(is_empty_intcb(cb)){
         #if DEBUG

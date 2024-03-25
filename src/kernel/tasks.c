@@ -102,7 +102,7 @@ void idle_task(){
         // int cur_time = Time(clock);
         if(count%30==0){
             uint32_t idle_time_percent = (*p_idle_task_total*100)/(sys_time() - *p_program_start);
-            char str[] = "\0337\033[14;1HIdle:   % \0338";
+            char str[] = "\0337\033[1;40HIdle:   % \0338";
             ui2a_no0(idle_time_percent, 10, str+15);
             // ui2a_no0(cur_time, 10, str+19);
             Puts(console_tid, CONSOLE, str);
@@ -128,17 +128,17 @@ void i2str(int i, char *str){
 void console_time(){
     int clock_tid = WhoIs("clock\0");
     int console_tid = WhoIs("cout\0");
-    char time_str[] = "\0337\033[1;1H\033[K00:00. \0338";
+    char time_str[] = "\0337\033[1;1H00:00.0 \0338";
     char bf[3];
     int time = Time(clock_tid);
     for(;;){
         unsigned int minutes = time/100/60;
         unsigned int seconds = (time/100)%60;
         unsigned int tenthOfSecond = (time/10)%10;
-        i2str(minutes, time_str+11);
-        i2str(seconds, time_str+14);
+        i2str(minutes, time_str+8);
+        i2str(seconds, time_str+11);
         ui2a( tenthOfSecond, 10, bf );
-        time_str[17] = bf[0];
+        time_str[14] = bf[0];
         Puts(console_tid, CONSOLE, time_str);
         time += 10;
         DelayUntil(clock_tid, time);        
@@ -156,11 +156,11 @@ void user_input(){
     int input_index = 0;
     int input_col = 3;
 
-    char new_line_str[] = "\033[10;1H\033[K> ";
+    char new_line_str[] = "\033[13;1H\033[K> ";
     Puts(cout, CONSOLE, new_line_str);
     // new_line_str[2] = INPUT_ROW;
 
-    char next_char_str[] = "\033[10;0H  ";
+    char next_char_str[] = "\033[13;0H  ";
     // next_char_str[2] = INPUT_ROW;
     for(;;){
 
@@ -209,7 +209,7 @@ void user_input(){
                 input_index = 0;
                 input_col = 3;
                 Puts(cout, CONSOLE, new_line_str);
-                char err[] = "\033[12;1H\033[Kinput exceeded maximum number of characters";
+                char err[] = "\033[15;1H\033[Kinput exceeded maximum number of characters";
                 Puts(cout, CONSOLE, err);
             }else{
                 input[input_index] = c;
@@ -256,13 +256,14 @@ void k4(){
     char *s2 = "001:     002:     003:     004:     005:     006:     007:     008:  \r\n";
     char *s3 = "009:     010:     011:     012:     013:     014:     015:     016:  \r\n";
     char *s4 = "017:     018:     153:     154:     155:     156:  ";
-    printf(cout, CONSOLE, "\033[3;1H");
+    new_printf(cout, CONSOLE, "\033[3;1H");
     Puts(cout, CONSOLE, s1);
     Puts(cout, CONSOLE, s2);
     Puts(cout, CONSOLE, s3);
     Puts(cout, CONSOLE, s4);
     
-    printf(cout, CONSOLE, "\033[%u;1H\033[KMost recent sensors: ", SENSORS_ROW);
+    new_printf(cout, CONSOLE, "\033[8;1HTrain starting locations:");
+    new_printf(cout, CONSOLE, "\033[8;40HMost recent sensors: ");
 
     Create(6, &console_time);
     Create(4, &reverse);

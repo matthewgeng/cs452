@@ -380,6 +380,7 @@ void path_finding(){
 
     int res;
     int cur_pos = -2;
+    int train_id;
     int start_sensor;
     NewSensorInfo nsi;
     
@@ -442,6 +443,7 @@ void path_finding(){
             Reply(tid, NULL, 0);
                 
             cur_pos = pm.arg1;
+            train_id = pm.arg2;
             if(cur_pos<0 || cur_pos>80){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
                 continue;
@@ -472,6 +474,7 @@ void path_finding(){
 
             // change_switches_cmd(switch_tid, path->switches, path->num_switches);
             //TODO: maybe make this send size also dynamic depending on num of sensors
+            tsm.arg1 = train_id;
             memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
 
             intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);

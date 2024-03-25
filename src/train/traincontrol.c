@@ -27,6 +27,7 @@ uint8_t is_valid_speed(uint32_t train_speed){
   return train_speed == 0 || train_speed == 4 || train_speed == 8 || train_speed == 12 || train_speed == 14 || train_speed == 16+0 || train_speed == 16+4 || train_speed == 16+8 || train_speed == 16+12 || train_speed == 16+14;
 }
 
+// TODO: validate train numbers are supported
 void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid){
 
     unsigned int trainNumber, trainSpeed;
@@ -355,11 +356,21 @@ void execute_set_sensor(char *str, char *func_res, int console_tid, int train_se
     //   Puts(console_tid, CONSOLE, func_res);
     //   return;
     // }
+    uint8_t second_sensor = 255;
+
+    // first num was a single digit
+    if(str[4] == ' ' && str[5]!='\0'){
+      second_sensor = getArgumentTwoDigitNumber(str + 5);
+    // first num was a double digit
+    } else if(str[5] == ' ' && str[6]!='\0'){
+      second_sensor = getArgumentTwoDigitNumber(str + 6);
+    }
 
     TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_NEW_SENSOR;
     tsm.arg1 = sensor;
-    tsm.arg2 = Time(clock);
+    tsm.arg2 = second_sensor;
+    tsm.arg3 = Time(clock);
     int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
     if(reply_len!=0){
       str_cpy_w0(func_res+10, "switch reset invalid rpllen");
@@ -372,12 +383,12 @@ void execute_set_sensor(char *str, char *func_res, int console_tid, int train_se
 
 void executeFunction(int console_tid, int train_server_tid, char *str){  
   char last_fun[30];
-  str_cpy(last_fun, "\033[11;1H\033[K");
+  str_cpy(last_fun, "\033[14;1H\033[K");
   str_cpy_w0(last_fun+10, str);
   Puts(console_tid, CONSOLE, last_fun);
 
   char func_res[50];
-  str_cpy(func_res, "\033[12;1H\033[K");
+  str_cpy(func_res, "\033[15;1H\033[K");
 
   if(str[0]=='t' && str[1]=='r' && str[2]==' '){
     execute_tr(str, func_res, console_tid, train_server_tid);
