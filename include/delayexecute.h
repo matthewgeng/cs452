@@ -3,9 +3,17 @@
 
 #include <stdint.h>
 
+typedef enum {
+  DELAY_STOP,
+  DELAY_RV
+} delay_exe_argtype;
+
+
 typedef struct DelayExecuteMsg{
-    uint8_t train_number;
+    delay_exe_argtype type;
     int delay_until;
+    uint8_t train_number;
+    uint8_t last_speed;
 } DelayExecuteMsg;
 
 void delay_execute1();

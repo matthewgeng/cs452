@@ -2,7 +2,6 @@
 #include "trainserver.h"
 #include "syscall.h"
 #include "rpi.h"
-#include "reverse.h"
 #include "switches.h"
 #include "pathfinding.h"
 #include "delayexecute.h"
@@ -459,7 +458,6 @@ void trainserver(){
     int cout = WhoIs("cout\0");
     int sensor_tid = WhoIs("sensor\0");
     int pathfind_tid = WhoIs("pathfind\0");
-    int reverse_tid = WhoIs("reverse\0");
     int switch_tid = WhoIs("switch\0");
 
     int tid;
@@ -467,7 +465,6 @@ void trainserver(){
     int msg_len;
     int intended_reply_len;
 
-    ReverseMsg rm;
     PathMessage pm;
     SwitchChange scs[2];
     DelayExecuteMsg dsm;
@@ -617,9 +614,11 @@ void trainserver(){
                         
                         if(ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
                             ts->is_reversing = 1;
-                            rm.train_number = ts->train_id;
-                            rm.last_speed = ts->last_speed;
-                            intended_reply_len = Send(reverse_tid, &rm, sizeof(ReverseMsg), NULL, 0);
+                            dsm.type = DELAY_RV;
+                            dsm.delay_until = 0;
+                            dsm.train_number = tsm.arg1;
+                            dsm.last_speed = ts->cur_train_speed;
+                            intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
                             if(intended_reply_len!=0){
                                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
                             }
@@ -650,6 +649,7 @@ void trainserver(){
                             if(ts->delay_time==0){
                                 handle_tr(mio, 'a', ts, 0);
                             }else{
+                                dsm.type = DELAY_STOP;
                                 dsm.train_number = ts->train_id;
                                 dsm.delay_until = (int)(tsm.arg2) + ts->delay_time;
                                 intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
@@ -664,7 +664,7 @@ void trainserver(){
                             pm.arg1 = ts->train_id;
                             intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), NULL, 0);
                             if(intended_reply_len!=0){
-                                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav end unexpected reply\0338");
+                                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav end unexpected reply %d\0338", intended_reply_len);
                             }
                         }
                     }
@@ -676,8 +676,11 @@ void trainserver(){
                     intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), &(ts->new_sensor_new), sizeof(NewSensorInfo));
                     
                     if(intended_reply_len!=sizeof(NewSensorInfo)){
-                        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver get next sensor unexpected reply\0338");
-                        continue;
+                        intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), &(ts->new_sensor_new), sizeof(NewSensorInfo));
+                        if(intended_reply_len!=sizeof(NewSensorInfo)){
+                            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver get next sensor unexpected reply %d\0338", intended_reply_len);
+                            continue;
+                        }
                     }
                     
                     if(ts->predicted_next_sensor_time!=0){
@@ -745,9 +748,11 @@ void trainserver(){
             // TODO: show error
             continue;
         }
-        rm.train_number = tsm.arg1;
-        rm.last_speed = ts->cur_train_speed;
-        intended_reply_len = Send(reverse_tid, &rm, sizeof(ReverseMsg), NULL, 0);
+        dsm.type = DELAY_RV;
+        dsm.delay_until = 0;
+        dsm.train_number = tsm.arg1;
+        dsm.last_speed = ts->cur_train_speed;
+        intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
         if(intended_reply_len!=0){
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
         }

@@ -14,7 +14,6 @@
 #include "pathfinding.h"
 #include "sensors.h"
 #include "trainserver.h"
-#include "reverse.h"
 #include "delayexecute.h"
 
 void k2test() {
@@ -266,7 +265,6 @@ void k4(){
     new_printf(cout, CONSOLE, "\033[8;40HMost recent sensors: ");
 
     Create(6, &console_time);
-    Create(4, &reverse);
     Create(4, &switches_server);
     Create(1, &sensor_update);
     // Create(4, &trainserver);

@@ -19,14 +19,45 @@ void delay_execute_loop(){
 
     DelayExecuteMsg dsm;
     int tid;
+    int train_number, last_speed;
+    char cmd[4];
 
     for(;;){
         Receive(&tid, &dsm, sizeof(DelayExecuteMsg));
         // uart_printf(CONSOLE, "\0337\033[36;1H\033[Kdelayuntil received %d\0338", Time(clock_tid));
         Reply(tid, NULL, 0);
-        DelayUntil(clock_tid, dsm.delay_until);
-        // uart_printf(CONSOLE, "\0337\033[36;1H\033[Kdelayuntil stopped %d\0338", Time(clock_tid));
-        stop(mio, dsm.train_number);
+        if(dsm.type==DELAY_STOP){
+            if(dsm.delay_until!=0){
+                DelayUntil(clock_tid, dsm.delay_until);
+            }
+            // uart_printf(CONSOLE, "\0337\033[36;1H\033[Kdelayuntil stopped %d\0338", Time(clock_tid));
+            stop(mio, dsm.train_number);
+        }else if(dsm.type==DELAY_RV){
+            train_number = (int)(dsm.train_number);
+            last_speed = (int)(dsm.last_speed);
+            if(dsm.delay_until!=0){
+                DelayUntil(clock_tid, dsm.delay_until);
+            }
+            cmd[0] = 0;
+            cmd[1] = train_number;
+            Puts_len(mio, MARKLIN, cmd, 2);
+            // TODO: appropriately handle when speeds are > 16
+
+            if(last_speed<=10){
+                Delay(clock_tid, 500);
+            }else{
+                Delay(clock_tid, 600);
+            }
+            cmd[0] = 15;
+            cmd[1] = train_number;
+            Puts_len(mio, MARKLIN, cmd, 2);
+            cmd[0] = last_speed;
+            cmd[1] = train_number;
+            Puts_len(mio, MARKLIN, cmd, 2);
+
+            // str_cpy_w0(func_res+10, "Train reversed");
+            // Puts(cout, CONSOLE, func_res);
+        }
     }
 }
 
