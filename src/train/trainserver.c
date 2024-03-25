@@ -555,12 +555,11 @@ void trainserver(){
                         // in fact we maybe could initialize last_triggered to be the starting point
                         
                         Puts(cout, 0, "\0337\033[33;1H\033[K\0338");
-                // first sensor hit, we shouldn't do any speed calculations
+                    // first sensor hit, we shouldn't do any speed calculations
                     if (do_recalculate_speed) {
                         
                         ts->distance_between_sensors = sensor_distance_between(track, ts->last_triggered_sensor, tsm.arg1); // train_location <--> tsm.arg1 in millimeters
                         if (ts->distance_between_sensors == -1) {
-                            
                         }else {
                             // get time delta
                             uint32_t delta_new = sensor_query_time - ts->last_new_sensor_time; // ticks
@@ -570,9 +569,8 @@ void trainserver(){
                         // new_printf(cout, 0, "\0337\033[18;1H\033[KSpeed state: %d, train speed: %d, speed: %d, terminal: %d\0338", ts->train_speed_state, ts->cur_train_speed, ts->cur_physical_speed, ts->terminal_physical_speed);
 
                     }
-
                     new_printf(cout, 0, "\0337\033[%d;%dHTrain %d, terminal speed %d    \0338", ts->train_print_start_row,  ts->train_print_start_col, ts->train_id, ts->terminal_physical_speed);
-                    new_printf(cout, 0, "\0337\033[%d;%dHSpeed state %d, train speed %d, speed %d     \0338", 1 + ts->train_print_start_row, ts->train_print_start_col, ts->train_speed_state, ts->cur_train_speed, ts->cur_physical_speed);
+                    new_printf(cout, 0, "\0337\033[%d;%dHSpeed state %d, train speed %d, speed %d   \0338", 1 + ts->train_print_start_row, ts->train_print_start_col, ts->train_speed_state, ts->cur_train_speed, ts->cur_physical_speed);
 
                     // new_printf(cout, 0, "\0337\033[50;1H\033[Kcur_sensor_index: %u %u, speed: %u\0338",ts->cur_sensor_index, ts->train_sensor_path.sensors[ts->cur_sensor_index], ts->last_speed);
 
@@ -615,8 +613,8 @@ void trainserver(){
                         if(ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
                             ts->is_reversing = 1;
                             dsm.type = DELAY_RV;
-                            dsm.delay_until = 0;
-                            dsm.train_number = tsm.arg1;
+                            dsm.delay_until = sensor_query_time+20;
+                            dsm.train_number = ts->train_id;
                             dsm.last_speed = ts->cur_train_speed;
                             intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
                             if(intended_reply_len!=0){
