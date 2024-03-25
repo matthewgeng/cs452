@@ -47,6 +47,7 @@ typedef struct TrainState {
     uint32_t last_speed;
     uint8_t train_dest;
     int train_location;
+    int delay_execute_tid;
     SensorPath train_sensor_path;
     uint8_t cur_sensor_index;
     uint8_t got_sensor_path;
@@ -54,7 +55,6 @@ typedef struct TrainState {
     int delay_time;
     uint8_t next_nav_switch_change;
     NewSensorInfo new_sensor; // correct new data from pathfinder after a sensor trigger
-
     NewSensorInfo new_sensor_new; // raw new data from pathfinder after a sensor trigger
     NewSensorInfo new_sensor_err;
 

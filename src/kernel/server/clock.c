@@ -126,7 +126,7 @@ void clock_notifier(){
         int intended_reply_len = Send(clock_server_tid, NULL, 0, NULL, 0);
         if(intended_reply_len!=0){
             uart_printf(CONSOLE, "\x1b[31mClock notifier unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
-            for(;;){}
+            // for(;;){}
         }
     }
 }

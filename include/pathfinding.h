@@ -38,7 +38,9 @@ typedef enum {
   PATH_NAV,
   PATH_NEXT_SENSOR,
   PATH_SWITCH_CHANGE,
-  PATH_TRACK_CHANGE
+  PATH_TRACK_CHANGE,
+  PATH_NAV_END,
+  PATH_SEGMENT_RESET
 } path_arg_type;
 
 typedef struct PathMessage{

@@ -242,8 +242,8 @@ void execute_nav(char *str, char *func_res, int console_tid, int train_server_ti
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    str_cpy_w0(func_res+10, "Train navigation Ran");
-    Puts(console_tid, CONSOLE, func_res);
+    // str_cpy_w0(func_res+10, "Train navigation Ran");
+    // Puts(console_tid, CONSOLE, func_res);
 }
 
 void execute_go(char *str, char *func_res, int console_tid, int train_server_tid){
