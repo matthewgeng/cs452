@@ -751,3 +751,30 @@ int stopping_speed_for_train(char track, uint32_t train_id) {
             return 6;      
     }
 }
+
+int nav_reverse_stop_offset(uint32_t train_id){
+    switch (train_id){
+        case 1:
+            // A11 --> C7
+            return 60;
+        case 2:
+            // B7 --> A10
+            return 40;
+        case 54:
+            // B11 --> A8
+            // return 6;
+        case 55:
+        //     // TODO: find a different place
+        //     // B9 --> A5
+        //     return 4;
+        case 58:
+        //     // B9 --> A5
+        //     return 4;
+        case 77:
+        //     // A16 --> C13
+        //     return 44;
+        default:
+            // unsupported train
+            return 50;      
+    }
+}

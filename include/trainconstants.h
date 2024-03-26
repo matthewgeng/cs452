@@ -14,6 +14,6 @@ int starting_next_sensor_for_train(char track, uint32_t train_id);
 int train_min_speed(uint32_t train_num);
 int stopping_dist_for_train(char track, uint32_t train_id);
 int stopping_speed_for_train(char track, uint32_t train_id);
-
+int nav_reverse_stop_offset(uint32_t train_id);
 
 #endif
