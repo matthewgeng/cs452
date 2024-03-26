@@ -12,5 +12,8 @@ int sensor_distance_between(char track, uint32_t src_sensor, uint32_t dest_senso
 int starting_sensor_for_train(char track, uint32_t train_id);
 int starting_next_sensor_for_train(char track, uint32_t train_id);
 int train_min_speed(uint32_t train_num);
+int stopping_dist_for_train(char track, uint32_t train_id);
+int stopping_speed_for_train(char track, uint32_t train_id);
+
 
 #endif

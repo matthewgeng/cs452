@@ -176,7 +176,7 @@ void train_states_init(TrainState* trains, uint8_t num_trains) {
         ts->reversed = 0;
         ts->last_triggered_sensor = 255;
         ts->is_reversing = 0;
-        ts->cur_train_speed = 0;
+        ts->cur_train_speed = 16;
         ts->cur_physical_speed = 0;
         ts->distance_between_sensors = 0;
         ts->last_distance_between_sensors = 0;
@@ -451,6 +451,19 @@ void handle_tr(int mio, char track, TrainState* ts, int new_speed){
     tr(mio, ts->train_id, ts->cur_train_speed);
 }
 
+void nav_end(TrainState *ts, int pathfind_tid){
+    PathMessage pm;
+    ts->train_dest = 255;
+    ts->sensor_to_stop = 255;
+    ts->got_sensor_path = 0;
+    pm.type = PATH_NAV_END;
+    pm.arg1 = ts->train_id;
+    int intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), NULL, 0);
+    if(intended_reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav end unexpected reply %d\0338", intended_reply_len);
+    }
+}
+
 void trainserver(){
     RegisterAs("trainserver\0");
     int mio = WhoIs("mio\0");
@@ -470,6 +483,8 @@ void trainserver(){
     DelayExecuteMsg dsm;
     char track = 'a';
 
+    uint8_t reverse_delay = 40;
+    uint8_t reverse_stop_delay = 200;
 
     // train state data
     TrainState train_states[MAX_NUM_TRAINS];
@@ -578,69 +593,20 @@ void trainserver(){
 
                     if(ts->train_dest!=255 && ts->got_sensor_path && tsm.arg1==ts->train_sensor_path.sensors[ts->cur_sensor_index]){
 
-                        uint32_t stopping_acceleration = train_stopping_acceleration(ts->train_id, ts->cur_train_speed) *  ts->offset / 100; //mm/s^2
-
-                        // (Vf)^2 = (Vo)^2 + 2ad
-                        if(ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
-                            ts->cur_physical_speed = 0;
-                            ts->train_speed_state = STOPPED;
-                            ts->sensor_to_stop = ts->train_sensor_path.sensors[ts->train_sensor_path.num_sensors-1];
-                        }else{
-                            uint32_t stopping_distance = (ts->cur_physical_speed*ts->cur_physical_speed)/(2*stopping_acceleration); // mm
-                            int last_index = ts->train_sensor_path.num_sensors-1;
-                            if(ts->train_sensor_path.does_reverse[last_index-1]==1){
-                                ts->sensor_to_stop = ts->train_sensor_path.sensors[last_index];
-                                ts->delay_time = 0;
-                                new_printf(cout, 0, "\0337\033[60;1H\033[Ksensor to stop %d\0338", ts->sensor_to_stop);
-                            }else if(ts->train_sensor_path.does_reverse[last_index-2]==1){
-                                uint8_t reverse_delay_time_mult = 2;
-                                ts->sensor_to_stop = ts->train_sensor_path.sensors[last_index-1];
-                                // uint32_t stopping_distance_difference = (ts->train_sensor_path.dists[last_index] - ts->train_sensor_path.dists[last_index-1]) - stopping_distance;
-                                // ts->delay_time = (stopping_distance_difference*100)/ts->cur_physical_speed/reverse_delay_time_mult; // 10ms for system ticks
-                                ts->delay_time = (ts->train_sensor_path.dists[last_index] - ts->train_sensor_path.dists[last_index-1])*2/5;
-                                new_printf(cout, 0, "\0337\033[60;1H\033[KReverse sensor to stop %d, delay_time %d\0338", ts->sensor_to_stop, ts->delay_time );                                        
-                            }else{
-                                for (int i = last_index; i >= 0; i--) {
-                                    // if(ts->train_sensor_path.does_reverse[i]==1){
-                                    //     // ts->sensor_to_stop = ts->train_sensor_path.sensors[last_index];
-                                    //     if(i+2>=last_index){ 
-                                    //         ts->sensor_to_stop = ts->train_sensor_path.sensors[last_index];
-                                    //     }else{
-                                    //         ts->sensor_to_stop = ts->train_sensor_path.sensors[(i+last_index+1)/2];
-                                    //         ts->delay_time = 0;
-                                    //     }
-                                    //     new_printf(cout, 0, "\0337\033[60;1H\033[KStop after reverse: sensor to stop: %d\0338", ts->sensor_to_stop);
-                                    //     break;
-                                    // }
-                                    if (ts->train_sensor_path.dists[last_index] - ts->train_sensor_path.dists[i] > stopping_distance) {
-
-                                        ts->sensor_to_stop = ts->train_sensor_path.sensors[i];
-                                        uint32_t stopping_distance_difference = (ts->train_sensor_path.dists[ts->train_sensor_path.num_sensors-1] - ts->train_sensor_path.dists[i]) - stopping_distance;
-
-                                        ts->delay_time = (stopping_distance_difference*100)/ts->cur_physical_speed; // 10ms for system ticks
-                                        // delay_time = 0;
-                                        new_printf(cout, 0, "\0337\033[60;1H\033[KEstimated stopping distance %d, sensor to stop %d, delay_time %d\0338", stopping_distance, ts->sensor_to_stop, ts->delay_time );
-                                        // uart_printf(CONSOLE, "\0337\033[60;1H\033[KTrain sensor path dist %d, delay_time %d, last index %d, cur dist %d, diff %d \0338", train_sensor_path.dists[i], delay_time, train_sensor_path.dists[train_sensor_path.num_sensors-1], train_sensor_path.dists[i], train_sensor_path.dists[train_sensor_path.num_sensors-1] - train_sensor_path.dists[i]);
-                                        
-                                        break;
-                                    }
-                                }
-                            }
+                        if(ts->train_sensor_path.speeds[ts->cur_sensor_index]!=255){
+                            handle_tr(mio, 'a', ts, ts->train_sensor_path.speeds[ts->cur_sensor_index]);
                         }
-
                         
                         if(ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
                             ts->is_reversing = 1;
                             dsm.type = DELAY_RV;
-                            dsm.delay_until = sensor_query_time+80;
+                            dsm.delay_until = sensor_query_time + reverse_delay;
                             dsm.train_number = ts->train_id;
                             dsm.last_speed = ts->cur_train_speed;
                             intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
                             if(intended_reply_len!=0){
                                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
                             }
-                        }else if(ts->train_sensor_path.speeds[ts->cur_sensor_index]!=255){
-                            handle_tr(mio, 'a', ts, ts->train_sensor_path.speeds[ts->cur_sensor_index]);
                         }
 
                         if(ts->train_sensor_path.scs[0][ts->cur_sensor_index].switch_num!=255){
@@ -658,10 +624,30 @@ void trainserver(){
                                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver sw cmd unexpected reply\0338");
                             }
                         }
-                        
-                        ts->cur_sensor_index += 1;
 
-                        if(ts->train_location==ts->sensor_to_stop){
+                        if(ts->cur_sensor_index==ts->train_sensor_path.num_sensors-2 && ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
+                            // delay reverse then delay stop
+                            dsm.type = DELAY_RV_STOP;
+                            dsm.train_number = ts->train_id;
+                            dsm.delay_until = sensor_query_time + reverse_delay;
+                            dsm.last_speed = ts->cur_train_speed;
+                            dsm.stop_delay = reverse_stop_delay;
+                            intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+                            if(intended_reply_len!=0){
+                                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay rv stop unexpected reply\0338");
+                            }
+                            // reset nav vars
+                            nav_end(ts, pathfind_tid);
+                            new_printf(cout, 0, "\0337\033[60;1H\033[KLast sensor reverse: delay_rv_stopped %d\0338", ts->sensor_to_stop);
+                        }else if(ts->train_location==ts->sensor_to_stop){
+                            if(ts->delay_time==-1){
+                                // calculate delay time using cur velocity
+                                int stopping_dist = stopping_dist_for_train('a', ts->train_id);
+                                uint32_t stopping_distance_difference = (ts->train_sensor_path.dists[ts->train_sensor_path.num_sensors-1] - ts->train_sensor_path.dists[ts->cur_sensor_index]) - stopping_dist;
+                                ts->delay_time = (stopping_distance_difference*100)/ts->cur_physical_speed; // 10ms for system ticks
+                                new_printf(cout, 0, "\0337\033[60;1H\033[KRegular case: sensor to stop %d, delay_time: %d\0338", ts->sensor_to_stop, ts->delay_time);
+
+                            }
                             ts->cur_train_speed = 0;
                             if(ts->delay_time==0){
                                 handle_tr(mio, 'a', ts, 0);
@@ -674,16 +660,11 @@ void trainserver(){
                                     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
                                 }
                             }
-                            ts->train_dest = 255;
-                            ts->sensor_to_stop = 255;
-                            ts->got_sensor_path = 0;
-                            pm.type = PATH_NAV_END;
-                            pm.arg1 = ts->train_id;
-                            intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), NULL, 0);
-                            if(intended_reply_len!=0){
-                                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav end unexpected reply %d\0338", intended_reply_len);
-                            }
+                            nav_end(ts, pathfind_tid);
                         }
+
+                        ts->cur_sensor_index += 1;
+
                     }
 
                     // TODO: what if distance was invalid i.e. invalid sensor reading
@@ -918,15 +899,36 @@ void trainserver(){
         ts->got_sensor_path = 1;
         ts->sensor_to_stop = -1;
 
-        // /* 
-        // TODO: 
-
-        // calculate stop distance using velocity
-        // total_dist = train_sensor_path.sensor_path.dists[train_sensor_path.num_sensors-1];
-        // if(total_dist<stop_distance){
-        //     tr(train_id, 0);
-        // }
-        // */
+        int last_index = ts->train_sensor_path.num_sensors-1;
+        if(ts->train_sensor_path.does_reverse[last_index-1]==1){
+            new_printf(cout, 0, "\0337\033[60;1H\033[KLast sensor reverse\0338");
+        }else if(ts->train_sensor_path.does_reverse[last_index-2]==1){
+            ts->sensor_to_stop = ts->train_sensor_path.sensors[last_index-1];
+            ts->delay_time = (ts->train_sensor_path.dists[last_index] - ts->train_sensor_path.dists[last_index-1])*1/3; // TODO: finetune
+            new_printf(cout, 0, "\0337\033[60;1H\033[KSecond last sensor reverse: sensor to stop %d, delay_time %d\0338", ts->sensor_to_stop, ts->delay_time );                                        
+        }else{
+            int stopping_speed = stopping_speed_for_train('a', ts->train_id);
+            int stopping_dist = stopping_dist_for_train('a', ts->train_id);
+            ts->sensor_to_stop = 255;
+            ts->delay_time = -1;
+            for (int i = last_index; i >= 0; i--) {
+                if(ts->train_sensor_path.dists[last_index] - ts->train_sensor_path.dists[i] >= stopping_dist){
+                    ts->sensor_to_stop = ts->train_sensor_path.sensors[i];
+                    if(i>0){
+                        ts->train_sensor_path.speeds[i-1] = stopping_speed;
+                    }else{
+                        handle_tr(mio, 'a', ts, stopping_speed);
+                    }
+                    break;
+                }
+            }
+            if(ts->sensor_to_stop==255){
+                handle_tr(mio, 'a', ts, 0);
+                nav_end(ts, pathfind_tid);
+                new_printf(cout, 0, "\0337\033[60;1H\033[KStop immediately\0338");
+            }
+            new_printf(cout, 0, "\0337\033[60;1H\033[KRegular case: sensor to stop %d\0338", ts->sensor_to_stop);
+        }
     }else{
         Reply(tid, NULL, 0);
         uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver unknown cmd %d %u\0338", tsm.type, msg_len);

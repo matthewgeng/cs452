@@ -5,13 +5,15 @@
 
 typedef enum {
   DELAY_STOP,
-  DELAY_RV
+  DELAY_RV,
+  DELAY_RV_STOP
 } delay_exe_argtype;
 
 
 typedef struct DelayExecuteMsg{
     delay_exe_argtype type;
     int delay_until;
+    int stop_delay;
     uint8_t train_number;
     uint8_t last_speed;
 } DelayExecuteMsg;
