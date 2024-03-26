@@ -63,8 +63,22 @@ int WhoIs(const char *name){
         for(;;){}
     }
     if(tid==160){
-        uart_printf(CONSOLE, "\x1b[31mtid not set %s\x1b[0m\r\n", name);
-        for(;;){}
+        intended_reply_len = Send(NAME_SERVER_TID, &nsm, sizeof(NameServerMsg), &tid, 1);
+        if(intended_reply_len < 0 ){
+            return -1;
+        }
+        if(intended_reply_len == 0){
+            uart_printf(CONSOLE, "\x1b[31mCannot find corresponding tid %s %d\x1b[0m\r\n", name, tid);
+            for(;;){}
+        }
+        if(intended_reply_len != 1){
+            uart_printf(CONSOLE, "\x1b[31mWhoIs unexpected behaviour %d %d\x1b[0m\r\n", intended_reply_len, tid);
+            for(;;){}
+        }
+        if(tid==160){
+            uart_printf(CONSOLE, "\x1b[31mtid not set %s\x1b[0m\r\n", name);
+            for(;;){}
+        }
     }
     return (int)tid;
 }

@@ -44,9 +44,9 @@ void delay_execute_loop(){
             // TODO: appropriately handle when speeds are > 16
 
             if(last_speed<=10){
-                Delay(clock_tid, 500);
-            }else{
                 Delay(clock_tid, 600);
+            }else{
+                Delay(clock_tid, 700);
             }
             cmd[0] = 15;
             cmd[1] = train_number;
