@@ -12,6 +12,7 @@
 #include "io.h"
 #include "cb.h"
 #include "sensors.h"
+#include "tc2demo.h"
 
 void tr(int marklin_tid, int train_id, int train_speed){
   char cmd[3];
@@ -213,7 +214,7 @@ int isExpectedSensor(TrainState* ts, int sensor) {
     //                                 sensor==ts->new_sensor.next_next_sensor || sensor == ts->new_sensor.next_sensor_switch_err;
 
     // REMOVED NEXT NEXT check cause weird attribution occurs when trains are close to each other
-    uint8_t expected_normal_sensor = sensor==ts->new_sensor.next_sensor || sensor == ts->new_sensor.next_sensor_switch_err;
+    uint8_t expected_normal_sensor = sensor==ts->new_sensor.next_sensor || sensor==ts->new_sensor.next_next_sensor || sensor == ts->new_sensor.next_sensor_switch_err;
 
     uint8_t expected_alt_sensor = ts->new_sensor_err.next_sensor!=255 && sensor==ts->new_sensor_err.next_sensor;
 
@@ -476,6 +477,7 @@ void trainserver(){
     int sensor_tid = WhoIs("sensor\0");
     int pathfind_tid = WhoIs("pathfind\0");
     int switch_tid = WhoIs("switch\0");
+    int tc2_demo_tid = WhoIs("tc2demo\0");
 
     int tid;
     TrainServerMsg tsm;
@@ -485,6 +487,7 @@ void trainserver(){
     PathMessage pm;
     SwitchChange scs[2];
     DelayExecuteMsg dsm;
+    DemoMessage dm;
     char track = 'a';
 
     uint8_t reverse_delay = 40;
@@ -502,6 +505,8 @@ void trainserver(){
     int valid_trains[] = VALID_TRAINS;
     int num_valid_trains = sizeof(valid_trains)/sizeof(valid_trains[0]);
     print_starting_train_locations(cout, track, valid_trains, num_valid_trains);
+
+    uint8_t is_demoing = 0;
 
   for(;;){
     msg_len = Receive(&tid, &tsm, sizeof(TrainServerMsg));
@@ -640,6 +645,14 @@ void trainserver(){
                             // reset nav vars
                             nav_end(ts, pathfind_tid);
                             new_printf(cout, 0, "\0337\033[60;1H\033[KLast sensor reverse: delay_rv_stopped stop_delay: %d\0338", reverse_stop_delay);
+                            if(is_demoing){
+                                dm.type = DEMO_NAV_END;
+                                dm.arg1 = ts->train_id;
+                                intended_reply_len = Send(tc2_demo_tid, &dm, sizeof(DemoMessage), NULL, 0);
+                                if(intended_reply_len!=0){
+                                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver demo retry unexpected reply\0338");
+                                }
+                            }
                         }else if(ts->train_location==ts->sensor_to_stop){
                             if(ts->delay_time==-1){
                                 // calculate delay time using cur velocity
@@ -664,6 +677,14 @@ void trainserver(){
                                 }
                             }
                             nav_end(ts, pathfind_tid);
+                            if(is_demoing){
+                                dm.type = DEMO_NAV_END;
+                                dm.arg1 = ts->train_id;
+                                intended_reply_len = Send(tc2_demo_tid, &dm, sizeof(DemoMessage), NULL, 0);
+                                if(intended_reply_len!=0){
+                                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver demo retry unexpected reply\0338");
+                                }
+                            }
                         }
 
                         ts->cur_sensor_index += 1;
@@ -671,6 +692,7 @@ void trainserver(){
                     }
                     new_printf(cout, 0, "\0337\033[%d;%dHTrain %d, terminal speed %d    \0338", ts->train_print_start_row,  ts->train_print_start_col, ts->train_id, ts->terminal_physical_speed);
                     new_printf(cout, 0, "\0337\033[%d;%dHSpeed state %d, train speed %d, speed %d   \0338", 1 + ts->train_print_start_row, ts->train_print_start_col, ts->train_speed_state, ts->cur_train_speed, ts->cur_physical_speed);
+                    new_printf(cout, 0, "\0337\033[%d;%dHdest: %u   \0338", 2 + ts->train_print_start_row, ts->train_print_start_col, ts->train_dest);
 
 
                     // TODO: what if distance was invalid i.e. invalid sensor reading
@@ -853,37 +875,6 @@ void trainserver(){
         }else{
             new_printf(cout, 0, "\033[15;1H\033[KCannot navigate train while nav in progress");
         }
-    }else if(tsm.type==TRAIN_SERVER_GO && msg_len==sizeof(TrainServerMsgSimple)){
-        Reply(tid, NULL, 0);
-
-        TrainState* ts = getTrainState(track, tsm.arg1, trains, &next_free_train_state, &num_available_trains);
-        if (ts == NULL) {
-            // TODO: show error
-            continue;
-        }
-        
-        // ts->cur_train_speed = tsm.arg2;
-        // ts->offset = train_velocity_offset(tsm.arg1, tsm.arg3);
-        // ts->terminal_physical_speed = train_terminal_speed(tsm.arg1, tsm.arg3);
-        // if (ts->last_speed < tsm.arg3) {
-        //     ts->train_speed_state = ACCELERATING;
-        // } else if (ts->last_speed> tsm.arg3) {
-        //     ts->train_speed_state = DECELERATING;
-        // }
-
-        // tr(mio, ts->train_id, ts->cur_train_speed);
-        handle_tr(mio, cout, track, ts, tsm.arg2);
-
-        ts->train_dest = tsm.arg2;
-
-        pm.type = PATH_NAV;
-        pm.arg1 = ts->train_location;
-        pm.dest = tsm.arg2;
-        int reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), NULL, 0);
-        if(reply_len!=0){
-            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav cmd unexpected reply\0338");
-        }
-        ts->got_sensor_path = 0;
     }else if(tsm.type==TRAIN_SERVER_TRACK_CHANGE && msg_len==sizeof(TrainServerMsgSimple)){
         Reply(tid, NULL, 0);
         track = tsm.arg1;
@@ -895,6 +886,25 @@ void trainserver(){
         if(reply_len!=0){
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver tarck cmd unexpected reply\0338");
         }
+    } else if(tsm.type==TRAIN_SERVER_DEMO_START && msg_len==sizeof(TrainServerMsgSimple)){
+        Reply(tid, NULL, 0);
+        is_demoing = 1;
+        dm.type = DEMO_START;
+        intended_reply_len = Send(tc2_demo_tid, &dm, sizeof(DemoMessage), NULL, 0);
+        if(intended_reply_len!=0){
+            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver demo start unexpected reply\0338");
+        }
+        // TrainState* ts = getTrainState(track, tsm.arg1, trains, &next_free_train_state, &num_available_trains);
+        // if (ts == NULL) {
+        //     // TODO: show error
+        //     continue;
+        // }
+        // handle_tr(mio, cout, track, ts, tsm.arg2);
+
+    } else if(tsm.type==TRAIN_SERVER_DEMO_END && msg_len==sizeof(TrainServerMsgSimple)){
+        Reply(tid, NULL, 0);
+        is_demoing = 0;
+
     }else if(tsm.type==TRAIN_SERVER_NAV_PATH && msg_len==sizeof(TrainServerMsg)){
         //TODO: maybe this should be a reply?
         Reply(tid, NULL, 0);
@@ -905,7 +915,16 @@ void trainserver(){
         }
 
         if(tsm.arg2==0){
+            // TODO: demo
             nav_end(ts, pathfind_tid);
+            if(is_demoing){
+                dm.type = DEMO_NAV_RETRY;
+                dm.arg1 = ts->train_id;
+                intended_reply_len = Send(tc2_demo_tid, &dm, sizeof(DemoMessage), NULL, 0);
+                if(intended_reply_len!=0){
+                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver demo retry unexpected reply\0338");
+                }
+            }
             continue;
         }
 
@@ -1005,6 +1024,14 @@ void trainserver(){
                 handle_tr(mio, cout, 'a', ts, 0);
                 nav_end(ts, pathfind_tid);
                 new_printf(cout, 0, "\0337\033[60;1H\033[KStop immediately\0338");
+                if(is_demoing){
+                    dm.type = DEMO_NAV_END;
+                    dm.arg1 = ts->train_id;
+                    intended_reply_len = Send(tc2_demo_tid, &dm, sizeof(DemoMessage), NULL, 0);
+                    if(intended_reply_len!=0){
+                        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver demo retry unexpected reply\0338");
+                    }
+                }
             }
             new_printf(cout, 0, "\0337\033[60;1H\033[KRegular case: sensor to stop %d\0338", ts->sensor_to_stop);
         }

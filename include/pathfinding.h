@@ -42,6 +42,7 @@ typedef enum {
   PATH_SWITCH_CHANGE,
   PATH_TRACK_CHANGE,
   PATH_NAV_END,
+  // PATH_GET_RANDOM_DEST,
   PATH_SEGMENT_RESET
 } path_arg_type;
 

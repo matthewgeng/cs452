@@ -46,9 +46,9 @@ void delay_execute_loop(){
             // TODO: appropriately handle when speeds are > 16
 
             if(last_speed<=10){
-                Delay(clock_tid, 500);
+                Delay(clock_tid, 400);
             }else{
-                Delay(clock_tid, 600);
+                Delay(clock_tid, 500);
             }
             cmd[0] = 15;
             cmd[1] = train_number;
@@ -72,9 +72,9 @@ void delay_execute_loop(){
             // TODO: appropriately handle when speeds are > 16
 
             if(last_speed<=10){
-                Delay(clock_tid, 500);
+                Delay(clock_tid, 400);
             }else{
-                Delay(clock_tid, 600);
+                Delay(clock_tid, 500);
             }
             cmd[0] = 15;
             cmd[1] = train_number;
