@@ -601,7 +601,7 @@ void trainserver(){
                         if(ts->cur_sensor_index!=ts->train_sensor_path.num_sensors-2 && ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
                             ts->is_reversing = 1;
                             dsm.type = DELAY_RV;
-                            dsm.delay_until = sensor_query_time + reverse_delay;
+                            dsm.delay = reverse_delay;
                             dsm.train_number = ts->train_id;
                             dsm.last_speed = ts->cur_train_speed;
                             intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
@@ -630,7 +630,7 @@ void trainserver(){
                             // delay reverse then delay stop
                             dsm.type = DELAY_RV_STOP;
                             dsm.train_number = ts->train_id;
-                            dsm.delay_until = sensor_query_time + reverse_delay;
+                            dsm.delay = reverse_delay;
                             dsm.last_speed = ts->cur_train_speed;
                             dsm.stop_delay = reverse_stop_delay;
                             intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
@@ -648,6 +648,8 @@ void trainserver(){
                                 ts->delay_time = (stopping_distance_difference*100)/ts->cur_physical_speed; // 10ms for system ticks
                                 new_printf(cout, 0, "\0337\033[60;1H\033[KRegular case: sensor to stop %d, delay_time: %d\0338", ts->sensor_to_stop, ts->delay_time);
 
+                            }else{
+                                new_printf(cout, 0, "\0337\033[60;1H\033[KOther case: sensor to stop %d, delay_time: %d\0338", ts->sensor_to_stop, ts->delay_time);
                             }
                             ts->cur_train_speed = 0;
                             if(ts->delay_time==0){
@@ -655,7 +657,7 @@ void trainserver(){
                             }else{
                                 dsm.type = DELAY_STOP;
                                 dsm.train_number = ts->train_id;
-                                dsm.delay_until = sensor_query_time + ts->delay_time;
+                                dsm.delay = ts->delay_time;
                                 intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
                                 if(intended_reply_len!=0){
                                     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
@@ -692,7 +694,7 @@ void trainserver(){
                     new_printf(cout, 0, "\0337\033[16;1H\033[K\0338");
                     if(ts->new_sensor_new.next_segment_is_reserved == 1 && ts->train_dest==255){
                         dsm.type = DELAY_RV;
-                        dsm.delay_until = 0;
+                        dsm.delay = 0;
                         dsm.train_number = ts->train_id;
                         dsm.last_speed = ts->cur_train_speed;
                         intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
@@ -704,7 +706,7 @@ void trainserver(){
                         new_printf(cout, 0, "\0337\033[16;1H\033[KTrain %d reversed due to reservation\0338", ts->train_id);
                     }else if(ts->new_sensor_new.exit_incoming == 1 && ts->train_dest==255){
                         dsm.type = DELAY_RV;
-                        dsm.delay_until = 0;
+                        dsm.delay = 0;
                         dsm.train_number = ts->train_id;
                         dsm.last_speed = ts->cur_train_speed;
                         intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
@@ -779,7 +781,7 @@ void trainserver(){
             continue;
         }
         dsm.type = DELAY_RV;
-        dsm.delay_until = 0;
+        dsm.delay = 0;
         dsm.train_number = tsm.arg1;
         dsm.last_speed = ts->cur_train_speed;
         intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);

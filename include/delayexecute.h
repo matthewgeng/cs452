@@ -12,7 +12,7 @@ typedef enum {
 
 typedef struct DelayExecuteMsg{
     delay_exe_argtype type;
-    int delay_until;
+    int delay;
     int stop_delay;
     uint8_t train_number;
     uint8_t last_speed;

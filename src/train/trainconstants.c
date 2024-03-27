@@ -763,6 +763,7 @@ int nav_reverse_stop_offset(uint32_t train_id){
         case 54:
             // B11 --> A8
             // return 6;
+            return 30;
         case 55:
         //     // TODO: find a different place
         //     // B9 --> A5
