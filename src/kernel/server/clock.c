@@ -51,7 +51,7 @@ int Time(int tid){
     }
     if(intended_reply_len != 4){
         uart_printf(CONSOLE, "\x1b[31mTime unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
-        for(;;){}
+        // for(;;){}
     }
     return tick;
 }
@@ -81,7 +81,7 @@ int Delay(int tid, int ticks){
 
     if(intended_reply_len != 4){
         uart_printf(CONSOLE, "\x1b[31mTime unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
-        for(;;){}
+        // for(;;){}
     }
     return tick;
 }
@@ -110,7 +110,7 @@ int DelayUntil(int tid, int ticks){
 
     if(intended_reply_len != 4){
         uart_printf(CONSOLE, "\x1b[31mTime unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
-        for(;;){}
+        // for(;;){}
     }
     return tick;
 }
@@ -126,7 +126,7 @@ void clock_notifier(){
         int intended_reply_len = Send(clock_server_tid, NULL, 0, NULL, 0);
         if(intended_reply_len!=0){
             uart_printf(CONSOLE, "\x1b[31mClock notifier unexpected behaviour %d\x1b[0m\r\n", intended_reply_len);
-            for(;;){}
+            // for(;;){}
         }
     }
 }
@@ -139,7 +139,7 @@ void clock(){
     int notifier_tid = WhoIs("notifier\0");
     if(notifier_tid<0){
         uart_printf(CONSOLE, "\x1b[31mCannot get notifier tid\x1b[0m\r\n");
-        for(;;){}
+        // for(;;){}
     }
 
     DelayedTask free_dts[MAX_NUM_TASKS];
@@ -173,7 +173,7 @@ void clock(){
             if(msg[0]=='t'){
                 if(msglen!=1){
                     uart_printf(CONSOLE, "\x1b[Invalid time request to clock server\x1b[0m\r\n");
-                    for(;;){}
+                    // for(;;){}
                 }
                 Reply(tid, (char*)&tick, sizeof(tick));
             }else if(msg[0]=='d'){
@@ -212,7 +212,7 @@ void clock(){
                 heap_push(&sorted_delayed_tasks, dt);
             }else{
                 uart_printf(CONSOLE, "\x1b[31mInvalid msg received by clock server\x1b[0m\r\n");
-                for(;;){}
+                // for(;;){}
             }
         }
         

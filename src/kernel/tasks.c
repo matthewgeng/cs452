@@ -14,8 +14,8 @@
 #include "pathfinding.h"
 #include "sensors.h"
 #include "trainserver.h"
-#include "reverse.h"
-#include "delaystop.h"
+#include "trainconstants.h"
+#include "delayexecute.h"
 
 void k2test() {
     uart_printf(CONSOLE, "Beginning testing\r\n");
@@ -252,6 +252,15 @@ void k4(){
     Putc(marklin_tid, MARKLIN, 96);
     Putc(marklin_tid, MARKLIN, 0xC0);
 
+    char cmd[2];
+    int valid_trains[] = VALID_TRAINS;
+    int num_valid_trains = sizeof(valid_trains)/sizeof(valid_trains[0]);
+    for(int i = 0; i<num_valid_trains; i++){
+        cmd[0] = 16;
+        cmd[1] = valid_trains[i];
+        Puts_len(marklin_tid, MARKLIN, cmd, 2);
+    }
+
     char *s1 = "Switches\r\n";
     char *s2 = "001:     002:     003:     004:     005:     006:     007:     008:  \r\n";
     char *s3 = "009:     010:     011:     012:     013:     014:     015:     016:  \r\n";
@@ -266,13 +275,16 @@ void k4(){
     new_printf(cout, CONSOLE, "\033[8;40HMost recent sensors: ");
 
     Create(6, &console_time);
-    Create(6, &reverse);
     Create(4, &switches_server);
     Create(1, &sensor_update);
     // Create(4, &trainserver);
     Create_sp_size(4, &trainserver, 1);
     Create(6, &user_input);    
-    Create(6, &delay_stop);    
+    Create(6, &delay_execute1);
+    Create(6, &delay_execute2);
+    Create(6, &delay_execute3);
+    Create(6, &delay_execute4);
+    Create(6, &delay_execute5);
     Create_sp_size(5, &path_finding, 2);
 }
 

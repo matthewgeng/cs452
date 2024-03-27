@@ -712,3 +712,87 @@ int starting_next_sensor_for_train(char track, uint32_t train_id) {
             return -1;
     }
 }
+
+int stopping_dist_for_train(char track, uint32_t train_id) {
+    // TODO: print starting sensors out
+    switch (train_id){
+        case 1:
+            // A11 --> C7
+            return 245;
+        case 2:
+            // B7 --> A10
+            return 432;
+        case 54:
+            // B11 --> A8
+            return 422;
+        case 55:
+        //     // TODO: find a different place
+        //     // B9 --> A5
+        //     return 4;
+        case 58:
+        //     // B9 --> A5
+        //     return 4;
+        case 77:
+        //     // A16 --> C13
+        //     return 44;
+        default:
+            // unsupported train
+            return 6;      
+    }
+}
+
+
+int stopping_speed_for_train(char track, uint32_t train_id) {
+    // TODO: print starting sensors out
+    switch (train_id){
+        case 1:
+            // A11 --> C7
+            return 8;
+        case 2:
+            // B7 --> A10
+            return 6;
+        case 54:
+            // B11 --> A8
+            return 6;
+        case 55:
+        //     // TODO: find a different place
+        //     // B9 --> A5
+        //     return 4;
+        case 58:
+        //     // B9 --> A5
+        //     return 4;
+        case 77:
+        //     // A16 --> C13
+        //     return 44;
+        default:
+            // unsupported train
+            return 6;      
+    }
+}
+
+int nav_reverse_stop_offset(uint32_t train_id){
+    switch (train_id){
+        case 1:
+            // A11 --> C7
+            return 60;
+        case 2:
+            // B7 --> A10
+            return 40;
+        case 54:
+            // B11 --> A8
+            // return 6;
+        case 55:
+        //     // TODO: find a different place
+        //     // B9 --> A5
+        //     return 4;
+        case 58:
+        //     // B9 --> A5
+        //     return 4;
+        case 77:
+        //     // A16 --> C13
+        //     return 44;
+        default:
+            // unsupported train
+            return 50;      
+    }
+}
