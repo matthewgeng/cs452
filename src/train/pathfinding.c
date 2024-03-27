@@ -432,17 +432,17 @@ uint8_t segments_reserved(track_node *track, uint8_t train_on_segment[TRACK_MAX]
             //     return 1; // err case assume taken
             // }
             if(train_on_segment[cur_node][dir]!=0 && train_on_segment[cur_node][dir]!=train_id){
-                return 1;
+                return train_on_segment[cur_node][dir];
             }
             cur_node = cur_track_node->edge[dir].dest - track;
         }else if(cur_track_node->type==NODE_EXIT){
             if(train_on_segment[cur_node][0]!=0 && train_on_segment[cur_node][0]!=train_id){
-                return 1;
+                return train_on_segment[cur_node][0];
             }
             return 0;
         }else{
             if(train_on_segment[cur_node][0]!=0 && train_on_segment[cur_node][0]!=train_id){
-                return 1;
+                return train_on_segment[cur_node][0];
             }
             cur_node = cur_track_node->edge[0].dest - track;
         }
@@ -679,11 +679,11 @@ void path_finding(){
             // }
             // uart_printf(CONSOLE, "\0337\033[%u;1H\033[K\0338", 40+path->sensor_path.num_sensors);
 
-            memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
-            intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
-            if(intended_reply_len!=0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[KPathfind sent sensor path and received unexpected rplen\0338");
-            }
+            // memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
+            // intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+            // if(intended_reply_len!=0){
+            //     uart_printf(CONSOLE, "\0337\033[30;1H\033[KPathfind sent sensor path and received unexpected rplen\0338");
+            // }
 
             reclaimHeapNode(nextFreeHeapNode, path);
         }else if(pm.type==PATH_NAV){
@@ -704,6 +704,14 @@ void path_finding(){
             path = dijkstra(start_sensor, pm.dest, train_id, track, TRACK_MAX, switch_states, train_on_segment, &nextFreeHeapNode);
             if(path==NULL){
                 Puts(cout, 0, "\0337\033[15;1H\033[KDidn't find a route\0338");
+                tsm.type = TRAIN_SERVER_NAV_PATH;
+                tsm.arg1 = train_id;
+                tsm.arg2 = 0;
+
+                intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
+                if(intended_reply_len!=0){
+                    uart_printf(CONSOLE, "\0337\033[30;1H\033[KPathfind sent sensor path and received unexpected rplen\0338");
+                }
                 continue;
             }
             Puts(cout, 0, "\0337\033[15;1H\033[KTrain navigation ran\0338");
@@ -715,8 +723,10 @@ void path_finding(){
                 edge = path->used_segments[i]%2;
                 train_on_segment[node][edge] = train_id;
             }
-
+            
+            tsm.type = TRAIN_SERVER_NAV_PATH;
             tsm.arg1 = train_id;
+            tsm.arg2 = 1;
             memcpy(tsm.data, &(path->sensor_path), sizeof(SensorPath));
 
             intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsg), NULL, 0);
@@ -757,17 +767,21 @@ void path_finding(){
             nsi.next_next_sensor = get_next_sensor(nsi.next_sensor, switch_states, track, NULL, &(nsi.switch_after_next_sensor), NULL);
             nsi.reverse_sensor = (track+cur_pos)->reverse - track;
 
-            nsi.next_segment_is_reserved = 0;
             // if next next segment is taken, send back reverse command
 
             if(nsi.next_sensor == -1 || nsi.next_next_sensor == -1){
                 nsi.exit_incoming = 1;
             }else{
                 nsi.exit_incoming = 0;
-                if(segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1 || segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1){
+                uint8_t cur_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1;
+                uint8_t next_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1;
+                if(cur_segment_reserver != 0){
                     // new_printf(cout, 0, "\0337\033[60;1H\033[K cur_pos reserved: %d, next reserved: %d, if cond: %d\0338", segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos), segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor), segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1 || segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1);
-                    nsi.next_segment_is_reserved = 1;
+                    nsi.next_segment_is_reserved = cur_segment_reserver;
+                }else if(next_segment_reserver != 0){
+                    nsi.next_segment_is_reserved = cur_segment_reserver;
                 }else{
+                    nsi.next_segment_is_reserved = 0;
                     if(train_loc[train_id]!=255){
                         unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
                     }
@@ -779,16 +793,16 @@ void path_finding(){
             train_loc[train_id] = cur_pos;
             
             print_reservation(cout, train_on_segment);
-        }else if(pm.type==PATH_NAV_END){
-            Reply(tid, NULL, 0);
-            train_id = pm.arg1;
-            for(int i = 0; i<TRACK_MAX; i++){
-                for(int u = 0; u<2; u++){
-                    if(train_on_segment[i][u]==train_id){
-                        train_on_segment[i][u] = 0;
-                    }
-                }
-            }
+        // }else if(pm.type==PATH_NAV_END){
+        //     Reply(tid, NULL, 0);
+        //     train_id = pm.arg1;
+        //     for(int i = 0; i<TRACK_MAX; i++){
+        //         for(int u = 0; u<2; u++){
+        //             if(train_on_segment[i][u]==train_id){
+        //                 train_on_segment[i][u] = 0;
+        //             }
+        //         }
+        //     }
         }else if(pm.type==PATH_SEGMENT_RESET){
             Reply(tid, NULL, 0);
             train_id = pm.arg1;

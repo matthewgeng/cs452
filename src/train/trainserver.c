@@ -456,12 +456,12 @@ void nav_end(TrainState *ts, int pathfind_tid){
     ts->train_dest = 255;
     ts->sensor_to_stop = 255;
     ts->got_sensor_path = 0;
-    pm.type = PATH_NAV_END;
-    pm.arg1 = ts->train_id;
-    int intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), NULL, 0);
-    if(intended_reply_len!=0){
-        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav end unexpected reply %d\0338", intended_reply_len);
-    }
+    // pm.type = PATH_NAV_END;
+    // pm.arg1 = ts->train_id;
+    // int intended_reply_len = Send(pathfind_tid, &pm, sizeof(PathMessage), NULL, 0);
+    // if(intended_reply_len!=0){
+    //     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver nav end unexpected reply %d\0338", intended_reply_len);
+    // }
 }
 
 uint8_t nav_in_progress(TrainState *ts){
@@ -896,12 +896,17 @@ void trainserver(){
     }else if(tsm.type==TRAIN_SERVER_NAV_PATH && msg_len==sizeof(TrainServerMsg)){
         //TODO: maybe this should be a reply?
         Reply(tid, NULL, 0);
-
         TrainState* ts = getTrainState(track, tsm.arg1, trains, &next_free_train_state, &num_available_trains);
         if (ts == NULL) {
             // TODO: show error
             continue;
         }
+
+        if(tsm.arg2==0){
+            nav_end(ts, pathfind_tid);
+            continue;
+        }
+
         memcpy(&(ts->train_sensor_path), tsm.data, sizeof(SensorPath));
 
         uint8_t speed_offset = train_min_speed(ts->train_id)-4;
