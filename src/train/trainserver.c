@@ -38,7 +38,7 @@ void loc_err_handling(int train_location, NewSensorInfo *new_sensor, NewSensorIn
 
 }
 
-int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_speed, int terminal_speed, uint32_t distance_between, uint32_t ticks, uint32_t offset) {
+int calculate_new_current_speed(TrainState* ts, int old_speed, int terminal_speed, uint32_t distance_between, uint32_t ticks, uint32_t offset) {
 
     // mm / 10ms --> mm/ms --> *1000 = mm/ms /10 --> *100
 
@@ -46,18 +46,20 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
     int new_cur_speed = 0;
     // uart_printf(CONSOLE, "\0337\033[17;1H\033[K old state: %d, old speed: %d, new average speed: %d , terminal speed: %d \0338", *train_speed_state, old_speed, average_new_speed, terminal_speed);
 
-    switch (*train_speed_state) {
+    switch (ts->train_speed_state) {
         case ACCELERATING:
 
             if (average_new_speed >= terminal_speed) {
                 new_cur_speed = average_new_speed;
-                *train_speed_state = CONSTANT_SPEED;
+                ts->train_speed_state = CONSTANT_SPEED;
             } else {
 
                 // TODO: weird case due to error or something
                 if (old_speed > average_new_speed) {
-                    new_cur_speed = old_speed;
+                    // new_cur_speed = old_speed;
                     // new_cur_speed = average_new_speed;
+
+                    new_cur_speed = train_terminal_speed(ts->train_id, ts->cur_train_speed);
                 } else {
                     // normal case
                     new_cur_speed = average_new_speed + (average_new_speed - old_speed);
@@ -68,14 +70,16 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
             break;
         case DECELERATING:
             if (terminal_speed == 0 && average_new_speed == old_speed) {
-                *train_speed_state = STOPPED;
+                ts->train_speed_state = STOPPED;
             } else if (average_new_speed <= terminal_speed || old_speed <= terminal_speed) {
-                *train_speed_state = CONSTANT_SPEED;
+                ts->train_speed_state = CONSTANT_SPEED;
             } else {
                 // TODO: weird case when average speed is greater than the current speed due to some error/turn idk
                 if (old_speed < average_new_speed) {
-                    new_cur_speed = old_speed;
+                    // new_cur_speed = old_speed;
                     // new_cur_speed = average_new_speed;
+
+                    new_cur_speed = train_terminal_speed(ts->train_id, ts->cur_train_speed);
                 } else {
                     // normal case
                     new_cur_speed = average_new_speed - (old_speed - average_new_speed);
@@ -256,7 +260,7 @@ TrainState* getTrainState(char track, uint32_t train_id, TrainState** current_tr
         */
         int train_index = MAX_NUM_TRAINS - *num_available_trains;
         ts->train_print_start_row = 20 * (train_index/2 + 1);
-        ts->train_print_start_col = 50*(train_index%2);
+        ts->train_print_start_col = 60*(train_index%2);
         *num_available_trains = *num_available_trains -1;
         ts->active = 1;
         return ts;
@@ -396,22 +400,31 @@ void handle_collision(int cout, int marklin_tid, char track, TrainState* ts1, Tr
     // NOTE: NOT CHECKING IF TS2 colliding with TS1, assuming we are doing a nested loop this case will be covered
    // SAME DIRECTION, DIFF SPEED COLLISION
    // ts1 faster than ts2
-    int velocity_error = 50; //mm/s
+    int velocity_error = 30; //mm/s
     new_printf(cout, 0, "\0337\033[56;1H ts1 speed: %d, ts2 speed:%d, ts1 next: %d, ts1 nextnext: %d, ts2 loc: %d\0338", 
         ts1->cur_physical_speed, ts2->cur_physical_speed, ts1->new_sensor_new.next_sensor, ts1->new_sensor_new.next_next_sensor, ts2->train_location);
 
     int same_direction_collision = ts1->new_sensor_new.next_sensor == ts2->train_location || 
             ts1->new_sensor_new.next_next_sensor == ts2->train_location;
 
-    int constant_speed_collision = ts1->train_speed_state = CONSTANT_SPEED && ts1->cur_physical_speed >= ts2->cur_physical_speed;
+    // int constant_speed_collision = ts1->train_speed_state = CONSTANT_SPEED && train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed);
 
-    int accelerating_speed_collision = ts1->train_speed_state = ACCELERATING && train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= ts2->cur_physical_speed;
+    // int accelerating_speed_collision = ts1->train_speed_state = ACCELERATING && train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= ts2->cur_physical_speed;
 
-    int decelerating_speed_collision = ts2->train_speed_state = DECELERATING && ts1->cur_physical_speed >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed);
+    // int decelerating_speed_collision = ts2->train_speed_state = DECELERATING && ts1->cur_physical_speed >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed);
+
+    int terminal_speed_collision = train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error
+    ||
+    ts1->cur_physical_speed >= ts2->cur_physical_speed
+    ;
 
     // TODO: currently not handling the case where ts1 is accelerating and ts1 is decelerating
         
-    if (same_direction_collision && (constant_speed_collision || accelerating_speed_collision || decelerating_speed_collision)) {
+    // if (same_direction_collision && (constant_speed_collision || accelerating_speed_collision || decelerating_speed_collision)) {
+    new_printf(cout, 0, "\0337\033[%d;%dHCollision sensor check %d: speed check %d  \0338", 7 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+        same_direction_collision, terminal_speed_collision);
+
+    if (same_direction_collision && terminal_speed_collision) {
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: will hit train %d   \0338", 8 + ts1->train_print_start_row,  ts1->train_print_start_col, ts2->train_id);
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: train %d will hit me\0338", 8 + ts2->train_print_start_row,  ts2->train_print_start_col, ts1->train_id);
 
@@ -420,37 +433,45 @@ void handle_collision(int cout, int marklin_tid, char track, TrainState* ts1, Tr
             minimum_speed += 16;
         }
 
-        int slow_down_speed = ts1->cur_train_speed - 1;
+        int slow_down_speed = ts1->cur_train_speed;
 
         // weren't able to find a valid speed to slow down to
-        if (slow_down_speed < minimum_speed) {
+        if (slow_down_speed == minimum_speed) {
             int max_speed = (ts2->cur_train_speed >= 16) ? 30 : 14;
 
-            int speed_up_speed = ts2->cur_train_speed + 1;
-            if (speed_up_speed > max_speed) {
+            int speed_up_speed = ts2->cur_train_speed;
+            if (speed_up_speed == max_speed) {
                 return 0;
             }
 
-            int i = 0;
-
             // while (speed_up_speed < max_speed && train_terminal_speed(ts2->train_id, speed_up_speed) - ts1->cur_physical_speed <= velocity_error) {
-            while (speed_up_speed < max_speed && train_terminal_speed(ts2->train_id, speed_up_speed) - ts1->cur_physical_speed <= 0) {
-                new_printf(cout, 0, "\0337\033[%d;%dHspeed up %d, terminal %d, t1 cur %d, diff: %d\0338", i + 2 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col,
-                    speed_up_speed, train_terminal_speed(ts2->train_id, speed_up_speed), ts1->cur_physical_speed, train_terminal_speed(ts2->train_id, speed_up_speed) - ts1->cur_physical_speed
-                );
+            // while (speed_up_speed < max_speed && train_terminal_speed(ts2->train_id, speed_up_speed) - ts1->cur_physical_speed <= 0) {
+            while (speed_up_speed < max_speed && train_terminal_speed(ts2->train_id, speed_up_speed) <= train_terminal_speed(ts1->train_id, ts1->cur_train_speed) + velocity_error) {
+                // new_printf(cout, 0, "\0337\033[%d;%dHspeed up %d, terminal %d, t1 cur %d, diff: %d\0338", 2 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col,
+                //     speed_up_speed, train_terminal_speed(ts2->train_id, speed_up_speed), ts1->cur_physical_speed, train_terminal_speed(ts2->train_id, speed_up_speed) - ts1->cur_physical_speed
+                // );
                 speed_up_speed +=1;
-                i +=1;
             }
 
             new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col);
-            new_printf(cout, 0, "\0337\033[%d;%dHIncreasing speed to: %d    \0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, speed_up_speed);
+            new_printf(cout, 0, "\0337\033[%d;%dHSpeed increase to: %d, terminal: %d    \0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
+                speed_up_speed, train_terminal_speed(ts2->train_id, speed_up_speed));
             handle_tr(marklin_tid, track, ts2, speed_up_speed);
         } else {
-            while (slow_down_speed > minimum_speed && ts2->cur_physical_speed - train_terminal_speed(ts1->train_id, slow_down_speed) >= velocity_error) {
+            while (slow_down_speed > minimum_speed && train_terminal_speed(ts1->train_id, slow_down_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error) {
+                // new_printf(cout, 0, "\0337\033[%d;%dHspeed down %d, terminal %d, t1 cur %d, diff: %d\0338", 2 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col,
+                //     speed_up_speed, train_terminal_speed(ts2->train_id, speed_up_speed), ts1->cur_physical_speed, train_terminal_speed(ts2->train_id, speed_up_speed) - ts1->cur_physical_speed
+                // );
                 slow_down_speed -=1;
             }
+
+            if (slow_down_speed == ts1->cur_train_speed) {
+                slow_down_speed -=1;
+            }
+
             new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col);
-            new_printf(cout, 0, "\0337\033[%d;%dHDecreasing speed to: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, slow_down_speed);
+            new_printf(cout, 0, "\0337\033[%d;%dHSpeed decrease to: %d, terminal: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+            slow_down_speed, train_terminal_speed(ts1->train_id, slow_down_speed));
             handle_tr(marklin_tid, track, ts1, slow_down_speed);
         }
         return 1;
@@ -494,7 +515,7 @@ int process_sensor(int cout, char track, TrainState* ts, int sensor, uint32_t se
             }else {
                 // get time delta
                 uint32_t delta_new = sensor_query_time - ts->last_new_sensor_time; // ticks
-                ts->cur_physical_speed = calculate_new_current_speed(&(ts->train_speed_state), ts->cur_physical_speed, ts->terminal_physical_speed, ts->distance_between_sensors, delta_new, ts->offset);
+                ts->cur_physical_speed = calculate_new_current_speed(ts, ts->cur_physical_speed, ts->terminal_physical_speed, ts->distance_between_sensors, delta_new, ts->offset);
             }
         }
 
@@ -596,7 +617,6 @@ int process_sensor(int cout, char track, TrainState* ts, int sensor, uint32_t se
         
         ts->last_new_sensor_time = sensor_query_time;
         ts->last_distance_between_sensors = ts->distance_between_sensors;
-
         ts->last_triggered_sensor = sensor;
     }
 }
@@ -674,6 +694,10 @@ void trainserver(){
                 }
 
                 process_sensor(cout, track, ts, sensor, sensor_query_time, &scs, &dsm, &pm, switch_tid, delay_stop_tid, pathfind_tid);
+
+                if (ts->cur_physical_speed > train_terminal_speed(ts->train_id, ts->cur_train_speed) + 100) {
+                    new_printf(cout, 0, "\0337\033[%d;%d sensor %d, predicted %d\0338", 10 + ts->train_print_start_row,  ts->train_print_start_col, sensor, ts->new_sensor_new.next_sensor);
+                }
                 sensors[s] = 255;
             }
         }
