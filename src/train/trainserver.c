@@ -48,6 +48,9 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
     // mm / 10ms --> mm/ms --> *1000 = mm/ms /10 --> *100
 
     int average_new_speed = (distance_between*100) / ticks; // millimeters per second
+    if (average_new_speed - terminal_speed > 1000) {
+        average_new_speed = terminal_speed;
+    }
     int new_cur_speed = 0;
     // uart_printf(CONSOLE, "\0337\033[17;1H\033[K old state: %d, old speed: %d, new average speed: %d, terminal speed: %d, new_cur_speed: %d\0338", *train_speed_state, old_speed, average_new_speed, terminal_speed, new_cur_speed);
 
@@ -214,7 +217,7 @@ int isExpectedNextSensor(TrainState* ts, int sensor) {
     //                                 sensor==ts->new_sensor.next_next_sensor || sensor == ts->new_sensor.next_sensor_switch_err;
 
     // REMOVED NEXT NEXT check cause weird attribution occurs when trains are close to each other
-    uint8_t expected_normal_sensor = sensor==ts->new_sensor.next_sensor || sensor==ts->new_sensor.next_next_sensor || sensor == ts->new_sensor.next_sensor_switch_err;
+    uint8_t expected_normal_sensor = sensor==ts->new_sensor.next_sensor || sensor == ts->new_sensor.next_sensor_switch_err;
 
     uint8_t expected_alt_sensor = ts->new_sensor_err.next_sensor!=255 && sensor==ts->new_sensor_err.next_sensor;
 
@@ -267,7 +270,7 @@ TrainState* getTrainState(char track, uint32_t train_id, TrainState** current_tr
         */
         int train_index = MAX_NUM_TRAINS - *num_available_trains;
         ts->train_print_start_row = 20 * (train_index/2 + 1);
-        ts->train_print_start_col = 70*(train_index%2);
+        ts->train_print_start_col = 70*(train_index%2) + 1;
         *num_available_trains = *num_available_trains -1;
         ts->active = 1;
         return ts;
@@ -360,8 +363,8 @@ void print_starting_train_locations(int cout, char track, int* valid_trains, int
     // }
 
     // return 0;
-void handle_collision(int cout, int marklin_tid, char track, TrainState* ts1, TrainState* ts2) {
-    /*
+void handle_collision(int cout, int mio, char track, TrainState* ts1, TrainState* ts2) {
+        /*
 
     cases:
         HEAD ON COLLISION
@@ -400,9 +403,19 @@ void handle_collision(int cout, int marklin_tid, char track, TrainState* ts1, Tr
 
     */
 
-   // TODO: HEAD ON COLLISION
+    // int head_on_collision = ts1->new_sensor_new.next_next_segment_is_reserved == ts2->new_sensor_new.cur_segment_is_reserved ||
+    // ts1->new_sensor_new.next_segment_is_reserved == ts2->new_sensor_new.cur_segment_is_reserved
 
-   // TODO: 1 TRAIN STOPPED COLLISION
+    // TODO: currently can never reach the stopped state after running
+    if (ts2->cur_train_speed == 0 || ts2->train_speed_state == STOPPED) {
+        handle_tr(mio, cout, track, ts1, 16);
+        return;
+    } 
+    // else if (ts1->new_sensor_new.)
+
+    // TODO: HEAD ON COLLISION
+
+    // TODO: 1 TRAIN STOPPED COLLISION
 
     // NOTE: NOT CHECKING IF TS2 colliding with TS1, assuming we are doing a nested loop this case will be covered
    // SAME DIRECTION, DIFF SPEED COLLISION
@@ -410,28 +423,77 @@ void handle_collision(int cout, int marklin_tid, char track, TrainState* ts1, Tr
     int velocity_error = 30; //mm/s
     new_printf(cout, 0, "\0337\033[56;1H ts1 speed: %d, ts2 speed:%d, ts1 next: %d, ts1 nextnext: %d, ts2 loc: %d\0338", 
         ts1->cur_physical_speed, ts2->cur_physical_speed, ts1->new_sensor_new.next_sensor, ts1->new_sensor_new.next_next_sensor, ts2->train_location);
-    if (ts1->cur_physical_speed - ts2->cur_physical_speed >= velocity_error && ts1->new_sensor_new.next_sensor == ts2->train_location || ts1->new_sensor_new.next_next_sensor == ts2->train_location) {
+
+    int same_direction_collision = ts1->new_sensor_new.next_sensor == ts2->train_location || 
+            ts1->new_sensor_new.next_next_sensor == ts2->train_location;
+
+    int terminal_speed_collision = train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error
+    ||
+    ts1->cur_physical_speed >= ts2->cur_physical_speed
+    ;
+
+
+    // int constant_speed_collision = ts1->train_speed_state = CONSTANT_SPEED && train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed);
+
+    // int accelerating_speed_collision = ts1->train_speed_state = ACCELERATING && train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= ts2->cur_physical_speed;
+
+    // int decelerating_speed_collision = ts2->train_speed_state = DECELERATING && ts1->cur_physical_speed >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed);
+
+
+    // TODO: currently not handling the case where ts1 is accelerating and ts1 is decelerating
+        
+    // if (same_direction_collision && (constant_speed_collision || accelerating_speed_collision || decelerating_speed_collision)) {
+    new_printf(cout, 0, "\0337\033[%d;%dHCollision sensor check %d with %d: speed check %d  \0338", 7 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+        same_direction_collision, ts2->train_id, terminal_speed_collision);
+
+    if (terminal_speed_collision) {
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: will hit train %d   \0338", 8 + ts1->train_print_start_row,  ts1->train_print_start_col, ts2->train_id);
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: train %d will hit me\0338", 8 + ts2->train_print_start_row,  ts2->train_print_start_col, ts1->train_id);
 
         int minimum_speed = ts1->minimum_moving_train_speed;
-
-        // TODO: maybe smartly select train speed based off of terminal velocities
-        int new_speed = ts1->cur_train_speed - 1;
-
-        while (new_speed >= minimum_speed && ts2->cur_physical_speed - train_terminal_speed(ts1->train_id, new_speed) >= velocity_error) {
-            new_speed -=1;
+        if (ts1->cur_train_speed > 15) {
+            minimum_speed += 16;
         }
 
-        if (new_speed < minimum_speed) {
-            // TODO: must increase velocity of other train instead
-            new_printf(cout, 0, "\0337\033[%d;%dHIncreasing speed TODO   \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col);
+        int slow_down_speed = ts1->cur_train_speed;
+
+        // weren't able to find a valid speed to slow down to
+        if (slow_down_speed == minimum_speed) {
+            int max_speed = (ts2->cur_train_speed >= 16) ? 30 : 14;
+
+            int speed_up_speed = ts2->cur_train_speed;
+            if (speed_up_speed == max_speed) {
+                slow_down_speed = 0;
+                new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col);
+                new_printf(cout, 0, "\0337\033[%d;%dHSpeed decrease to: %d, terminal: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+                slow_down_speed, train_terminal_speed(ts1->train_id, slow_down_speed));
+                handle_tr(mio, cout, track, ts1, slow_down_speed);
+                return 0;
+            }
+
+            while (speed_up_speed < max_speed && train_terminal_speed(ts2->train_id, speed_up_speed) <= train_terminal_speed(ts1->train_id, ts1->cur_train_speed) + velocity_error) {
+                speed_up_speed +=1;
+            }
+
+            new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col);
+            new_printf(cout, 0, "\0337\033[%d;%dHSpeed increase to: %d, terminal: %d    \0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
+                speed_up_speed, train_terminal_speed(ts2->train_id, speed_up_speed));
+            handle_tr(mio, cout, track, ts2, speed_up_speed);
         } else {
-            new_printf(cout, 0, "\0337\033[%d;%dHDecreasing speed to: %d: will hit train %d   \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, new_speed);
-            handle_tr(marklin_tid, track, ts1, new_speed);
-        }
+            while (slow_down_speed > minimum_speed && train_terminal_speed(ts1->train_id, slow_down_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error) {
+                slow_down_speed -=1;
+            }
 
-        // for(;;){}
+            if (slow_down_speed == ts1->cur_train_speed) {
+                slow_down_speed -=1;
+            }
+
+            new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col);
+            new_printf(cout, 0, "\0337\033[%d;%dHSpeed decrease to: %d, terminal: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+            slow_down_speed, train_terminal_speed(ts1->train_id, slow_down_speed));
+            handle_tr(mio, cout, track, ts1, slow_down_speed);
+        }
+        return 1;
     }
 }
 
@@ -488,7 +550,7 @@ uint8_t nav_in_progress(TrainState *ts){
     return ts->train_dest!=255 || ts->sensor_to_stop!=255;
 }
 
-int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, uint32_t sensor_query_time, SwitchChange* scs, DelayExecuteMsg* dsm, PathMessage* pm, int switch_tid, int pathfind_tid, int reverse_delay, int reverse_stop_delay, int is_demoing, int tc2_demo_tid, DemoMessage* dm) {
+int process_sensor(int cout, int mio, char track, TrainState* ts, TrainState* trains[], int sensor, uint32_t sensor_query_time, SwitchChange* scs, DelayExecuteMsg* dsm, PathMessage* pm, int switch_tid, int pathfind_tid, int reverse_delay, int reverse_stop_delay, int is_demoing, int tc2_demo_tid, DemoMessage* dm) {
     int intended_reply_len = 0;
     uint8_t do_recalculate_speed = (ts->new_sensor.next_sensor!=255 && sensor==ts->new_sensor.next_sensor);
 
@@ -633,18 +695,21 @@ int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, ui
             print_estimation(cout, sensor_query_time, ts);
         }
         new_printf(cout, 0, "\0337\033[16;1H\033[K\0338");
-        if(ts->new_sensor_new.next_segment_is_reserved == 1 && ts->train_dest==255){
-            dsm->type = DELAY_RV;
-            dsm->delay = 0;
-            dsm->train_number = ts->train_id;
-            dsm->last_speed = ts->cur_train_speed;
-            intended_reply_len = Send(ts->delay_execute_tid, dsm, sizeof(DelayExecuteMsg), NULL, 0);
-            if(intended_reply_len!=0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+        new_printf(cout, 0, "\0337\033[%d;%dHReservation check %d \0338", 10 + ts->train_print_start_row,  ts->train_print_start_col, 
+            ts->new_sensor_new.next_segment_is_reserved || ts->new_sensor_new.next_next_segment_is_reserved
+        );
+
+        if((ts->new_sensor_new.next_next_segment_is_reserved != 1 || ts->new_sensor_new.next_segment_is_reserved != 1) && ts->train_dest==255){
+            int owning_train_id = ts->new_sensor_new.next_next_segment_is_reserved;
+
+            if (owning_train_id == 0) {
+                owning_train_id = ts->new_sensor_new.next_segment_is_reserved;
             }
-            ts->is_reversing = 1;
-            ts->reversed = !ts->reversed;
-            new_printf(cout, 0, "\0337\033[16;1H\033[KTrain %d reversed due to reservation\0338", ts->train_id);
+            TrainState* owning_train = trains[owning_train_id];
+            new_printf(cout, 0, "\0337\033[%d;%dHowning train %d \0338", 11 + ts->train_print_start_row,  ts->train_print_start_col, 
+                owning_train->train_id
+            );
+            handle_collision(cout, mio, track, ts, owning_train);
         }else if(ts->new_sensor_new.exit_incoming == 1 && ts->train_dest==255){
             dsm->type = DELAY_RV;
             dsm->delay = 0;
@@ -710,7 +775,7 @@ void trainserver(){
 
     // train state data
     TrainState train_states[MAX_NUM_TRAINS];
-    train_states_init(&train_states, MAX_NUM_TRAINS);
+    train_states_init(train_states, MAX_NUM_TRAINS);
     TrainState* next_free_train_state = train_states;
     int num_available_trains = MAX_NUM_TRAINS;
 
@@ -753,14 +818,11 @@ void trainserver(){
                 // new_printf(cout, 0, "\0337\033[%d;1H\033[K sensor trigger %d, train %d, next: %d, nextnext: %d, alt next: %d, alt nextnext: %d\0338",
                 //                 20 + (ts->train_print_start_col/4) + ts->train_print_start_row,
                 //                 sensor, ts->train_id, ts->new_sensor.next_sensor, ts->new_sensor.next_next_sensor, ts->new_sensor_err.next_sensor, ts->new_sensor_err.next_next_sensor);
-                // uint8_t do_recalculate_speed = (ts->new_sensor.next_sensor!=255 && tsm.arg1==ts->new_sensor.next_sensor) || (ts->is_reversing && tsm.arg1==ts->new_sensor.reverse_sensor);
-                uint8_t do_recalculate_speed = (ts->new_sensor.next_sensor!=255 && tsm.arg1==ts->new_sensor.next_sensor);
-
                 
                 if (!expected_sensor) {
                     continue;
                 }
-                process_sensor(cout, mio, track, ts, sensor, sensor_query_time, &scs, &dsm, &pm, switch_tid, pathfind_tid, reverse_delay, reverse_stop_delay, is_demoing, tc2_demo_tid, &dm);
+                process_sensor(cout, mio, track, ts, trains, sensor, sensor_query_time, &scs, &dsm, &pm, switch_tid, pathfind_tid, reverse_delay, reverse_stop_delay, is_demoing, tc2_demo_tid, &dm);
                 sensors[s] = 255;
             }
         }
@@ -782,14 +844,11 @@ void trainserver(){
                 // new_printf(cout, 0, "\0337\033[%d;1H\033[K sensor trigger %d, train %d, next: %d, nextnext: %d, alt next: %d, alt nextnext: %d\0338",
                 //                 20 + (ts->train_print_start_col/4) + ts->train_print_start_row,
                 //                 sensor, ts->train_id, ts->new_sensor.next_sensor, ts->new_sensor.next_next_sensor, ts->new_sensor_err.next_sensor, ts->new_sensor_err.next_next_sensor);
-                // uint8_t do_recalculate_speed = (ts->new_sensor.next_sensor!=255 && tsm.arg1==ts->new_sensor.next_sensor) || (ts->is_reversing && tsm.arg1==ts->new_sensor.reverse_sensor);
-                uint8_t do_recalculate_speed = (ts->new_sensor.next_sensor!=255 && tsm.arg1==ts->new_sensor.next_sensor);
-
                 
                 if (!expected_sensor) {
                     continue;
                 }
-                process_sensor(cout, mio, track, ts, sensor, sensor_query_time, &scs, &dsm, &pm, switch_tid, pathfind_tid, reverse_delay, reverse_stop_delay, is_demoing, tc2_demo_tid, &dm);
+                process_sensor(cout, mio, track, ts, trains, sensor, sensor_query_time, &scs, &dsm, &pm, switch_tid, pathfind_tid, reverse_delay, reverse_stop_delay, is_demoing, tc2_demo_tid, &dm);
                 sensors[s] = 255;
             }
         }
