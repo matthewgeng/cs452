@@ -230,7 +230,10 @@ int train1_terminal_speed(uint32_t train_speed) {
             speed = 184;
             break;
         case 8:
-            speed = 237;
+            // speed = 237;
+
+            // emperically running after broken and using our velocity calculations
+            speed = 210;
             break;
         case 9:
             speed = 300;
@@ -292,11 +295,17 @@ int train2_terminal_speed(uint32_t train_speed) {
             speed = 590;
             break;
         case 13:
-            speed = 605;
+            // speed = 605;
+            // emperically found from kernel runtime speed calculations
+            speed = 630;
             break;
         case 14:
             // speed = 630; // old speed calculation from first measurements
-            speed = 583;
+
+            // speed = 583;
+
+            // emperically found from kernel runtime speed calculations
+            speed = 640;
             break;
         default:
             // unsupported speed
@@ -365,10 +374,16 @@ int train54_terminal_speed(uint32_t train_speed) {
             speed = 555;
             break;
         case 13:
-            speed = 533;
+            // speed = 533;
+
+            // emperically found when running kernel
+            speed = 580;
             break;
         case 14:
-            speed = 521;
+            // speed = 521;
+
+            // emperically found when running kernel
+            speed = 590;
             break;
         default:
             // unsupported speed
@@ -391,7 +406,10 @@ int train58_terminal_speed(uint32_t train_speed) {
             speed = 171;
             break;
         case 8:
-            speed = 222;
+            // speed = 222;
+
+            // after broken emperically found during runtime using our sensor calculations
+            speed = 200;
             break;
         case 9:
             speed = 279;
