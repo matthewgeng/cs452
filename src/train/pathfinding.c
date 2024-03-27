@@ -155,29 +155,6 @@ uint8_t try_add_used_segment(uint8_t train_on_segment[TRACK_MAX][2], int train_i
 
 NavPath *dijkstra(uint8_t src, uint8_t dest, int train_id, track_node *track, int track_len, char switch_states[], uint8_t train_on_segment[TRACK_MAX][2], NavPath **nextFreeHeapNode){
 
-    int cout = WhoIs("cout\0");
-
-    int tmp_c[3] = {0,0,0};
-    // new_printf(cout, 0, "\0337\033[%d;%dHTrain %d, terminal speed %d    \0338");
-    new_printf(cout, 0, "\0337\033[63;0H\033[K tr: 1 \0338");
-    new_printf(cout, 0, "\0337\033[64;0H\033[K tr: 2 \0338");
-    new_printf(cout, 0, "\0337\033[65;0H\033[K tr: 54 \0338");
-    // Puts(cout, 0, "\033[35;0H\033[K");
-    for(int i = 0; i<TRACK_MAX; i++){
-        for(int u = 0; u<2; u++){
-            if(train_on_segment[i][u]==1){
-                new_printf(cout, 0, "\0337\033[63;%dH %u;%u \0338", tmp_c[0]*6+10, i, u);
-                tmp_c[0]+=1;
-            }else if(train_on_segment[i][u]==2){
-                new_printf(cout, 0, "\0337\033[64;%dH %u;%u \0338", tmp_c[1]*6+10, i, u);
-                tmp_c[1]+=1;
-            }else if(train_on_segment[i][u]==54){
-                new_printf(cout, 0, "\0337\033[65;%dH %u;%u \0338", tmp_c[2]*6+10, i, u);
-                tmp_c[2]+=1;
-            }
-        }
-    }
-
     //TODO: start pathfinding maybe 2/3 sensors after so the train doesn't go off course
     /* 
     design decisions:
@@ -704,7 +681,7 @@ void path_finding(){
             }
             path = dijkstra(start_sensor, pm.dest, train_id, track, TRACK_MAX, switch_states, train_on_segment, &nextFreeHeapNode);
             if(path==NULL){
-                Puts(cout, 0, "\0337\033[15;1H\033[KDidn't find a route\0338");
+                new_printf(cout, 0, "\0337\033[16;1H\033[KDidn't find a route %d %d\0338", train_id, pm.dest);
                 tsm.type = TRAIN_SERVER_NAV_PATH;
                 tsm.arg1 = train_id;
                 tsm.arg2 = 0;
@@ -715,7 +692,7 @@ void path_finding(){
                 }
                 continue;
             }
-            Puts(cout, 0, "\0337\033[15;1H\033[KTrain navigation ran\0338");
+            new_printf(cout, 0, "\0337\033[15;1H\033[KTrain %u navigated to %u\0338", train_id, pm.dest);
 
             Puts(cout, 0, "\033[36;0H\033[K");
             uint8_t node, edge;
@@ -770,7 +747,7 @@ void path_finding(){
 
             // if next next segment is taken, send back reverse command
 
-            new_printf(cout, 0, "\0337\033[31;1H\033[KPathfind unreserved %d %d\0338", train_loc[train_id], train_id);
+            // new_printf(cout, 0, "\0337\033[31;1H\033[KPathfind unreserved %d %d\0338", train_loc[train_id], train_id);
             if(nsi.next_sensor == -1 || nsi.next_next_sensor == -1){
                 nsi.exit_incoming = 1;
             }else{

@@ -286,7 +286,7 @@ void k4(){
     Create(6, &delay_execute3);
     Create(6, &delay_execute4);
     Create(6, &delay_execute5);
-    Create(7, &tc2demo);
+    Create(4, &tc2demo);
     Create_sp_size(5, &path_finding, 2);
 }
 
