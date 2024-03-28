@@ -5,6 +5,9 @@
 #include "trainserver.h"
 #include "timer.h"
 #include "util.h"
+#include "io.h"
+#include "constants.h"
+#include "int_cb.h"
 
 void sensor_update(){
   RegisterAs("sensor\0");
@@ -25,7 +28,7 @@ void sensor_update(){
   int sensors_str_index;
 
   // allows 2 sensor triggers
-  int triggered_sensors[MAX_NUM_TRIGGERED_SENSORS];
+  int triggered_sensors[MAX_NUM_TRIGGERED_SENSORS] = {-1};
   IntCB triggered_sensor_cb;
   initialize_intcb(&triggered_sensor_cb, triggered_sensors, MAX_NUM_TRIGGERED_SENSORS, 0);
 
@@ -37,17 +40,19 @@ void sensor_update(){
   for(;;){
     // uart_printf(CONSOLE, "\033[30;1Hstart %d", time);
     Putc(mio, MARKLIN, 0x85);
-    memset(triggered_sensors, -1, MAX_NUM_TRIGGERED_SENSORS);
+    new_printf(cout, 0, "\0337\033[67;1H\033[K> time %d \0338", Time(clock_tid));
+    // memset(triggered_sensors, -1, MAX_NUM_TRIGGERED_SENSORS);
 
     for(int i = 0; i<10; i++){
       sensor_byte = Getc(mio, MARKLIN);
+        new_printf(cout, 0, "\0337\033[68;1H\033[K> atime %d i: %d\0338", Time(clock_tid), i);
       for (int u = 0; u < 8; u++) {
         if (sensor_byte & (1 << u)) {
           int sensorNum = i*8+7-u;
           if(sensorNum!=last_sensor_triggered){
             if (is_full_intcb(&triggered_sensor_cb)) {
                 // > 2 sensors got triggered in one query, shouldn't happen unless we have more than 2 trains
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[K> %d sensors triggered in one query %d \0338", MAX_NUM_TRIGGERED_SENSORS);
+                new_printf(cout, 0, "\0337\033[30;1H\033[K>=3 sensors triggered in one query \0338", MAX_NUM_TRIGGERED_SENSORS);
             }
             // uart_printf(CONSOLE, "\0337\033[%d;1H\033[K pushing sensor %d \0338", 31 + i, sensor_cb.count, triggered_sensor_cb.count);
             push_intcb(&sensor_cb, sensorNum);
@@ -65,19 +70,23 @@ void sensor_update(){
     if(!is_empty_intcb(&triggered_sensor_cb)){
 
         // first sensor is guaranteed to exist (not empty cb)
-        tsm.arg1 = pop_intcb(&triggered_sensor_cb);
+        int first_sensor = pop_intcb(&triggered_sensor_cb);
+        tsm.arg1 = (first_sensor == -1) ? 255 : first_sensor;
 
         // second sensor
         int second_sensor = pop_intcb(&triggered_sensor_cb);
         tsm.arg2 = (second_sensor == -1) ? 255 : second_sensor;
         tsm.arg3 = time;
 
+    new_printf(cout, 0, "\0337\033[69;1H\033[Kbefore send %d\0338", Time(clock_tid));
         // TODO: currently don't support third sensor
         intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+    new_printf(cout, 0, "\0337\033[70;1H\033[Kafter send %d\0338", Time(clock_tid));
         if(intended_reply_len!=0){
             uart_printf(CONSOLE, "\0337\033[30;1H\033[Ksensor task unexpected reply from train server %d\0338", intended_reply_len);
         }
     }
+    
     
     if(new_sensor_triggered==1){
       // update the console output whenever we get a *new* sensor
@@ -87,6 +96,7 @@ void sensor_update(){
         int i;
         char sensor_band;
         int sensor_num;
+        // new_printf(cout, 0, "\0337\033[68;1H\033[K> time %d, count: %d sensor cb count: %d\0338", Time(clock_tid), cb_count, sensor_cb.count);
         while(cb_count < sensor_cb.count){
             i = sensor_cb.queue[cb_index];
             sensor_band = i/16 + 'A';
@@ -106,8 +116,10 @@ void sensor_update(){
         sensors_str[sensors_str_index] = '\0';
         Puts(cout, CONSOLE, sensors_str);
         new_sensor_triggered = 0;
+        // new_printf(cout, 0, "\0337\033[68;1H\033[K> time %d, count: %d sensor cb count: %d\0338", Time(clock_tid), cb_count, sensor_cb.count);
     }
-    time += 10;
-    DelayUntil(clock_tid, time);
+    time += 6;
+    // DelayUntil(clock_tid, time);
+    Delay(clock_tid, 6);
   }
 }

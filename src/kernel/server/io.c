@@ -73,7 +73,7 @@ void console_out() {
     int tid;
     // circular buffer 
     // TODO: make constant a variable
-    char raw_buffer[1024];
+    char raw_buffer[2048];
     CharCB buffer;
     initialize_charcb(&buffer, raw_buffer, sizeof(raw_buffer), 0);
     // message struct
@@ -314,6 +314,7 @@ void marklin_io() {
     initialize_charcb(&out_buffer, raw_out_buffer, 128, 0);
     int prev_cts = 1; // 1 --> high able to send, 0 --> down should not send
     int cts_transition = 2;
+    int out_notifier_parked = 0;
     // TODO: parking for output notifiers
 
 
@@ -327,7 +328,6 @@ void marklin_io() {
     int in_notifier_parked = 0;
 
     int tx_ready = 1;
-    int min_counter = 0;
 
     IOMessage m;
     for(;;) {
@@ -353,8 +353,15 @@ void marklin_io() {
 
             // uart_printf(CONSOLE, "\n after writing prev cts = %u, cur cts %u\r\n", prev_cts, uart_cts(MARKLIN));
 
-            // reply to notifier
-            Reply(tid, NULL, 0);
+
+           if (!is_empty_charcb(&out_buffer)) {
+                // reply to notifier
+                Reply(tid, NULL, 0);
+                out_notifier_parked = 0;
+           } else {
+                out_notifier_parked = 1;
+           }
+
             // trywrite()
         } else if (tid == mout_cts_notifier) {
             // cts turning off
@@ -385,15 +392,21 @@ void marklin_io() {
             }
             //trywrite()
 
+            // if (!is_empty_charcb(&out_buffer) && out_notifier_parked) {
+            //     // reply to notifier
+            //     Reply(mout_tx_notifier, NULL, 0);
+            //     out_notifier_parked = 0;
+            // } else {
+            //     out_notifier_parked = 1;
+            // }
+
             // reply to notifier
             Reply(tid, NULL, 0);
         // store data in buffer
         } else if (tid == min_notifier) {
-            char c;
             while (uart_can_read(MARKLIN)) {
                 // uart_printf(CONSOLE, "\033[35;1Hmin notifier recieved, count:%d, %d\r\n", min_counter, Time(clock_tid));
-                min_counter += 1;
-                c = uart_readc(MARKLIN);
+                char c = uart_readc(MARKLIN);
                 push_charcb(&in_buffer, c);
             }
 
@@ -403,12 +416,12 @@ void marklin_io() {
                 Reply(task, &data, 1);
             }
 
-            // if (is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer)) {
+            if (is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer)) {
                 Reply(tid, NULL, 0);
-            //     in_notifier_parked = 0;
-            // } else {
-            //     in_notifier_parked = 1;        
-            // }
+                in_notifier_parked = 0;
+            } else {
+                in_notifier_parked = 1;        
+            }
 
         // store data in buffer
         } else {
@@ -425,14 +438,15 @@ void marklin_io() {
                     Reply(task, &data, 1);
                 }
 
-                // if (is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer) && in_notifier_parked) {
-                //     Reply(min_notifier, NULL, 0);
-                //     in_notifier_parked = 0;
-                // } else {
-                //     in_notifier_parked = 1;
-                // }
+                if (is_empty_charcb(&in_buffer) && !is_empty_intcb(&task_buffer) && in_notifier_parked) {
+                    Reply(min_notifier, NULL, 0);
+                    in_notifier_parked = 0;
+                } else {
+                    in_notifier_parked = 1;
+                }
 
             } else if (m.type == PUTC || m.type == PUTS) {
+                Reply(tid, NULL, 0);
                 // store data in buffer
                 for (uint32_t i = 0; i < m.len; i++) {
                     push_charcb(&out_buffer, m.str[i]);
@@ -450,7 +464,11 @@ void marklin_io() {
                 } else {
                     // uart_printf(CONSOLE, "can't write immediately cur cts = %u, cts_transition = %u, and replying to %u\r\n", uart_cts(MARKLIN), cts_transition,tid);
                 }
-                Reply(tid, NULL, 0);
+
+                if (!is_empty_charcb(&out_buffer) && out_notifier_parked) {
+                    out_notifier_parked = 0;
+                    Reply(mout_tx_notifier, NULL, 0);
+                }
             } else {
                 uart_printf(CONSOLE, "io message type not supported\r\n");
                 for(;;){}

@@ -3,6 +3,9 @@
 
 #include <stdint.h>
 #include "pathfinding.h"
+#include "int_cb.h"
+
+#define NUM_RECENT_SENSORS 5
 
 typedef enum {
   TRAIN_SERVER_NONE,
@@ -75,6 +78,8 @@ typedef struct TrainState {
     uint32_t train_print_start_row;
     uint32_t train_print_start_col;
     int active;
+    IntCB recent_sensors;
+    int recent_sensor_data[5];
     struct TrainState* next;
 } TrainState;
 

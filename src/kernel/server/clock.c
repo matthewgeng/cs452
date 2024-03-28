@@ -159,6 +159,10 @@ void clock(){
         if(tid == notifier_tid){
             tick++;
             DelayedTask *next_dt = heap_peek(&sorted_delayed_tasks);
+            if (next_dt->tid == 15) {
+                uart_printf(CONSOLE, "\0337\033[48;1H\033[K sensor tid wait until %d, curtick %d\0338", next_dt->delay_until, tick);
+            }
+
             while(next_dt!=NULL && next_dt->delay_until<=tick){
                 heap_pop(&sorted_delayed_tasks);
                 // DelayedTask *popped = heap_pop(&sorted_delayed_tasks);

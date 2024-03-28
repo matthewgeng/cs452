@@ -22,6 +22,7 @@
 #define RECEIVE_WAIT 3
 #define REPLY_WAIT 4
 
+#define MAX_NUM_TRIGGERED_SENSORS 2
 #define MAX_NUM_TRAINS 2
 
 #endif
