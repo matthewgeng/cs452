@@ -5,6 +5,7 @@
 #include "trainserver.h"
 #include "timer.h"
 #include "util.h"
+#include "io.h"
 
 void sensor_update(){
   RegisterAs("sensor\0");
@@ -37,7 +38,7 @@ void sensor_update(){
   for(;;){
     // uart_printf(CONSOLE, "\033[30;1Hstart %d", time);
     Putc(mio, MARKLIN, 0x85);
-    memset(triggered_sensors, -1, MAX_NUM_TRIGGERED_SENSORS);
+    // memset(triggered_sensors, -1, MAX_NUM_TRIGGERED_SENSORS);
 
     for(int i = 0; i<10; i++){
       sensor_byte = Getc(mio, MARKLIN);
@@ -47,9 +48,8 @@ void sensor_update(){
           if(sensorNum!=last_sensor_triggered){
             if (is_full_intcb(&triggered_sensor_cb)) {
                 // > 2 sensors got triggered in one query, shouldn't happen unless we have more than 2 trains
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[K> %d sensors triggered in one query %d \0338", MAX_NUM_TRIGGERED_SENSORS);
+                new_printf(cout, 0, "\0337\033[30;1H\033[K>=3 sensors triggered in one query\0338");
             }
-            // uart_printf(CONSOLE, "\0337\033[%d;1H\033[K pushing sensor %d \0338", 31 + i, sensor_cb.count, triggered_sensor_cb.count);
             push_intcb(&sensor_cb, sensorNum);
             push_intcb(&triggered_sensor_cb, sensorNum);
             new_sensor_triggered = 1;
@@ -59,13 +59,11 @@ void sensor_update(){
       }
     }
 
-    // uart_printf(CONSOLE, "\0337\033[31;1H\033[K sensor cb size %d, triggerd cb size %d\0338", sensor_cb.count, triggered_sensor_cb.count);
-    
-    // send whenever we get a sensor
     if(!is_empty_intcb(&triggered_sensor_cb)){
 
         // first sensor is guaranteed to exist (not empty cb)
-        tsm.arg1 = pop_intcb(&triggered_sensor_cb);
+        int first_sensor = pop_intcb(&triggered_sensor_cb);
+        tsm.arg1 = (first_sensor == -1) ? 255 : first_sensor;
 
         // second sensor
         int second_sensor = pop_intcb(&triggered_sensor_cb);

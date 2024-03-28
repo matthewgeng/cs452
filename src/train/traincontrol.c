@@ -23,8 +23,22 @@ int get_sensor_num(char *str){
   return res;
 }
 
-uint8_t is_valid_speed(uint32_t train_speed){
-  return train_speed == 0 || train_speed == 4 || train_speed == 8 || train_speed == 12 || train_speed == 14 || train_speed == 16+0 || train_speed == 16+4 || train_speed == 16+8 || train_speed == 16+12 || train_speed == 16+14;
+uint8_t is_valid_speed(int train_num, uint32_t train_speed){
+    if (train_speed >= 31) {
+        return 0;
+    }
+
+    if (train_speed >= 16) {
+        train_speed -=16;
+    }
+
+    if (train_speed < 0) {
+        return 0;
+    } else if (train_speed > 0 && train_speed < train_min_speed(train_num)) {
+        return 0;
+    }
+
+    return 1;
 }
 
 // TODO: validate train numbers are supported
@@ -52,13 +66,16 @@ void execute_tr(char *str, char *func_res, int console_tid, int train_server_tid
       Puts(console_tid, CONSOLE, func_res);
       return;
     }
-    // if(is_valid_speed(trainSpeed)==0){
-    //   str_cpy_w0(func_res+10, "Only support train speed 0,4,8,12,14 (can +16 for headlights)\0");
-    //   Puts(console_tid, CONSOLE, func_res);
-    //   return;
-    // }
+
+    if(is_valid_speed(trainNumber,trainSpeed)==0){
+      str_cpy_w0(func_res+10, "train speed too low\0");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+
     str_cpy_w0(func_res+10, "Train speed changed");
     Puts(console_tid, CONSOLE, func_res);
+
     TrainServerMsgSimple tsm;
     tsm.type = TRAIN_SERVER_TR;
     tsm.arg1 = trainNumber;
