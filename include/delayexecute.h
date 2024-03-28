@@ -6,7 +6,8 @@
 typedef enum {
   DELAY_STOP,
   DELAY_RV,
-  DELAY_RV_STOP
+  DELAY_RV_STOP,
+  DELAY_STOP_START
 } delay_exe_argtype;
 
 

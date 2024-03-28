@@ -55,15 +55,15 @@ void tc2demo(){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
             }
 
-            // Delay(clock_tid, 1500);
-            // tsm.type = TRAIN_SERVER_NAV;
-            // tsm.arg1 = train2;
-            // tsm.arg2 = start_dest2;
-            // tsm.arg3 = 0;
-            // intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
-            // if(intended_reply_len!=0){
-            //     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
-            // }
+            Delay(clock_tid, 800);
+            tsm.type = TRAIN_SERVER_NAV;
+            tsm.arg1 = train2;
+            tsm.arg2 = start_dest2;
+            tsm.arg3 = 0;
+            intended_reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+            if(intended_reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+            }
         }else if(dm.type==DEMO_NAV_END){
             new_printf(cout, 0, "\0337\033[28;1H\033[Kgot nav end\0338", train1, dest);
             Delay(clock_tid, 800);

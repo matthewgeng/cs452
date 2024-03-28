@@ -88,6 +88,30 @@ void delay_execute_loop(){
             stop(mio, dsm.train_number);
             // str_cpy_w0(func_res+10, "Train reversed");
             // Puts(cout, CONSOLE, func_res);
+        }else if(dsm.type==DELAY_STOP_START){
+            train_number = (int)(dsm.train_number);
+            last_speed = (int)(dsm.last_speed);
+            cmd[0] = 0;
+            cmd[1] = train_number;
+            Puts_len(mio, MARKLIN, cmd, 2);
+            // TODO: appropriately handle when speeds are > 16
+
+            if(dsm.delay!=0){
+                Delay(clock_tid, dsm.delay);
+            }
+
+            if(last_speed<=10){
+                Delay(clock_tid, 400);
+            }else{
+                Delay(clock_tid, 500);
+            }
+
+            cmd[0] = last_speed;
+            cmd[1] = train_number;
+            Puts_len(mio, MARKLIN, cmd, 2);
+            stop(mio, dsm.train_number);
+            // str_cpy_w0(func_res+10, "Train reversed");
+            // Puts(cout, CONSOLE, func_res);
         }
     }
 }

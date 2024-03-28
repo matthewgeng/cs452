@@ -390,8 +390,10 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
     // (ts1->new_sensor_new.next_next_sensor == ts2->train_location && ts2->new_sensor_new.next_next_sensor == ts1->train_location)
     // ;
 
-    int head_on_collision = (ts1->new_sensor_new.next_next_sensor != ts2->new_sensor_new.next_sensor && ts1->new_sensor_new.next_next_sensor/2 == ts2->new_sensor_new.next_sensor/2) && 
-    (ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor/2 == ts2->new_sensor_new.next_next_sensor/2)
+    int head_on_collision = (ts1->new_sensor_new.next_next_sensor != ts2->new_sensor_new.next_sensor && ts1->new_sensor_new.next_next_sensor/2 == ts2->new_sensor_new.next_sensor/2 && 
+    ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor/2 == ts2->new_sensor_new.next_next_sensor/2) || 
+    (ts1->new_sensor_new.next_sensor != ts2->train_location && ts1->new_sensor_new.next_sensor/2 == ts2->train_location/2 && 
+    ts1->train_location != ts2->new_sensor_new.next_sensor && ts1->train_location/2 == ts2->new_sensor_new.next_sensor/2)
     ;
 
     int merge_collision = (ts1->train_location != ts2->train_location) && ((ts1->new_sensor_new.next_next_sensor == ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_sensor) || (ts1->new_sensor_new.next_sensor == ts2->new_sensor_new.next_sensor))
@@ -410,53 +412,73 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: will hit train %d   \0338", 8 + ts1->train_print_start_row,  ts1->train_print_start_col, ts2->train_id);
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: train %d will hit me\0338", 8 + ts2->train_print_start_row,  ts2->train_print_start_col, ts1->train_id);
 
-        int minimum_speed = ts1->minimum_moving_train_speed;
-        if (ts1->cur_train_speed > 15) {
-            minimum_speed += 16;
-        }
+        if(ts1->train_dest==255 && ts2->train_dest==255){
+            int minimum_speed = ts1->minimum_moving_train_speed;
+            if (ts1->cur_train_speed > 15) {
+                minimum_speed += 16;
+            }
 
-        int slow_down_speed = ts1->cur_train_speed;
+            int slow_down_speed = ts1->cur_train_speed;
 
-        // weren't able to find a valid speed to slow down to
-        if (slow_down_speed == minimum_speed) {
-            int max_speed = (ts2->cur_train_speed >= 16) ? 30 : 14;
+            // weren't able to find a valid speed to slow down to
+            if (slow_down_speed == minimum_speed) {
+                int max_speed = (ts2->cur_train_speed >= 16) ? 30 : 14;
 
-            int speed_up_speed = ts2->cur_train_speed;
-            if (speed_up_speed == max_speed) {
-                slow_down_speed = 0;
+                int speed_up_speed = ts2->cur_train_speed;
+                if (speed_up_speed == max_speed) {
+                    slow_down_speed = 0;
+                    new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col);
+                    new_printf(cout, 0, "\0337\033[%d;%dHSpeed decrease to: %d, terminal: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+                    slow_down_speed, train_terminal_speed(ts1->train_id, slow_down_speed));
+                    handle_tr(mio, cout, track, ts1, slow_down_speed);
+                    return 0;
+                }
+
+                while (speed_up_speed < max_speed && train_terminal_speed(ts2->train_id, speed_up_speed) <= train_terminal_speed(ts1->train_id, ts1->cur_train_speed) + velocity_error) {
+                    speed_up_speed +=1;
+                }
+
+                new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col);
+                new_printf(cout, 0, "\0337\033[%d;%dHSpeed increase to: %d, terminal: %d    \0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
+                    speed_up_speed, train_terminal_speed(ts2->train_id, speed_up_speed));
+                handle_tr(mio, cout, track, ts2, speed_up_speed);
+            } else {
+                while (slow_down_speed > minimum_speed && train_terminal_speed(ts1->train_id, slow_down_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error) {
+                    slow_down_speed -=1;
+                }
+
                 new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col);
                 new_printf(cout, 0, "\0337\033[%d;%dHSpeed decrease to: %d, terminal: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
                 slow_down_speed, train_terminal_speed(ts1->train_id, slow_down_speed));
                 handle_tr(mio, cout, track, ts1, slow_down_speed);
-                return 0;
             }
-
-            while (speed_up_speed < max_speed && train_terminal_speed(ts2->train_id, speed_up_speed) <= train_terminal_speed(ts1->train_id, ts1->cur_train_speed) + velocity_error) {
-                speed_up_speed +=1;
-            }
-
-            new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col);
-            new_printf(cout, 0, "\0337\033[%d;%dHSpeed increase to: %d, terminal: %d    \0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
-                speed_up_speed, train_terminal_speed(ts2->train_id, speed_up_speed));
-            handle_tr(mio, cout, track, ts2, speed_up_speed);
-        } else {
-            while (slow_down_speed > minimum_speed && train_terminal_speed(ts1->train_id, slow_down_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error) {
-                slow_down_speed -=1;
-            }
-
-            new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col);
-            new_printf(cout, 0, "\0337\033[%d;%dHSpeed decrease to: %d, terminal: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
-            slow_down_speed, train_terminal_speed(ts1->train_id, slow_down_speed));
-            handle_tr(mio, cout, track, ts1, slow_down_speed);
+            return 1;
         }
-        return 1;
     } else if (head_on_collision) {
         new_printf(cout, 0, "\0337\033[%d;%dHhead on collision with %d\0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
         ts2->train_id);
         new_printf(cout, 0, "\0337\033[%d;%dHhead on collision with %d\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
         ts1->train_id);
-        handle_tr(mio, cout, track, ts1, 0);
-        handle_tr(mio, cout, track, ts2, 0);
+        // handle_tr(mio, cout, track, ts1, 0);
+        // handle_tr(mio, cout, track, ts2, 0);
+
+        if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
+            ts1->is_reversing = 1;
+            DelayExecuteMsg dsm;
+            dsm.type = DELAY_RV;
+            dsm.delay = 0;
+            dsm.train_number = ts1->train_id;
+            dsm.last_speed = ts1->cur_train_speed;
+            int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+            if(intended_reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+            }
+        }else{
+            handle_tr(mio, cout, track, ts1, 0);
+            handle_tr(mio, cout, track, ts2, 0);
+        }
+
+
         // if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
 
         // }else if(ts1->train_dest!=255 && ts2->train_dest!=255 && ts1->train_id<ts2->train_id){
@@ -471,8 +493,22 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
         ts2->train_id);
         new_printf(cout, 0, "\0337\033[%d;%dHmerge collision with %d\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
         ts1->train_id);
-        handle_tr(mio, cout, track, ts1, 0);
-        handle_tr(mio, cout, track, ts2, 0);
+
+        if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
+            // handle_tr(mio, cout, track, ts1, 0);
+            DelayExecuteMsg dsm;
+            dsm.type = DELAY_STOP_START;
+            dsm.delay = 100;
+            dsm.train_number = ts1->train_id;
+            dsm.last_speed = ts1->cur_train_speed;
+            int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+            if(intended_reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+            }
+        }else{
+            handle_tr(mio, cout, track, ts1, 0);
+            handle_tr(mio, cout, track, ts2, 0);
+        }
         // if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
 
         // }else if(ts1->train_dest!=255 && ts2->train_dest!=255 && ts1->train_id<ts2->train_id){
@@ -707,19 +743,19 @@ int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, ui
         //     new_printf(cout, 0, "\0337\033[16;1H\033[KTrain %d reversed due to reservation\0338", ts->train_id);
         // }else 
         
-        if(ts->new_sensor_new.exit_incoming == 1 && ts->train_dest==255){
-            dsm->type = DELAY_RV;
-            dsm->delay = 0;
-            dsm->train_number = ts->train_id;
-            dsm->last_speed = ts->cur_train_speed;
-            intended_reply_len = Send(ts->delay_execute_tid, dsm, sizeof(DelayExecuteMsg), NULL, 0);
-            if(intended_reply_len!=0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
-            }
-            ts->is_reversing = 1;
-            ts->reversed = !ts->reversed;
-            new_printf(cout, 0, "\0337\033[16;1H\033[KTrain %d reversed due to incoming exit\0338", ts->train_id);
-        }
+        // if(ts->new_sensor_new.exit_incoming == 1 && ts->train_dest==255){
+            // dsm->type = DELAY_RV;
+            // dsm->delay = 0;
+            // dsm->train_number = ts->train_id;
+            // dsm->last_speed = ts->cur_train_speed;
+            // intended_reply_len = Send(ts->delay_execute_tid, dsm, sizeof(DelayExecuteMsg), NULL, 0);
+            // if(intended_reply_len!=0){
+            //     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+            // }
+            // ts->is_reversing = 1;
+            // ts->reversed = !ts->reversed;
+            // new_printf(cout, 0, "\0337\033[16;1H\033[KTrain %d reversed due to incoming exit\0338", ts->train_id);
+        // }
         
         if(ts->new_sensor_new.next_sensor == -2){
             ts->predicted_next_sensor_time = 0;

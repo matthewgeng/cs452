@@ -629,6 +629,8 @@ void path_finding(){
     uint8_t train_loc[100];
     memset(train_loc, 255, sizeof(uint8_t)*100);
 
+    uint8_t run_res = 0;
+
     for(;;){
         // uart_printf(CONSOLE, "\0337\033[55;1H\033[Kpathfinding before receive %d\0338", Time(clock));
         intended_send_len = Receive(&tid, &pm, sizeof(pm));
@@ -669,6 +671,7 @@ void path_finding(){
             reclaimHeapNode(nextFreeHeapNode, path);
         }else if(pm.type==PATH_NAV){
             Reply(tid, NULL, 0);
+            run_res = 1;
             
             cur_pos = pm.arg1;
             train_id = pm.arg2;
@@ -761,15 +764,17 @@ void path_finding(){
             }else{
                 nsi.exit_incoming = 0;
             }
-            nsi.cur_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos);
-            nsi.next_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor);
-            nsi.next_next_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_next_sensor);
-            if(nsi.cur_segment_is_reserved==0){
-                reserve_segments(track, train_on_segment, switch_states, train_id, cur_pos);
-            }
+            if(run_res==1){
+                nsi.cur_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos);
+                nsi.next_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor);
+                nsi.next_next_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_next_sensor);
+                if(nsi.cur_segment_is_reserved==0){
+                    reserve_segments(track, train_on_segment, switch_states, train_id, cur_pos);
+                }
 
-            if(train_loc[train_id]!=255){
-                unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
+                if(train_loc[train_id]!=255){
+                    unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
+                }
             }
 
             Reply(tid, &nsi, sizeof(NewSensorInfo));
