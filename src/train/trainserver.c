@@ -489,10 +489,11 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
                     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
                 }
             }
-        }else{
-            handle_tr(mio, cout, track, ts1, 0);
-            handle_tr(mio, cout, track, ts2, 0);
         }
+        // }else{
+        //     handle_tr(mio, cout, track, ts1, 0);
+        //     handle_tr(mio, cout, track, ts2, 0);
+        // }
 
 
         // if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
@@ -523,10 +524,11 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
                     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
                 }
             }
-        }else{
-            handle_tr(mio, cout, track, ts1, 0);
-            handle_tr(mio, cout, track, ts2, 0);
         }
+        // }else{
+        //     handle_tr(mio, cout, track, ts1, 0);
+        //     handle_tr(mio, cout, track, ts2, 0);
+        // }
         // if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
 
         // }else if(ts1->train_dest!=255 && ts2->train_dest!=255 && ts1->train_id<ts2->train_id){
