@@ -56,6 +56,13 @@ typedef struct PathMessage{
     char switches[22];
 } PathMessage;
 
+int path_pf(int tid, uint32_t src, uint32_t dest);
+int path_nav(int tid, uint32_t train_loc, uint32_t train_id, uint32_t dest);
+int path_next_sensor(int tid, uint32_t train_loc, uint32_t train_id, NewSensorInfo *ns);
+int path_switch_change(int tid, char switch_states[]);
+int path_track_change(int tid, char track);
+int path_segment_reset(int tid);
+
 void path_finding();
 
 #endif

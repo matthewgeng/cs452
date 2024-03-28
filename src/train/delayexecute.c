@@ -12,6 +12,49 @@ void stop(int marklin_tid, unsigned int trainNumber){
   Puts_len(marklin_tid, MARKLIN, cmd, 2);
 }
 
+int delay_stop(int tid, uint8_t train_id, int delay){
+    DelayExecuteMsg dsm;
+    dsm.type = DELAY_STOP;
+    dsm.train_number = train_id;
+    dsm.delay = delay;
+    int intended_reply_len = Send(tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+    if(intended_reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay stop unexpected reply\0338");
+        return -1;
+    }
+    return 0;
+}
+
+int delay_rv(int tid, uint8_t train_id, int delay, uint8_t last_speed){
+    DelayExecuteMsg dsm;
+    dsm.type = DELAY_RV;
+    dsm.delay = delay;
+    dsm.train_number = train_id;
+    dsm.last_speed = last_speed;
+    int intended_reply_len = Send(tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+    if(intended_reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+        return -1;
+    }
+    return 0;
+}
+
+
+int delay_rv_stop(int tid, uint8_t train_id, int delay, uint8_t last_speed, int stop_delay){
+    DelayExecuteMsg dsm;
+    dsm.type = DELAY_RV_STOP;
+    dsm.train_number = train_id;
+    dsm.delay = delay;
+    dsm.last_speed = last_speed;
+    dsm.stop_delay = stop_delay;
+    int intended_reply_len = Send(tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+    if(intended_reply_len!=0){
+        uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver delay rv stop unexpected reply\0338");
+        return -1;
+    }
+    return 0;
+}
+
 void delay_execute_loop(){
     // int cout = WhoIs("cout\0");
     int clock_tid = WhoIs("clock\0");

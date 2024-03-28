@@ -95,12 +95,13 @@ uint8_t switches_setup(int cout, int mio, char switch_states[], uint8_t initial_
   return changed;
 }
 
-void update_pathfind(int pathfind_tid, PathMessage *pm, char switch_states[]){
-  for(int i = 0; i<22; i++) pm->switches[i] = switch_states[i];
-  int intended_reply_len = Send(pathfind_tid, pm, sizeof(PathMessage), NULL, 0);
-  if(intended_reply_len!=0){
-    uart_printf(CONSOLE, "\0337\033[30;1H\033[Kswitches unexpected reply len from pathfind\0338");
-  }
+void update_pathfind(int pathfind_tid, char switch_states[]){
+  path_switch_change(pathfind_tid, switch_states);
+  // for(int i = 0; i<22; i++) pm->switches[i] = switch_states[i];
+  // int intended_reply_len = Send(pathfind_tid, pm, sizeof(PathMessage), NULL, 0);
+  // if(intended_reply_len!=0){
+  //   uart_printf(CONSOLE, "\0337\033[30;1H\033[Kswitches unexpected reply len from pathfind\0338");
+  // }
 }
 
 void switches_server(){
@@ -135,7 +136,7 @@ void switches_server(){
       Reply(tid, NULL, 0);
       changed = switches_setup(cout, mio, switch_states, 0);
       if(changed==1){
-          update_pathfind(pathfind_tid, &pm, switch_states);
+          update_pathfind(pathfind_tid, switch_states);
       }
     }else if(msg_len<sizeof(SwitchChange)*22 && msg_len%sizeof(SwitchChange)==0){
         Reply(tid, NULL, 0);
@@ -155,7 +156,7 @@ void switches_server(){
           }
         }
         if(changed==1){
-          update_pathfind(pathfind_tid, &pm, switch_states);
+          update_pathfind(pathfind_tid, switch_states);
         }
     }else{
       Reply(tid, NULL, 0);

@@ -18,6 +18,10 @@ typedef struct DelayExecuteMsg{
     uint8_t last_speed;
 } DelayExecuteMsg;
 
+int delay_stop(int tid, uint8_t train_id, int delay);
+int delay_rv(int tid, uint8_t train_id, int delay, uint8_t last_speed);
+int delay_rv_stop(int tid, uint8_t train_id, int delay, uint8_t last_speed, int stop_delay);
+
 void delay_execute1();
 void delay_execute2();
 void delay_execute3();
