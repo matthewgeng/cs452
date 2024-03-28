@@ -10,8 +10,10 @@ typedef struct NewSensorInfo{
   int next_next_sensor;
   int next_sensor_switch_err;
   int switch_after_next_sensor;
-  int reverse_sensor;
+  int reverse_sensor;  
+  uint8_t cur_segment_is_reserved;
   uint8_t next_segment_is_reserved;
+  uint8_t next_next_segment_is_reserved;
   uint8_t exit_incoming;
 } NewSensorInfo;
 

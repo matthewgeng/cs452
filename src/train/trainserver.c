@@ -27,6 +27,11 @@ void loc_err_handling(int train_location, NewSensorInfo *new_sensor, NewSensorIn
     memcpy(new_sensor, new_sensor_new, sizeof(NewSensorInfo));
     new_sensor_err->next_sensor = 255;
     *last_triggered_sensor = train_location;
+  }else if(*is_reversing==1 && train_location==new_sensor->next_next_sensor){
+    // in nav, missed the sensor to reverse so late reverse
+    memcpy(new_sensor, new_sensor_new, sizeof(NewSensorInfo));
+    new_sensor_err->next_sensor = 255;
+    *last_triggered_sensor = train_location;
   }else if(train_location==new_sensor->next_next_sensor || train_location==new_sensor->next_sensor_switch_err){
     memcpy(new_sensor_err, new_sensor_new, sizeof(NewSensorInfo));
   }else if(train_location==new_sensor_err->next_sensor){
@@ -262,7 +267,7 @@ TrainState* getTrainState(char track, uint32_t train_id, TrainState** current_tr
         */
         int train_index = MAX_NUM_TRAINS - *num_available_trains;
         ts->train_print_start_row = 20 * (train_index/2 + 1);
-        ts->train_print_start_col = 50*(train_index%2);
+        ts->train_print_start_col = 80*(train_index%2);
         *num_available_trains = *num_available_trains -1;
         ts->active = 1;
         return ts;
@@ -943,11 +948,16 @@ void trainserver(){
         }
 
         ts->cur_sensor_index = 0;
-        new_printf(cout, 0, "\0337\033[%u;1H\033[K initial sc: %u %u\0338", 39, ts->train_sensor_path.initial_scs[0].switch_num, ts->train_sensor_path.initial_scs[0].dir);
+        new_printf(cout, 0, "\0337\033[%d;%dH initial sc: %u %u\0338", 39, ts->train_print_start_col, ts->train_sensor_path.initial_scs[0].switch_num, ts->train_sensor_path.initial_scs[0].dir);
         for(int i = 0; i<ts->train_sensor_path.num_sensors; i++){
-            new_printf(cout, 0, "\0337\033[%u;1H\033[K sensor: %u, dist: %u, reverse: %u, speed: %u, switch: %u %u\0338", 40+i, ts->train_sensor_path.sensors[i], ts->train_sensor_path.dists[i], ts->train_sensor_path.does_reverse[i], ts->train_sensor_path.speeds[i], ts->train_sensor_path.scs[0][i].switch_num, ts->train_sensor_path.scs[0][i].dir);
+            new_printf(cout, 0, "\0337\033[%d;%dH sensor: %u, dist: %u, rv: %u, speed: %u, sw: %u %u %u %u\0338", 40+i, ts->train_print_start_col, ts->train_sensor_path.sensors[i], ts->train_sensor_path.dists[i], ts->train_sensor_path.does_reverse[i], ts->train_sensor_path.speeds[i], ts->train_sensor_path.scs[0][i].switch_num, ts->train_sensor_path.scs[0][i].dir, ts->train_sensor_path.scs[1][i].switch_num, ts->train_sensor_path.scs[1][i].dir);
         }
-        new_printf(cout, 0, "\0337\033[%u;1H\033[K\0338", 40+ts->train_sensor_path.num_sensors);
+        new_printf(cout, 0, "\0337\033[%u;%dH                                                      \0338", 40+ts->train_sensor_path.num_sensors, ts->train_print_start_col);
+        // new_printf(cout, 0, "\0337\033[%u;1H\033[K initial sc: %u %u\0338", 39, ts->train_sensor_path.initial_scs[0].switch_num, ts->train_sensor_path.initial_scs[0].dir);
+        // for(int i = 0; i<ts->train_sensor_path.num_sensors; i++){
+        //     new_printf(cout, 0, "\0337\033[%u;1H\033[K sensor: %u, dist: %u, reverse: %u, speed: %u, switch: %u %u\0338", 40+i, ts->train_sensor_path.sensors[i], ts->train_sensor_path.dists[i], ts->train_sensor_path.does_reverse[i], ts->train_sensor_path.speeds[i], ts->train_sensor_path.scs[0][i].switch_num, ts->train_sensor_path.scs[0][i].dir);
+        // }
+        // new_printf(cout, 0, "\0337\033[%u;1H\033[K\0338", 40+ts->train_sensor_path.num_sensors);
 
         // if first switch is upcoming, change it now
         if(ts->train_sensor_path.initial_scs[0].switch_num!=255){

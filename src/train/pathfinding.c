@@ -155,29 +155,6 @@ uint8_t try_add_used_segment(uint8_t train_on_segment[TRACK_MAX][2], int train_i
 
 NavPath *dijkstra(uint8_t src, uint8_t dest, int train_id, track_node *track, int track_len, char switch_states[], uint8_t train_on_segment[TRACK_MAX][2], NavPath **nextFreeHeapNode){
 
-    int cout = WhoIs("cout\0");
-
-    int tmp_c[3] = {0,0,0};
-    // new_printf(cout, 0, "\0337\033[%d;%dHTrain %d, terminal speed %d    \0338");
-    new_printf(cout, 0, "\0337\033[63;0H\033[K tr: 1 \0338");
-    new_printf(cout, 0, "\0337\033[64;0H\033[K tr: 2 \0338");
-    new_printf(cout, 0, "\0337\033[65;0H\033[K tr: 54 \0338");
-    // Puts(cout, 0, "\033[35;0H\033[K");
-    for(int i = 0; i<TRACK_MAX; i++){
-        for(int u = 0; u<2; u++){
-            if(train_on_segment[i][u]==1){
-                new_printf(cout, 0, "\0337\033[63;%dH %u;%u \0338", tmp_c[0]*6+10, i, u);
-                tmp_c[0]+=1;
-            }else if(train_on_segment[i][u]==2){
-                new_printf(cout, 0, "\0337\033[64;%dH %u;%u \0338", tmp_c[1]*6+10, i, u);
-                tmp_c[1]+=1;
-            }else if(train_on_segment[i][u]==54){
-                new_printf(cout, 0, "\0337\033[65;%dH %u;%u \0338", tmp_c[2]*6+10, i, u);
-                tmp_c[2]+=1;
-            }
-        }
-    }
-
     //TODO: start pathfinding maybe 2/3 sensors after so the train doesn't go off course
     /* 
     design decisions:
@@ -324,6 +301,9 @@ NavPath *dijkstra(uint8_t src, uint8_t dest, int train_id, track_node *track, in
                         sc_to_change = next_node->sensor_path.initial_scs;
                     }else{
                         sc_to_change = next_node->sensor_path.scs[0] + (next_node->sensor_path.num_sensors-2);
+                        if(sc_to_change->switch_num!=255){
+                            sc_to_change = next_node->sensor_path.scs[1] + (next_node->sensor_path.num_sensors-2);
+                        }
                     }
                     sc_to_change->switch_num = cur_track_node->num;
                     sc_to_change->dir = dirs[i];
@@ -769,25 +749,42 @@ void path_finding(){
 
             // if next next segment is taken, send back reverse command
 
+            // new_printf(cout, 0, "\0337\033[31;1H\033[KPathfind unreserved %d %d\0338", train_loc[train_id], train_id);
             if(nsi.next_sensor == -1 || nsi.next_next_sensor == -1){
                 nsi.exit_incoming = 1;
             }else{
                 nsi.exit_incoming = 0;
-                uint8_t cur_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1;
-                uint8_t next_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1;
-                if(cur_segment_reserver != 0){
-                    // new_printf(cout, 0, "\0337\033[60;1H\033[K cur_pos reserved: %d, next reserved: %d, if cond: %d\0338", segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos), segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor), segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1 || segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1);
-                    nsi.next_segment_is_reserved = cur_segment_reserver;
-                }else if(next_segment_reserver != 0){
-                    nsi.next_segment_is_reserved = cur_segment_reserver;
-                }else{
-                    nsi.next_segment_is_reserved = 0;
-                    if(train_loc[train_id]!=255){
-                        unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
-                    }
-                    reserve_segments(track, train_on_segment, switch_states, train_id, cur_pos);
-                }
             }
+            nsi.cur_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos);
+            nsi.next_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor);
+            nsi.next_next_segment_is_reserved = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_next_sensor);
+            if(nsi.cur_segment_is_reserved==0){
+                reserve_segments(track, train_on_segment, switch_states, train_id, cur_pos);
+            }
+
+            if(train_loc[train_id]!=255){
+                unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
+            }
+
+            // if(nsi.next_sensor == -1 || nsi.next_next_sensor == -1){
+            //     nsi.exit_incoming = 1;
+            // }else{
+            //     nsi.exit_incoming = 0;
+            //     uint8_t cur_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1;
+            //     uint8_t next_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1;
+            //     if(cur_segment_reserver != 0){
+            //         // new_printf(cout, 0, "\0337\033[60;1H\033[K cur_pos reserved: %d, next reserved: %d, if cond: %d\0338", segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos), segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor), segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1 || segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1);
+            //         nsi.next_segment_is_reserved = cur_segment_reserver;
+            //     }else if(next_segment_reserver != 0){
+            //         nsi.next_segment_is_reserved = cur_segment_reserver;
+            //     }else{
+            //         nsi.next_segment_is_reserved = 0;
+            //         if(train_loc[train_id]!=255){
+            //             unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
+            //         }
+            //         reserve_segments(track, train_on_segment, switch_states, train_id, cur_pos);
+            //     }
+            // }
 
             Reply(tid, &nsi, sizeof(NewSensorInfo));
             train_loc[train_id] = cur_pos;
