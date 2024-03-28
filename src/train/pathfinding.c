@@ -772,26 +772,6 @@ void path_finding(){
                 unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
             }
 
-            // if(nsi.next_sensor == -1 || nsi.next_next_sensor == -1){
-            //     nsi.exit_incoming = 1;
-            // }else{
-            //     nsi.exit_incoming = 0;
-            //     uint8_t cur_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1;
-            //     uint8_t next_segment_reserver = segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1;
-            //     if(cur_segment_reserver != 0){
-            //         // new_printf(cout, 0, "\0337\033[60;1H\033[K cur_pos reserved: %d, next reserved: %d, if cond: %d\0338", segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos), segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor), segments_reserved(track, train_on_segment, switch_states, train_id, cur_pos)==1 || segments_reserved(track, train_on_segment, switch_states, train_id, nsi.next_sensor)==1);
-            //         nsi.next_segment_is_reserved = cur_segment_reserver;
-            //     }else if(next_segment_reserver != 0){
-            //         nsi.next_segment_is_reserved = cur_segment_reserver;
-            //     }else{
-            //         nsi.next_segment_is_reserved = 0;
-            //         if(train_loc[train_id]!=255){
-            //             unreserve_segments(track, train_on_segment, switch_states, train_id, train_loc[train_id]);
-            //         }
-            //         reserve_segments(track, train_on_segment, switch_states, train_id, cur_pos);
-            //     }
-            // }
-
             Reply(tid, &nsi, sizeof(NewSensorInfo));
             train_loc[train_id] = cur_pos;
             

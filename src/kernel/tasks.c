@@ -12,6 +12,7 @@
 #include "util.h"
 #include "traincontrol.h"
 #include "pathfinding.h"
+#include "pathfinding_nores.h"
 #include "sensors.h"
 #include "trainserver.h"
 #include "trainconstants.h"
@@ -288,6 +289,7 @@ void k4(){
     Create(6, &delay_execute5);
     Create(4, &tc2demo);
     Create_sp_size(5, &path_finding, 2);
+    // Create_sp_size(5, &path_finding_nores, 2);
 }
 
 
