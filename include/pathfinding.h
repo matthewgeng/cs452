@@ -51,6 +51,7 @@ typedef struct PathMessage{
     path_arg_type type;
     uint32_t arg1;
     uint32_t arg2;
+    uint32_t arg3;
     uint32_t dest;
     char switches[22];
 } PathMessage;

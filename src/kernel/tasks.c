@@ -16,6 +16,7 @@
 #include "trainserver.h"
 #include "trainconstants.h"
 #include "delayexecute.h"
+#include "tc2demo.h"
 
 void k2test() {
     uart_printf(CONSOLE, "Beginning testing\r\n");
@@ -285,6 +286,7 @@ void k4(){
     Create(6, &delay_execute3);
     Create(6, &delay_execute4);
     Create(6, &delay_execute5);
+    Create(4, &tc2demo);
     Create_sp_size(5, &path_finding, 2);
 }
 

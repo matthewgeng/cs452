@@ -604,6 +604,7 @@ void path_finding(){
     int res;
     int cur_pos = -2;
     int train_id;
+    int do_get_next;
     int start_sensor;
     NewSensorInfo nsi;
     
@@ -671,11 +672,16 @@ void path_finding(){
             
             cur_pos = pm.arg1;
             train_id = pm.arg2;
+            do_get_next = pm.arg3;
             if(cur_pos<0 || cur_pos>80){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Knav invalid cur pos\0338");
                 continue;
             }
-            start_sensor = get_next_sensor(cur_pos, switch_states, track, NULL, NULL, NULL);
+            if(do_get_next==1){
+                start_sensor = get_next_sensor(cur_pos, switch_states, track, NULL, NULL, NULL);
+            }else{
+                start_sensor = cur_pos;
+            }
 
             if(start_sensor<0){
                 uart_printf(CONSOLE, "\0337\033[30;1H\033[Kfailed to get start node\0338");

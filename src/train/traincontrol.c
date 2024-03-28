@@ -346,6 +346,36 @@ void execute_switch_reset(char *str, char *func_res, int console_tid, int train_
     }
 }
 
+void execute_demo(char *str, char *func_res, int console_tid, int train_server_tid){
+
+    str_cpy_w0(func_res+10, "Switches reset");
+    Puts(console_tid, CONSOLE, func_res);
+
+    TrainServerMsgSimple tsm;
+    tsm.type = TRAIN_SERVER_DEMO_START;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+    if(reply_len!=0){
+      str_cpy_w0(func_res+10, "switch reset invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+}
+
+void execute_demo_end(char *str, char *func_res, int console_tid, int train_server_tid){
+
+    str_cpy_w0(func_res+10, "Switches reset");
+    Puts(console_tid, CONSOLE, func_res);
+
+    TrainServerMsgSimple tsm;
+    tsm.type = TRAIN_SERVER_DEMO_END;
+    int reply_len = Send(train_server_tid, &tsm, sizeof(TrainServerMsgSimple), NULL, 0);
+    if(reply_len!=0){
+      str_cpy_w0(func_res+10, "switch reset invalid rpllen");
+      Puts(console_tid, CONSOLE, func_res);
+      return;
+    }
+}
+
 void execute_set_sensor(char *str, char *func_res, int console_tid, int train_server_tid){
 
     int clock = WhoIs("clock");
@@ -411,6 +441,10 @@ void executeFunction(int console_tid, int train_server_tid, char *str){
     execute_track(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='r' && str[1]=='e' && str[2]=='s' && str[3]=='e' && str[4]=='t'){
     execute_switch_reset(str, func_res, console_tid, train_server_tid);
+  }else if(str[0]=='d' && str[1]=='e' && str[2]=='m' && str[3]=='o'){
+    execute_demo(str, func_res, console_tid, train_server_tid);
+  }else if(str[0]=='e' && str[1]=='n' && str[2]=='d'){
+    execute_demo_end(str, func_res, console_tid, train_server_tid);
   }else if(str[0]=='s' && str[1]=='s' && str[2]==' '){
     execute_set_sensor(str, func_res, console_tid, train_server_tid);
   }else{
