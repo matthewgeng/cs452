@@ -633,8 +633,14 @@ int starting_sensor_for_train(char track, uint32_t train_id) {
             switch (train_id){
                 // TODO: select starting sensors for trains
                 case 1:
+                    // A1 - C13
+                    return 0;
                 case 2:
+                    // B7 - C13
+                    return 22;
                 case 54:
+                    // A13 - A10
+                    return 12;
                 case 58:
                 case 77:
                 default:
@@ -682,8 +688,14 @@ int starting_next_sensor_for_train(char track, uint32_t train_id) {
             switch (train_id){
                 // TODO: select starting sensors for trains
                 case 1:
+                    // A1 - C13
+                    return 44;
                 case 2:
+                    // B7 - C13
+                    return 44;
                 case 54:
+                    // A13 - A10
+                    return 9;
                 case 58:
                 case 77:
                 default:
