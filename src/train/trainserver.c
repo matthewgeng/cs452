@@ -464,16 +464,18 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
         // handle_tr(mio, cout, track, ts1, 0);
         // handle_tr(mio, cout, track, ts2, 0);
 
-        if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
-            ts1->is_reversing = 1;
-            DelayExecuteMsg dsm;
-            dsm.type = DELAY_RV;
-            dsm.delay = 0;
-            dsm.train_number = ts1->train_id;
-            dsm.last_speed = ts1->cur_train_speed;
-            int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
-            if(intended_reply_len!=0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+        if(ts1->train_dest==255 && ts2->train_dest==255){
+            if(ts1->train_id<ts2->train_id){
+                ts1->is_reversing = 1;
+                DelayExecuteMsg dsm;
+                dsm.type = DELAY_RV;
+                dsm.delay = 0;
+                dsm.train_number = ts1->train_id;
+                dsm.last_speed = ts1->cur_train_speed;
+                int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+                if(intended_reply_len!=0){
+                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+                }
             }
         }else{
             handle_tr(mio, cout, track, ts1, 0);
@@ -496,16 +498,18 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
         new_printf(cout, 0, "\0337\033[%d;%dHmerge collision with %d\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
         ts1->train_id);
 
-        if(ts1->train_dest==255 && ts2->train_dest==255 && ts1->train_id<ts2->train_id){
-            // handle_tr(mio, cout, track, ts1, 0);
-            DelayExecuteMsg dsm;
-            dsm.type = DELAY_STOP_START;
-            dsm.delay = 100;
-            dsm.train_number = ts1->train_id;
-            dsm.last_speed = ts1->cur_train_speed;
-            int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
-            if(intended_reply_len!=0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+        if(ts1->train_dest==255 && ts2->train_dest==255){
+            if(ts1->train_id<ts2->train_id){
+                // handle_tr(mio, cout, track, ts1, 0);
+                DelayExecuteMsg dsm;
+                dsm.type = DELAY_STOP_START;
+                dsm.delay = 400;
+                dsm.train_number = ts1->train_id;
+                dsm.last_speed = ts1->cur_train_speed;
+                int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+                if(intended_reply_len!=0){
+                    uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+                }
             }
         }else{
             handle_tr(mio, cout, track, ts1, 0);
