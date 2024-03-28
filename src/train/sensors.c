@@ -107,6 +107,6 @@ void sensor_update(){
         Puts(cout, CONSOLE, sensors_str);
         new_sensor_triggered = 0;
     }
-    Delay(clock_tid, 6);
+    Delay(clock_tid, 10);
   }
 }

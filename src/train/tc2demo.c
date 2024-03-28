@@ -28,7 +28,7 @@ void tc2demo(){
 
     uint8_t train1 = 1;
     uint8_t start_dest1 = 73;
-    uint8_t train2 = 2;
+    uint8_t train2 = 54;
     uint8_t start_dest2 = 30;
 
     PathMessage pm;
