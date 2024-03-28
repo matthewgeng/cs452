@@ -37,24 +37,26 @@ void sensor_update(){
 
   for(;;){
     // uart_printf(CONSOLE, "\033[30;1Hstart %d", time);
+    int time = Time(clock_tid);
     Putc(mio, MARKLIN, 0x85);
-    // memset(triggered_sensors, -1, MAX_NUM_TRIGGERED_SENSORS);
+    // memset(last_sensors_triggered, -1, MAX_NUM_TRIGGERED_SENSORS);
 
     for(int i = 0; i<10; i++){
       sensor_byte = Getc(mio, MARKLIN);
       for (int u = 0; u < 8; u++) {
         if (sensor_byte & (1 << u)) {
           int sensorNum = i*8+7-u;
-          if(sensorNum!=last_sensor_triggered){
+            if (sensorNum != last_sensor_triggered) {
+                push_intcb(&sensor_cb, sensorNum);
+                last_sensor_triggered = sensorNum;
+            }
+
             if (is_full_intcb(&triggered_sensor_cb)) {
                 // > 2 sensors got triggered in one query, shouldn't happen unless we have more than 2 trains
                 new_printf(cout, 0, "\0337\033[30;1H\033[K>=3 sensors triggered in one query\0338");
             }
-            push_intcb(&sensor_cb, sensorNum);
             push_intcb(&triggered_sensor_cb, sensorNum);
             new_sensor_triggered = 1;
-            last_sensor_triggered = sensorNum;
-          }
         }
       }
     }
@@ -105,7 +107,6 @@ void sensor_update(){
         Puts(cout, CONSOLE, sensors_str);
         new_sensor_triggered = 0;
     }
-    time += 6;
-    DelayUntil(clock_tid, time);
+    Delay(clock_tid, 6);
   }
 }

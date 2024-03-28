@@ -629,11 +629,12 @@ void path_finding(){
     uint8_t train_loc[100];
     memset(train_loc, 255, sizeof(uint8_t)*100);
 
-    uint8_t run_res = 0;
+    uint8_t run_res = 1;
 
     for(;;){
         // uart_printf(CONSOLE, "\0337\033[55;1H\033[Kpathfinding before receive %d\0338", Time(clock));
         intended_send_len = Receive(&tid, &pm, sizeof(pm));
+        new_printf(cout, 0, "\033[80;0Hrun_res :%u", run_res); 
         // if(intended_send_len!=sizeof(pm)){
         //     uart_printf(CONSOLE, "\0337\033[30;1H\033[Kpath finding received unknown object\0338");
         //     continue;

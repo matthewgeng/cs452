@@ -384,23 +384,24 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
     // new_printf(cout, 0, "\0337\033[56;1H ts1 speed: %d, ts2 speed:%d, ts1 next: %d, ts1 nextnext: %d, ts2 loc: %d\0338", 
     //     ts1->cur_physical_speed, ts2->cur_physical_speed, ts1->new_sensor_new.next_sensor, ts1->new_sensor_new.next_next_sensor, ts2->train_location);
 
-    int same_direction_collision = ts1->new_sensor_new.next_sensor == ts2->train_location || 
-            ts1->new_sensor_new.next_next_sensor == ts2->train_location;
-
     // int head_on_collision = (ts1->new_sensor_new.next_next_sensor == ts2->train_location && ts2->new_sensor_new.next_next_sensor == ts1->train_location) ||
     // (ts1->new_sensor_new.next_next_sensor == ts2->new_sensor_new.next_sensor && ts2->new_sensor_new.next_next_sensor == ts1->new_sensor_new.next_sensor) ||
     // (ts1->new_sensor_new.next_next_sensor == ts2->train_location && ts2->new_sensor_new.next_next_sensor == ts1->train_location)
     // ;
 
+    int stopped_collision = (ts1->cur_train_speed != 0 && ts2->cur_train_speed == 0) && (ts1->new_sensor_new.next_next_sensor == ts2->train_location || ts1->new_sensor_new.next_sensor == ts2->train_location);
+
     int head_on_collision = (ts1->new_sensor_new.next_next_sensor != ts2->new_sensor_new.next_sensor && ts1->new_sensor_new.next_next_sensor/2 == ts2->new_sensor_new.next_sensor/2 && 
-    ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor/2 == ts2->new_sensor_new.next_next_sensor/2) || 
-    (ts1->new_sensor_new.next_sensor != ts2->train_location && ts1->new_sensor_new.next_sensor/2 == ts2->train_location/2 && 
-    ts1->train_location != ts2->new_sensor_new.next_sensor && ts1->train_location/2 == ts2->new_sensor_new.next_sensor/2)
+        ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor/2 == ts2->new_sensor_new.next_next_sensor/2) || 
+        (ts1->new_sensor_new.next_sensor != ts2->train_location && ts1->new_sensor_new.next_sensor/2 == ts2->train_location/2 && 
+        ts1->train_location != ts2->new_sensor_new.next_sensor && ts1->train_location/2 == ts2->new_sensor_new.next_sensor/2)
     ;
 
     int merge_collision = (ts1->train_location != ts2->train_location) && ((ts1->new_sensor_new.next_next_sensor == ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_sensor) || (ts1->new_sensor_new.next_sensor == ts2->new_sensor_new.next_sensor))
     ;
 
+    int same_direction_collision = ts1->new_sensor_new.next_sensor == ts2->train_location || 
+            ts1->new_sensor_new.next_next_sensor == ts2->train_location;
     int terminal_speed_collision = train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error
     ||
     ts1->cur_physical_speed >= ts2->cur_physical_speed
@@ -410,7 +411,18 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
     new_printf(cout, 0, "\0337\033[%d;%dHcollisions: same dir %d, speed check %d, head on %d, merge %d \0338", 7 + ts1->train_print_start_row,  ts1->train_print_start_col, 
         same_direction_collision, terminal_speed_collision, head_on_collision, merge_collision);
 
-    if (same_direction_collision && terminal_speed_collision) {
+    if (stopped_collision) {
+        ts1->is_reversing = 1;
+        DelayExecuteMsg dsm;
+        dsm.type = DELAY_RV;
+        dsm.delay = 0;
+        dsm.train_number = ts1->train_id;
+        dsm.last_speed = ts1->cur_train_speed;
+        int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+        if(intended_reply_len!=0){
+            uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+        }
+    } else if (same_direction_collision && terminal_speed_collision) {
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: will hit train %d   \0338", 8 + ts1->train_print_start_row,  ts1->train_print_start_col, ts2->train_id);
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: train %d will hit me\0338", 8 + ts2->train_print_start_row,  ts2->train_print_start_col, ts1->train_id);
 
@@ -465,7 +477,7 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
         // handle_tr(mio, cout, track, ts2, 0);
 
         if(ts1->train_dest==255 && ts2->train_dest==255){
-            if(ts1->train_id<ts2->train_id){
+            if(ts1->terminal_physical_speed > ts2->terminal_physical_speed){
                 ts1->is_reversing = 1;
                 DelayExecuteMsg dsm;
                 dsm.type = DELAY_RV;
@@ -499,11 +511,11 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
         ts1->train_id);
 
         if(ts1->train_dest==255 && ts2->train_dest==255){
-            if(ts1->train_id<ts2->train_id){
+            if(ts1->terminal_physical_speed<ts2->terminal_physical_speed){
                 // handle_tr(mio, cout, track, ts1, 0);
                 DelayExecuteMsg dsm;
                 dsm.type = DELAY_STOP_START;
-                dsm.delay = 400;
+                dsm.delay = 100;
                 dsm.train_number = ts1->train_id;
                 dsm.last_speed = ts1->cur_train_speed;
                 int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
@@ -969,8 +981,8 @@ void trainserver() {
         int sensors[MAX_NUM_TRIGGERED_SENSORS] = {255};
         sensors[0] = tsm.arg1;
         sensors[1] = tsm.arg2;
-        // new_printf(cout, 0, "\0337\033[50;1H\033[K sensor 1: %d\0338", sensors[0]);
-        // new_printf(cout, 0, "\0337\033[51;1H\033[K sensor 2: %d\0338", sensors[1]);
+        new_printf(cout, 0, "\0337\033[50;1H\033[K sensor 1: %d\0338", sensors[0]);
+        new_printf(cout, 0, "\0337\033[51;1H\033[K sensor 2: %d\0338", sensors[1]);
 
         new_printf(cout, 0, "\0337\033[52;1H\033[K before sorting %d %d\0338", 
         train_state_pointers[0]->train_id, train_state_pointers[1]->train_id);
