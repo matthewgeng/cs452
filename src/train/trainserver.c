@@ -226,7 +226,9 @@ int isExpectedNextSensor(TrainState* ts, int sensor) {
 
     uint8_t expected_alt_sensor = ts->new_sensor_err.next_sensor!=255 && sensor==ts->new_sensor_err.next_sensor;
 
-    return expected_normal_sensor || expected_alt_sensor || (ts->is_reversing && sensor==ts->new_sensor.reverse_sensor);;
+    // new_printf(WhoIs("cout"), 0, "\0337\033[58;1H\033[Knew_sensor.rv: %u  \0338", ts->new_sensor.reverse_sensor );
+
+    return expected_normal_sensor || expected_alt_sensor || (ts->is_reversing==1 && sensor==ts->new_sensor.reverse_sensor);;
 }
 
 int isExpectedNextNextSensor(TrainState* ts, int sensor) {
@@ -621,6 +623,7 @@ int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, ui
         }
         // new_printf(cout, 0, "\0337\033[50;1H\033[Kcur_sensor_index: %u %u, speed: %u\0338",ts->cur_sensor_index, ts->train_sensor_path.sensors[ts->cur_sensor_index], ts->last_speed);
 
+        uint8_t did_reverse = 0;
        if(ts->train_dest!=255 && ts->got_sensor_path){
 
             // if(ts->cur_sensor_index+1<ts->train_sensor_path.num_sensors){
@@ -634,7 +637,7 @@ int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, ui
                 }
                 
                 if(ts->cur_sensor_index!=ts->train_sensor_path.num_sensors-2 && ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
-                    ts->is_reversing = 1;
+                    did_reverse = 1;
                     dsm->type = DELAY_RV;
                     dsm->delay = reverse_delay;
                     dsm->train_number = ts->train_id;
@@ -663,7 +666,7 @@ int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, ui
 
                 if(ts->cur_sensor_index==ts->train_sensor_path.num_sensors-2 && ts->train_sensor_path.does_reverse[ts->cur_sensor_index]==1){
                     // delay reverse then delay stop
-                    ts->is_reversing = 1;
+                    did_reverse = 1;
                     dsm->type = DELAY_RV_STOP;
                     dsm->train_number = ts->train_id;
                     dsm->delay = reverse_delay;
@@ -773,6 +776,9 @@ int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, ui
         new_printf(cout, 0, "\0337\033[65;1H\033[Knext: %u, next next: %u, rev: %u, segment reserved: %u, exit incoming: %u\0338", ts->new_sensor_new.next_sensor, ts->new_sensor_new.next_next_sensor, ts->new_sensor_new.reverse_sensor, ts->new_sensor_new.next_segment_is_reserved, ts->new_sensor_new.exit_incoming);
         new_printf(cout, 0, "\0337\033[66;1H\033[Knew_sensor: %u, new_sensor_rev: %u, new_sensor_err: %u, last trig: %u\0338", ts->new_sensor.next_sensor, ts->new_sensor.reverse_sensor, ts->new_sensor_err.next_sensor, ts->last_triggered_sensor);
 
+        if(did_reverse==1){
+            ts->is_reversing = 1;
+        }
         
         ts->last_new_sensor_time = sensor_query_time;
         ts->last_distance_between_sensors = ts->distance_between_sensors;
@@ -992,9 +998,9 @@ void trainserver() {
                 }
 
                 uint8_t expected_sensor = isExpectedNextSensor(ts, sensor);
-                new_printf(cout, 0, "\0337\033[%d;1H\033[K sensor trigger %d, train %d, next: %d, nextnext: %d, alt next: %d, alt nextnext: %d\0338",
-                                20 + (ts->train_print_start_col/4) + ts->train_print_start_row,
-                                sensor, ts->train_id, ts->new_sensor.next_sensor, ts->new_sensor.next_next_sensor, ts->new_sensor_err.next_sensor, ts->new_sensor_err.next_next_sensor);
+                // new_printf(cout, 0, "\0337\033[%d;1H\033[K sensor trigger %d, train %d, next: %d, nextnext: %d, alt next: %d, alt nextnext: %d\0338",
+                //                 20 + (ts->train_print_start_col/4) + ts->train_print_start_row,
+                //                 sensor, ts->train_id, ts->new_sensor.next_sensor, ts->new_sensor.next_next_sensor, ts->new_sensor_err.next_sensor, ts->new_sensor_err.next_next_sensor);
                 
                 if (!expected_sensor) {
                     continue;
@@ -1021,9 +1027,9 @@ void trainserver() {
                 }
 
                 uint8_t expected_sensor = isExpectedNextNextSensor(ts, sensor);
-                new_printf(cout, 0, "\0337\033[%d;1H\033[K sensor trigger %d, train %d, next: %d, nextnext: %d, alt next: %d, alt nextnext: %d\0338",
-                                20 + (ts->train_print_start_col/4) + ts->train_print_start_row,
-                                sensor, ts->train_id, ts->new_sensor.next_sensor, ts->new_sensor.next_next_sensor, ts->new_sensor_err.next_sensor, ts->new_sensor_err.next_next_sensor);
+                // new_printf(cout, 0, "\0337\033[%d;1H\033[K sensor trigger %d, train %d, next: %d, nextnext: %d, alt next: %d, alt nextnext: %d\0338",
+                //                 20 + (ts->train_print_start_col/4) + ts->train_print_start_row,
+                //                 sensor, ts->train_id, ts->new_sensor.next_sensor, ts->new_sensor.next_next_sensor, ts->new_sensor_err.next_sensor, ts->new_sensor_err.next_next_sensor);
                 
                 if (!expected_sensor) {
                     continue;

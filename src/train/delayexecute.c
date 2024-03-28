@@ -99,17 +99,9 @@ void delay_execute_loop(){
             if(dsm.delay!=0){
                 Delay(clock_tid, dsm.delay);
             }
-
-            if(last_speed<=10){
-                Delay(clock_tid, 400);
-            }else{
-                Delay(clock_tid, 500);
-            }
-
             cmd[0] = last_speed;
             cmd[1] = train_number;
             Puts_len(mio, MARKLIN, cmd, 2);
-            stop(mio, dsm.train_number);
             // str_cpy_w0(func_res+10, "Train reversed");
             // Puts(cout, CONSOLE, func_res);
         }
