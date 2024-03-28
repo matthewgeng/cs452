@@ -498,12 +498,22 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
             // handle_tr(mio, cout, track, ts1, 0);
             DelayExecuteMsg dsm;
             dsm.type = DELAY_STOP_START;
-            dsm.delay = 100;
+            dsm.delay = 400;
             dsm.train_number = ts1->train_id;
             dsm.last_speed = ts1->cur_train_speed;
             int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
             if(intended_reply_len!=0){
-                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver stop start cmd unexpected reply\0338");
+            }
+        }else if(ts1->train_dest!=255 && ts2->train_dest!=255 && ts1->train_id<ts2->train_id){
+            DelayExecuteMsg dsm;
+            dsm.type = DELAY_STOP_START;
+            dsm.delay = 600;
+            dsm.train_number = ts1->train_id;
+            dsm.last_speed = ts1->cur_train_speed;
+            int intended_reply_len = Send(ts1->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+            if(intended_reply_len!=0){
+                uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver stop start cmd unexpected reply\0338");
             }
         }else{
             handle_tr(mio, cout, track, ts1, 0);
