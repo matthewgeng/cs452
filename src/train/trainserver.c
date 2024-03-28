@@ -54,6 +54,9 @@ int calculate_new_current_speed(TrainSpeedState* train_speed_state, int old_spee
     // mm / 10ms --> mm/ms --> *1000 = mm/ms /10 --> *100
 
     int average_new_speed = (distance_between*100) / ticks; // millimeters per second
+    if (average_new_speed - terminal_speed > 500) {
+        average_new_speed = terminal_speed;
+    }
     int new_cur_speed = 0;
     // uart_printf(CONSOLE, "\0337\033[17;1H\033[K old state: %d, old speed: %d, new average speed: %d, terminal speed: %d, new_cur_speed: %d\0338", *train_speed_state, old_speed, average_new_speed, terminal_speed, new_cur_speed);
 
@@ -387,13 +390,11 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
     // (ts1->new_sensor_new.next_next_sensor == ts2->train_location && ts2->new_sensor_new.next_next_sensor == ts1->train_location)
     // ;
 
-    int head_on_collision = (ts1->new_sensor_new.reverse_sensor == ts2->new_sensor_new.next_next_sensor || ts1->new_sensor_new.reverse_sensor == ts2->new_sensor_new.next_sensor) ||
-    (ts2->new_sensor_new.reverse_sensor == ts1->new_sensor_new.next_next_sensor || ts2->new_sensor_new.reverse_sensor == ts1->new_sensor_new.next_sensor) ||
-    ts1->new_sensor_new.reverse_sensor == ts2->new_sensor_new.reverse_sensor
+    int head_on_collision = (ts1->new_sensor_new.next_next_sensor != ts2->new_sensor_new.next_sensor && ts1->new_sensor_new.next_next_sensor/2 == ts2->new_sensor_new.next_sensor/2) && 
+    (ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor/2 == ts2->new_sensor_new.next_next_sensor/2)
     ;
 
-    int merge_collision = (ts1->new_sensor_new.next_next_sensor == ts2->new_sensor_new.next_next_sensor) || (ts1->new_sensor_new.next_sensor == ts2->new_sensor_new.next_sensor) ||
-    (ts1->new_sensor_new.next_next_sensor == ts2->new_sensor_new.next_sensor) || (ts2->new_sensor_new.next_next_sensor == ts1->new_sensor_new.next_sensor)
+    int merge_collision = (ts1->train_location != ts2->train_location) && ((ts1->new_sensor_new.next_next_sensor == ts2->new_sensor_new.next_next_sensor && ts1->new_sensor_new.next_sensor != ts2->new_sensor_new.next_sensor) || (ts1->new_sensor_new.next_sensor == ts2->new_sensor_new.next_sensor))
     ;
 
     int terminal_speed_collision = train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error
@@ -443,10 +444,6 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
                 slow_down_speed -=1;
             }
 
-            if (slow_down_speed == ts1->cur_train_speed) {
-                slow_down_speed -=1;
-            }
-
             new_printf(cout, 0, "\0337\033[%d;%dH\033[K\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col);
             new_printf(cout, 0, "\0337\033[%d;%dHSpeed decrease to: %d, terminal: %d    \0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
             slow_down_speed, train_terminal_speed(ts1->train_id, slow_down_speed));
@@ -454,9 +451,17 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
         }
         return 1;
     } else if (head_on_collision) {
+        new_printf(cout, 0, "\0337\033[%d;%dHhead on collision with %d\0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+        ts2->train_id);
+        new_printf(cout, 0, "\0337\033[%d;%dHhead on collision with %d\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
+        ts1->train_id);
         handle_tr(mio, cout, track, ts1, 0);
         handle_tr(mio, cout, track, ts2, 0);
     } else if (merge_collision) {
+        new_printf(cout, 0, "\0337\033[%d;%dHmerge collision with %d\0338", 1 + 8 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+        ts2->train_id);
+        new_printf(cout, 0, "\0337\033[%d;%dHmerge collision with %d\0338", 1 + 8 + ts2->train_print_start_row,  ts2->train_print_start_col, 
+        ts1->train_id);
         handle_tr(mio, cout, track, ts1, 0);
         handle_tr(mio, cout, track, ts2, 0);
     } else {
