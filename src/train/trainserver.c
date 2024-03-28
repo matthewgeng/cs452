@@ -363,11 +363,16 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
     // TODO: 1 TRAIN STOPPED COLLISION
 
     int velocity_error = 30; //mm/s
-    new_printf(cout, 0, "\0337\033[56;1H ts1 speed: %d, ts2 speed:%d, ts1 next: %d, ts1 nextnext: %d, ts2 loc: %d\0338", 
-        ts1->cur_physical_speed, ts2->cur_physical_speed, ts1->new_sensor_new.next_sensor, ts1->new_sensor_new.next_next_sensor, ts2->train_location);
+    // new_printf(cout, 0, "\0337\033[56;1H ts1 speed: %d, ts2 speed:%d, ts1 next: %d, ts1 nextnext: %d, ts2 loc: %d\0338", 
+    //     ts1->cur_physical_speed, ts2->cur_physical_speed, ts1->new_sensor_new.next_sensor, ts1->new_sensor_new.next_next_sensor, ts2->train_location);
 
     int same_direction_collision = ts1->new_sensor_new.next_sensor == ts2->train_location || 
             ts1->new_sensor_new.next_next_sensor == ts2->train_location;
+
+    int head_on_collision = (ts1->new_sensor_new.next_next_sensor == ts2->train_location && ts2->new_sensor_new.next_next_sensor == ts1->train_location) ||
+    (ts1->new_sensor_new.next_next_sensor == ts2->new_sensor_new.next_sensor && ts2->new_sensor_new.next_next_sensor == ts1->new_sensor_new.next_sensor) ||
+    (ts1->new_sensor_new.next_next_sensor == ts2->train_location && ts2->new_sensor_new.next_next_sensor == ts1->train_location)
+    ;
 
     int terminal_speed_collision = train_terminal_speed(ts1->train_id, ts1->cur_train_speed) >= train_terminal_speed(ts2->train_id, ts2->cur_train_speed) - velocity_error
     ||
@@ -375,8 +380,8 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
     ;
 
     // TODO: currently not handling the case where ts1 is accelerating and ts1 is decelerating
-    new_printf(cout, 0, "\0337\033[%d;%dHCollision sensor check %d with %d: speed check %d  \0338", 7 + ts1->train_print_start_row,  ts1->train_print_start_col, 
-        same_direction_collision, ts2->train_id, terminal_speed_collision);
+    new_printf(cout, 0, "\0337\033[%d;%dHsame dir collision %d, head on collision: %d, speed check %d  \0338", 7 + ts1->train_print_start_row,  ts1->train_print_start_col, 
+        same_direction_collision, head_on_collision, terminal_speed_collision);
 
     if (same_direction_collision && terminal_speed_collision) {
         new_printf(cout, 0, "\0337\033[%d;%dHCollision detected: will hit train %d   \0338", 8 + ts1->train_print_start_row,  ts1->train_print_start_col, ts2->train_id);
@@ -426,6 +431,9 @@ void handle_collision(int mio, int cout, char track, TrainState* ts1, TrainState
             handle_tr(mio, cout, track, ts1, slow_down_speed);
         }
         return 1;
+    } else if (head_on_collision) {
+        handle_tr(mio, cout, track, ts1, 0);
+        handle_tr(mio, cout, track, ts2, 0);
     }
 }
 
