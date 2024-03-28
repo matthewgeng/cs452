@@ -1,9 +1,9 @@
 # TC2
 
-First ensure that we are in the correct SHA specified in the PDF or in the tc2 branch
+First ensure that we are in the correct SHA specified in the PDF or in the tc2-collision-merge branch
 
 ```
-git checkout tc2
+git checkout tc2-collision-merge
 ```
 
 Enter root directory and `make`
