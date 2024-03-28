@@ -552,7 +552,7 @@ int process_sensor(int cout, int mio, char track, TrainState* ts, int sensor, ui
                 dsm->delay = reverse_delay;
                 dsm->train_number = ts->train_id;
                 dsm->last_speed = ts->cur_train_speed;
-                intended_reply_len = Send(ts->delay_execute_tid, &dsm, sizeof(DelayExecuteMsg), NULL, 0);
+                intended_reply_len = Send(ts->delay_execute_tid, dsm, sizeof(DelayExecuteMsg), NULL, 0);
                 if(intended_reply_len!=0){
                     uart_printf(CONSOLE, "\0337\033[30;1H\033[Ktrainserver reverse cmd unexpected reply\0338");
                 }
